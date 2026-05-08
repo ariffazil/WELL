@@ -107,12 +107,23 @@ def _check_telemetry_purity(
             for line in recent:
                 try:
                     e = json.loads(line)
-                    env = e.get("environment", "PROD")
-                    if env == "TEST":
+                    env = e.get("environment", None)
+                    note = e.get("note", "") or ""
+                    tier = e.get("tier", "")
+                    is_test_by_note = (
+                        note.lower().startswith("test ") or
+                        "test path" in note.lower() or
+                        "test red path" in note.lower() or
+                        "test green path" in note.lower() or
+                        "automated test" in note.lower() or
+                        "mocked" in note.lower()
+                    )
+                    is_test_by_tier = tier in ("GREEN", "RED", "AMBER") and is_test_by_note
+                    if env == "TEST" or is_test_by_note:
                         purity = "DIRTY"
                         dirty_count += 1
                         test_entries.append(e)
-                    elif env == "PROD":
+                    elif env == "PROD" or env is None:
                         prod_count += 1
                 except Exception:
                     continue
@@ -134,6 +145,109 @@ def _check_telemetry_purity(
             if purity == "DIRTY"
             else "CLEAN: Production telemetry uncontaminated."
         ),
+    }
+
+
+# ── Freshness Ceiling Rules (Phase 3) ─────────────────────────────────────────────
+# Evidence discipline: stale telemetry cannot produce optimistic verdicts.
+# Freshness bands:
+#   0–12h verified  → GREEN/OPTIMAL/HIGH confidence allowed
+#   12–24h           → AMBER maximum
+#   24–72h           → LIMITED maximum
+#   >72h or unverified → UNKNOWN/STALE only
+
+WELL_FRESHNESS_BANDS = {
+    "FRESH": {"max_age_hours": 12, "max_readiness": "OPTIMAL", "max_confidence": "HIGH"},
+    "CURRENT": {"max_age_hours": 24, "max_readiness": "FUNCTIONAL", "max_confidence": "MEDIUM"},
+    "AGED": {"max_age_hours": 72, "max_readiness": "LOW_CAPACITY", "max_confidence": "LOW"},
+    "STALE": {"max_age_hours": float("inf"), "max_readiness": "UNKNOWN", "max_confidence": "LOW"},
+}
+
+
+def _get_freshness_band(state: dict[str, Any]) -> str:
+    """Determine freshness band from state timestamp."""
+    ts = state.get("timestamp", "")
+    if not ts:
+        return "STALE"
+    try:
+        if isinstance(ts, str):
+            dt = datetime.datetime.fromisoformat(ts.replace("Z", "+00:00"))
+        else:
+            dt = ts
+        age_hours = (datetime.datetime.now(datetime.timezone.utc) - dt).total_seconds() / 3600
+        if age_hours <= 12:
+            return "FRESH"
+        elif age_hours <= 24:
+            return "CURRENT"
+        elif age_hours <= 72:
+            return "AGED"
+        else:
+            return "STALE"
+    except Exception:
+        return "STALE"
+
+
+def _cap_readiness_by_freshness(readiness: str, freshness_band: str) -> str:
+    """Apply freshness ceiling to readiness verdict."""
+    band = WELL_FRESHNESS_BANDS.get(freshness_band, WELL_FRESHNESS_BANDS["STALE"])
+    ceiling = band["max_readiness"]
+    ceiling_rank = {"OPTIMAL": 4, "FUNCTIONAL": 3, "LOW_CAPACITY": 2, "DEGRADED": 1, "UNKNOWN": 0}
+    readiness_rank = ceiling_rank.get(readiness, 0)
+    ceiling_rank_val = ceiling_rank.get(ceiling, 0)
+    if readiness_rank > ceiling_rank_val:
+        return ceiling
+    return readiness
+
+
+def _cap_confidence_by_freshness(confidence: str, freshness_band: str) -> str:
+    """Apply freshness ceiling to confidence level."""
+    band = WELL_FRESHNESS_BANDS.get(freshness_band, WELL_FRESHNESS_BANDS["STALE"])
+    ceiling = band["max_confidence"]
+    ceiling_rank = {"HIGH": 3, "MEDIUM": 2, "LOW": 1}
+    confidence_rank = ceiling_rank.get(confidence, 0)
+    ceiling_rank_val = ceiling_rank.get(ceiling, 0)
+    if confidence_rank > ceiling_rank_val:
+        return ceiling
+    return confidence
+
+
+# ── Federation Health Reconciliation (Phase 3) ────────────────────────────────────
+def _federation_health_reconcile(
+    transport_ok: bool,
+    identity_valid: bool,
+    truth_status: str,
+    any_tool_says_optimistic: bool,
+) -> dict[str, Any]:
+    """
+    Reconciliation rule: IF any tool says PASS/OPTIMAL/GREEN
+    while identity_valid=false AND truth_status=UNVERIFIED,
+    THEN federation_verdict must be HOLD.
+
+    Returns reconciliation verdict and contradiction flags.
+    """
+    contradiction_flags: list[str] = []
+    verdict = "RECONCILED"
+
+    if not identity_valid and any_tool_says_optimistic:
+        contradiction_flags.append("IDENTITY_INVALID_BUT_OPTIMISTIC")
+        verdict = "HOLD"
+
+    if truth_status in ("UNVERIFIED", "STALE", "EXPIRED") and any_tool_says_optimistic:
+        contradiction_flags.append("STALE_EVIDENCE_BUT_OPTIMISTIC")
+        verdict = "HOLD"
+
+    if not transport_ok:
+        contradiction_flags.append("TRANSPORT_DOWN")
+        verdict = "HOLD"
+
+    return {
+        "verdict": verdict,
+        "contradiction_flags": contradiction_flags,
+        "transport_ok": transport_ok,
+        "identity_valid": identity_valid,
+        "truth_status": truth_status,
+        "any_tool_says_optimistic": any_tool_says_optimistic,
+        "federation_policy": "HOLD on any contradiction",
     }
 
 
@@ -226,7 +340,7 @@ def _has_verified_telemetry(state: dict[str, Any]) -> bool:
     Return True only if state contains actual body telemetry, not defaults.
     UNVERIFIED or VOID truth_status fails immediately.
     """
-    if state.get("truth_status") in ("VOID", "TEST"):
+    if state.get("truth_status") in ("VOID", "TEST", "UNVERIFIED"):
         return False
     metrics = state.get("metrics", {})
     if not metrics or not isinstance(metrics, dict):
@@ -289,12 +403,18 @@ def _resolve_readiness(state: dict[str, Any]) -> dict[str, Any]:
             "active_violations": violations,
             "has_telemetry": True,
             "truth_status": truth_status,
+            "freshness_band": "STALE",
             "w0": "OPERATOR_VETO_INTACT / HIERARCHY_INVARIANT",
         }
 
+    # ── Phase 3 Freshness Ceiling ─────────────────────────────────────────────
+    # Apply freshness ceiling to all downstream verdicts
+    freshness_band = _get_freshness_band(state)
+
     if violations:
+        readiness_capped = "DEGRADED"
         return {
-            "readiness": "DEGRADED",
+            "readiness": readiness_capped,
             "risk_level": "RED",
             "recommended_mode": "draft_only",
             "human_confirmation_required": True,
@@ -302,44 +422,65 @@ def _resolve_readiness(state: dict[str, Any]) -> dict[str, Any]:
             "well_score": score,
             "active_violations": violations,
             "has_telemetry": True,
+            "truth_status": truth_status,
+            "freshness_band": freshness_band,
+            "freshness_note": f"Ceiling applied: {freshness_band}",
             "w0": "OPERATOR_VETO_INTACT / HIERARCHY_INVARIANT",
         }
 
     if score >= 80:
+        raw_readiness = "OPTIMAL"
+        readiness_capped = _cap_readiness_by_freshness(raw_readiness, freshness_band)
         return {
-            "readiness": "OPTIMAL",
-            "risk_level": "GREEN",
-            "recommended_mode": "full",
-            "human_confirmation_required": False,
-            "reason": "Substrate stable and high-capacity. Full forge bandwidth available.",
+            "readiness": readiness_capped,
+            "risk_level": "GREEN" if readiness_capped == "OPTIMAL" else "AMBER",
+            "recommended_mode": "full" if readiness_capped == "OPTIMAL" else "review_or_draft",
+            "human_confirmation_required": readiness_capped != "OPTIMAL",
+            "reason": f"Substrate {'stable and high-capacity' if readiness_capped == 'OPTIMAL' else f'capacity capped to {freshness_band}'}. {'Full forge bandwidth available.' if readiness_capped == 'OPTIMAL' else 'Freshness ceiling applied.'}",
             "well_score": score,
             "active_violations": violations,
             "has_telemetry": True,
+            "truth_status": truth_status,
+            "freshness_band": freshness_band,
+            "raw_readiness": raw_readiness,
+            "freshness_note": f"Ceiling applied: {freshness_band}" if raw_readiness != readiness_capped else "within_band",
             "w0": "OPERATOR_VETO_INTACT / HIERARCHY_INVARIANT",
         }
 
     if score >= 60:
+        raw_readiness = "FUNCTIONAL"
+        readiness_capped = _cap_readiness_by_freshness(raw_readiness, freshness_band)
         return {
-            "readiness": "FUNCTIONAL",
-            "risk_level": "GREEN",
-            "recommended_mode": "structured",
-            "human_confirmation_required": False,
-            "reason": "Substrate functional. Normal forge operations permitted.",
+            "readiness": readiness_capped,
+            "risk_level": "GREEN" if readiness_capped == "FUNCTIONAL" else "AMBER",
+            "recommended_mode": "structured" if readiness_capped == "FUNCTIONAL" else "review_or_draft",
+            "human_confirmation_required": readiness_capped != "FUNCTIONAL",
+            "reason": f"Substrate {'functional' if readiness_capped == 'FUNCTIONAL' else f'capacity capped to {freshness_band}'}. {'Normal forge operations permitted.' if readiness_capped == 'FUNCTIONAL' else 'Freshness ceiling applied.'}",
             "well_score": score,
             "active_violations": violations,
             "has_telemetry": True,
+            "truth_status": truth_status,
+            "freshness_band": freshness_band,
+            "raw_readiness": raw_readiness,
+            "freshness_note": f"Ceiling applied: {freshness_band}" if raw_readiness != readiness_capped else "within_band",
             "w0": "OPERATOR_VETO_INTACT / HIERARCHY_INVARIANT",
         }
 
+    raw_readiness = "LOW_CAPACITY"
+    readiness_capped = _cap_readiness_by_freshness(raw_readiness, freshness_band)
     return {
-        "readiness": "LOW_CAPACITY",
+        "readiness": readiness_capped,
         "risk_level": "AMBER",
         "recommended_mode": "draft_only",
         "human_confirmation_required": True,
-        "reason": "Substrate low-capacity. Recommend rest before strategic decisions.",
+        "reason": f"Substrate low-capacity{freshness_band != 'FRESH' and f' (freshness ceiling: {freshness_band})' or ''}. Recommend rest before strategic decisions.",
         "well_score": score,
         "active_violations": violations,
         "has_telemetry": True,
+        "truth_status": truth_status,
+        "freshness_band": freshness_band,
+        "raw_readiness": raw_readiness,
+        "freshness_note": f"Ceiling applied: {freshness_band}" if raw_readiness != readiness_capped else "within_band",
         "w0": "OPERATOR_VETO_INTACT / HIERARCHY_INVARIANT",
     }
 
@@ -380,7 +521,9 @@ def mcp_health_check() -> dict:
     m_machine = state.get("m_machine", {})
     well_ok = is_well(state)
     has_telemetry = _has_verified_telemetry(state)
-    # I2 — Health coherence: heartbeat must reflect identity validity
+    truth_status = state.get("truth_status", "UNVERIFIED")
+    freshness_band = _get_freshness_band(state)
+
     if not well_ok:
         status = "WARN"
         identity_note = "identity_invalid"
@@ -390,6 +533,17 @@ def mcp_health_check() -> dict:
     else:
         status = "OK"
         identity_note = "healthy"
+
+    # I2 — Health coherence: heartbeat must reflect identity validity
+    # Phase 3 — federation reconciliation
+    any_tool_says_optimistic = status == "OK"
+    reconcile = _federation_health_reconcile(
+        transport_ok=True,
+        identity_valid=well_ok,
+        truth_status=truth_status,
+        any_tool_says_optimistic=any_tool_says_optimistic,
+    )
+
     return {
         "mcp": "WELL",
         "status": status,
@@ -406,6 +560,9 @@ def mcp_health_check() -> dict:
         "memory_integrity": m_machine.get("memory_integrity", 1.0),
         "vault_status": m_machine.get("vault_status", "ok"),
         "identity_note": identity_note,
+        "truth_status": truth_status,
+        "freshness_band": freshness_band,
+        "federation_reconcile": reconcile,
     }
 
 
@@ -633,6 +790,7 @@ def _compose_verdict(
     assumptions: list[str] | None = None,
     failure_flags: list[str] | None = None,
     next_safe_action: str | None = None,
+    federation_reconcile: dict | None = None,
 ) -> dict[str, Any]:
     """Canonical arifOS MCP verdict schema (Spec v1.0) with Failure Doctrine v1.0."""
     
@@ -681,6 +839,7 @@ def _compose_verdict(
         },
         "assumptions": assumptions or [],
         "failure_flags": failure_flags or [],
+        "federation_reconcile": federation_reconcile,
         "reversibility": "REVERSIBLE" if task.startswith("read") or "check" in task else "UNKNOWN",
         "final_authority": "Arif",
         "w0": "OPERATOR_VETO_INTACT / HIERARCHY_INVARIANT",
@@ -926,28 +1085,38 @@ def well_readiness(ctx: Context | None = None) -> dict[str, Any]:
         "LOW_CAPACITY": "CAUTION",
     }
 
-    # I3 — Evidence discipline: confidence gated by truth_status
+    # I3 — Evidence discipline: confidence gated by truth_status AND telemetry presence
     truth_status = state.get("truth_status", "UNVERIFIED")
+    freshness_band = resolved.get("freshness_band", _get_freshness_band(state))
     confidence = (
         "LOW" if truth_status in ("UNVERIFIED", "STALE", "EXPIRED") else
         "MEDIUM" if truth_status in ("PARTIAL", "INFERRED") else
-        "HIGH" if resolved["has_telemetry"] else "LOW"
+        "HIGH" if resolved["has_telemetry"] and truth_status == "VERIFIED" else "LOW"
+    )
+    confidence = _cap_confidence_by_freshness(confidence, freshness_band)
+    reconcile = _federation_health_reconcile(
+        transport_ok=True,
+        identity_valid=is_well(state),
+        truth_status=truth_status,
+        any_tool_says_optimistic=resolved["readiness"] in ("OPTIMAL", "FUNCTIONAL"),
     )
     return _compose_verdict(
         mcp="AFWELL",
         task="readiness_reflection",
-        status=status_map.get(resolved["readiness"], "HOLD"),
+        status=reconcile["verdict"] if reconcile["verdict"] == "HOLD" else status_map.get(resolved["readiness"], "HOLD"),
         domain_verdict=resolved["readiness"],
         confidence=confidence,
         risk_level=resolved["risk_level"],
         recommended_mode=resolved["recommended_mode"],
-        human_required=resolved["human_confirmation_required"],
+        human_required=resolved["human_confirmation_required"] or reconcile["verdict"] == "HOLD",
         assumptions=[
             f"truth_status={truth_status}",
             f"telemetry_confidence={state.get('telemetry_confidence', 'UNKNOWN')}",
             f"has_telemetry={resolved['has_telemetry']}",
+            f"freshness_band={freshness_band}",
         ],
-        next_safe_action=resolved["reason"]
+        next_safe_action=resolved["reason"],
+        federation_reconcile=reconcile,
     )
 
 
@@ -3072,7 +3241,7 @@ def well_get_health(ctx: Context | None = None) -> dict[str, Any]:
         verdict = "PASS"
         verdict_reason = "WELL identity intact, instrument healthy, and domain evidence fresh."
 
-    return {
+    ret = {
         "layer_1_service": {
             "alive": True,
             "transport": "SSE_VALID",
@@ -3105,8 +3274,8 @@ def well_get_health(ctx: Context | None = None) -> dict[str, Any]:
         "verdict_reason": verdict_reason,
         "w0": "OPERATOR_VETO_INTACT / HIERARCHY_INVARIANT",
     }
-    result.update(_legacy_advisory("well_get_health", "well_classify_substrate", {"mode": "health"}))
-    return result
+    ret.update(_legacy_advisory("well_get_health", "well_classify_substrate", {"mode": "health"}))
+    return ret
 
 
 # ── WELL-02 well_get_state ────────────────────────────────────────────────────
@@ -3528,19 +3697,42 @@ def _well_classify_substrate_impl(
         "COUPLED_HUMAN_MACHINE_SYSTEM": [],  # assigned via override logic below
     }
 
-    # I1 — Substrate classification override: machine indicators take precedence
-    machine_indicators = ["ai", "agent", "model", "mcp", "tool", "machine", "algorithm", "software", "compute", "server", "robot", "bot", "llm", "gpt", "claude", "kimi"]
-    human_indicators = ["human", "person", "man", "woman", "child", "arif", "operator", "worker", "founder", "individual"]
-    machine_matches = sum(1 for kw in machine_indicators if kw in combined)
-    human_matches = sum(1 for kw in human_indicators if kw in combined)
+    # ── HARD ONTOLOGY FIREWALL (Phase 2) ─────────────────────────────────────
+    # I1 — HARD BLOCK: AI/agent/machine/runtime indicators ABSOLUTELY FORBID
+    # HUMAN_PERSON classification. Machine systems are never human persons.
+    # Invariant 7: AI/machine is never classified as human person.
+    MACHINE_CORE_INDICATORS = [
+        "ai", "agent", "mcp", "tool", "runtime", "server", "robot",
+        "algorithm", "model", "llm", "gpt", "claude", "kimi", "bot",
+        "compute", "software", "hardware", "api", "endpoint", "forge",
+        "well-mcp", "arif", "geox", "wealth", "hermes", "aaa",
+    ]
+    MACHINE_PHRASE_BLOCKS = [
+        "ai agent", "artificial intelligence", "machine learning",
+        "ai mcp", "arifmcp", "arif os", "governance kernel",
+        "constitutional ai", "well mcp", "geox mcp", "wealth mcp",
+        "hermes agent", "a-forge", "forge bridge",
+    ]
 
-    if machine_matches >= 1 and human_matches >= 1:
-        detected_class = "COUPLED_HUMAN_MACHINE_SYSTEM"
-        max_matches = machine_matches + human_matches
-    elif machine_matches >= 1 and human_matches == 0:
-        detected_class = "MACHINE_SYSTEM"
-        max_matches = machine_matches
+    machine_core_count = sum(1 for kw in MACHINE_CORE_INDICATORS if kw in combined)
+    machine_phrase_blocked = any(phrase in combined for phrase in MACHINE_PHRASE_BLOCKS)
+
+    # If machine indicators present → NEVER allow HUMAN_PERSON
+    if machine_core_count >= 1 or machine_phrase_blocked:
+        human_indicators_strict = ["human", "person", "man", "woman", "child"]
+        human_matches_strict = sum(1 for kw in human_indicators_strict if kw in combined)
+        if human_matches_strict >= 1 and machine_core_count >= 1:
+            detected_class = "COUPLED_HUMAN_MACHINE_SYSTEM"
+            max_matches = machine_core_count + human_matches_strict
+        elif human_matches_strict >= 1:
+            # Human words present but machine also present → coupled
+            detected_class = "COUPLED_HUMAN_MACHINE_SYSTEM"
+            max_matches = machine_core_count + human_matches_strict
+        else:
+            detected_class = "MACHINE_SYSTEM"
+            max_matches = machine_core_count
     else:
+        # No machine indicators → use normal keyword matching
         detected_class = None
         max_matches = 0
         for cls, keywords in class_keywords.items():
@@ -3551,8 +3743,19 @@ def _well_classify_substrate_impl(
                 max_matches = matches
                 detected_class = cls
 
-    if detected_class is None:
-        detected_class = "MATERIAL_OBJECT"
+        if detected_class is None:
+            detected_class = "MATERIAL_OBJECT"
+
+    # ── EXPLICIT SYSTEM LABEL OVERRIDES ─────────────────────────────────────
+    # arifOS MCP is a GOVERNANCE_SYSTEM, not a person
+    if "arif" in combined and any(k in combined for k in ["mcp", "governance", "kernel", "arifos", "arifmcp"]):
+        detected_class = "GOVERNANCE_SYSTEM"
+    # WELL MCP is a READINESS_MIRROR
+    elif "well" in combined and any(k in combined for k in ["mcp", "well-mcp", "vitality", "substrate"]):
+        detected_class = "READINESS_MIRROR"
+    # Generic AI/MCP without human coupling
+    elif detected_class == "MACHINE_SYSTEM" and any(k in combined for k in ["mcp", "arif", "governance", "tool"]):
+        detected_class = "GOVERNANCE_INSTRUMENT"
 
     vitality_mode = UNIVERSAL_VITALITY_MODES.get(detected_class, "unknown")
     evidence_list = evidence_types or []
