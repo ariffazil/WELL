@@ -1,4 +1,4 @@
-# Release Notes — WELL v1.1.0-KANON
+# Release Notes — WELL v2026.05.01-KANON
 
 ## ⬡ Biological Readiness Mirror Hardened ⬡
 

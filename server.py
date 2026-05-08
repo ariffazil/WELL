@@ -5274,6 +5274,46 @@ if __name__ == "__main__":
     port = int(_os.environ.get("PORT", 8083))
     app = mcp.http_app(path="/mcp", transport="streamable-http", json_response=True, stateless_http=True)
 
+    async def tools_handler(request):
+        """Federation tool discovery — flat tool registry with WELL danger metadata."""
+        all_tools = await mcp.list_tools()
+        # WELL is L1/L2 only — mirrors, informs, reflects; no irrevocable mutations
+        _DANGER_MAP = {
+            "well_seal_vault": {"danger_level": "L3", "fail_posture": "fail-closed"},
+            "well_check_floor": {"danger_level": "L3", "fail_posture": "fail-closed"},
+            "mcp_health_check": {"danger_level": "L1", "fail_posture": "fail-open"},
+        }
+        _FAIL_OPEN_CONSTRAINT = "may degrade output, must not elevate authority"
+        tools = []
+        for t in all_tools:
+            name = t.name
+            meta = _DANGER_MAP.get(name, {"danger_level": "L1", "fail_posture": "fail-open"})
+            tools.append({
+                "name": name,
+                "description": getattr(t, "description", "") or "",
+                "inputSchema": getattr(t, "inputSchema", {}),
+                "outputSchema": getattr(t, "output_schema", {}),
+                "danger_level": meta["danger_level"],
+                "fail_posture": meta["fail_posture"],
+                "fail_open_constraint": _FAIL_OPEN_CONSTRAINT if meta["fail_posture"] == "fail-open" else None,
+            })
+        return JSONResponse({
+            "organ": "WELL",
+            "role": "Body / Human Intelligence — Operator Cognitive Pressure Monitor",
+            "authority": "REFLECT_ONLY — WELL informs. arifOS judges. Arif decides.",
+            "schema": "well-federation-v2026.05.07",
+            "version": "2026.04.29",
+            "count": len(tools),
+            "w0_invariant": "WELL holds a mirror, not a veto. Operator sovereignty is invariant.",
+            "danger_taxonomy": {
+                "L3": "vault seal / floor check — fail-closed mandatory",
+                "L2": "session / log — fail-open with constraint",
+                "L1": "observe / health / readiness — fail-open with constraint",
+            },
+            "fail_open_constraint": _FAIL_OPEN_CONSTRAINT,
+            "tools": tools,
+        })
+
     async def health_handler(request):
         state = _load_state()
         well_ok = is_well(state)
@@ -5292,6 +5332,7 @@ if __name__ == "__main__":
         })
 
     app.add_route("/health", health_handler, methods=["GET"])
+    app.add_route("/tools", tools_handler, methods=["GET"])
 
     uvicorn.run(app, host=host, port=port, log_level=_os.environ.get("LOG_LEVEL", "info"))
 # ═══════════════════════════════════════════════════════════════════════════════
