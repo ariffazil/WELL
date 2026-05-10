@@ -1,78 +1,96 @@
 # TODO — WELL Biological Substrate
 
+> **Roadmap:** ARIFOS_NEXT_HORIZON_2026  
+> **Execution Status:** HOLD until contracts frozen  
 > **Last Updated:** 2026-05-10  
-> **Session:** Governance Attestation + Substrate Vitality  
 > **Seal:** DITEMPA BUKAN DIBERI
 
 ---
 
-## ✅ Completed This Session
+## ✅ Embodiment Attestation (Completed Earlier Today)
 
-- [x] **arifOS embodiment contracts** deployed — WELL tools now respect lane/tier gating at kernel level
-- [x] **Model registry fix** — `gpt-5.5-thinking` resolves for governance attestation
-
----
-
-## 🔴 P0 — Critical (Before Next Session)
-
-### Version String Drift
-Health endpoint shows stale `2026.05.08` despite newer build (`5b017e2`).
-
-- [ ] **Bump version string** in `server.py` or build metadata
-- [ ] **Automate version injection** at build time from git tag or commit SHA
-- [ ] **Verify health endpoint** returns correct version after deploy
-
-### State File Integrity
-`state.json` and `events.jsonl` are the live operator state.
-
-- [ ] **Validate JSON schema** on every write — corrupt state = blind federation
-- [ ] **Backup strategy** — periodic snapshot to VAULT999 or separate volume
-- [ ] **Recovery test** — simulate state file corruption, verify graceful degradation
+- [x] arifOS embodiment contracts deployed
+- [x] Model registry fix
 
 ---
 
-## 🟠 P1 — High (Next 7 Days)
+## 🔴 P0 — Horizon 0: Canon Lock (Days 0–14)
 
-### Cognitive Load Integration with Embodiment Contracts
-WELL must feed operator readiness into arifOS tool gating.
+**Gate: No new features until contracts are frozen.**
 
-- [ ] **Export `cognitive_load` metric** via health endpoint or MCP tool
+### Authority Freeze
+- [ ] **Create `REPO_AUTHORITY_MATRIX.md`** — what WELL may own / must not own
+- [ ] **Tool inventory** — 60 tools (13 Ω-WELL + aliases), verify boundaries
+- [ ] **Schema inventory** — map all substrate schemas
+- [ ] **Version string fix** — health endpoint shows `2026.05.10`, not `2026.05.08`
+
+---
+
+## 🟠 P1 — Horizon 1: Security + Session Spine (Days 15–45)
+
+**Gate: Operator state feeds arifOS escalation thresholds.**
+
+### Substrate Evidence Schema
+- [ ] **Create `/schemas/substrate_evidence.schema.json`** — structured substrate vitality object
+- [ ] **Export `cognitive_load` metric** — via health endpoint or MCP tool
+- [ ] **Export `clarity` metric** — operator readiness score
+
+### arifOS Integration
 - [ ] **arifOS consumes WELL state** — adjust allowed risk tier based on operator clarity
-- [ ] **Thresholds:**
+- [ ] **Threshold enforcement:**
   - `clarity > 0.7` → all tiers allowed
   - `clarity 0.4–0.7` → SOVEREIGN blocked, CRITICAL allowed
   - `clarity < 0.4` → HOLD on all non-query tools
 
-### HRV / Biological Signal Hardening
-- [ ] **Validate HRV input** — reject impossible values (e.g., HR > 300)
-- [ ] **Sensor fallback** — if HRV device offline, infer from self-reported state
-- [ ] **Privacy boundary** — biological data NEVER leaves WELL container unencrypted
+### HRV / Biological Hardening
+- [ ] **Validate HRV input** — reject impossible values (HR > 300)
+- [ ] **Sensor fallback** — infer from self-reported state if device offline
+- [ ] **Privacy boundary** — biological data never leaves WELL container unencrypted
 
 ---
 
-## 🟡 P2 — Medium (Next 30 Days)
+## 🟡 P2 — Horizon 2: Deterministic Judge (Days 46–90)
 
-### Operator Panel Readiness
+**Gate: WELL evidence is machine-checkable and judge-ready.**
+
 - [ ] **Multi-operator aggregation** — average readiness across panel members
-- [ ] **Unavailability handling** — if operator offline > 30 min, escalate to next panel member
+- [ ] **Unavailability handling** — operator offline > 30 min → escalate to next panel member
 - [ ] **Readiness history** — 7-day rolling window for trend detection
-
-### WELL ↔ arifOS Loop
-- [ ] **Pre-JUDGE biological readiness mirror** — `gate/well_gate.py` integration
-- [ ] **Constitutional floor weighting** — F5 PEACE and F6 EMPATHY informed by WELL state
-- [ ] **Crisis mode** — if operator distress detected, auto-HOLD on irreversible tools
+- [ ] **WELL ↔ arifOS loop** — `gate/well_gate.py` pre-JUDGE biological readiness mirror
 
 ---
 
-## 🟢 P3 — Backlog (H2 2026)
+## 🟢 P3 — Horizon 3: Semantic Federation (Days 91–135)
 
-### Predictive Operator State
-- [ ] **ML model** — predict cognitive load 30 min ahead from HRV + sleep + activity patterns
+**Gate: WELL state affects causal decision intelligence.**
+
+### Causal Intelligence
+- [ ] **Causal template:** WELL/AAA → arifOS operator state affects escalation threshold
+- [ ] **Required causal output:**
+  ```json
+  {
+    "claim": "...",
+    "causal_graph_id": "...",
+    "intervention_tested": "...",
+    "counterfactual": "...",
+    "uncertainty": "...",
+    "evidence_refs": [],
+    "recommended_verdict": "HOLD"
+  }
+  ```
+- [ ] **Predictive operator state** — ML model predicts cognitive load 30 min ahead
+
+---
+
+## 🔵 P4 — Horizon 4: Self-Healing + Release (Days 136–180)
+
+**Gate: WELL informs recovery decisions, never authorizes them.**
+
+- [ ] **Recovery readiness check** — WELL assesses operator fitness before recovery
 - [ ] **Intervention suggestions** — recommend break, hydration, sleep before critical decisions
-
-### Cross-Operator Learning
-- [ ] **Anonymized readiness patterns** — learn what predicts good vs poor decision epochs
-- [ ] **Never expose individual data** — aggregate only, differential privacy
+- [ ] **Cross-operator learning** — anonymized readiness patterns (differential privacy)
+- [ ] **Public docs cleanup**
+- [ ] **Release tag `vNext-Horizon-0`**
 
 ---
 
