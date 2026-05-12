@@ -30,8 +30,10 @@ Any engineer modifying either repo must consult this contract before changing th
 | **Vitality measurement** | ✅ `well_assess_metabolism`, `well_validate_vitality` | ❌ Consumes only |
 | **Livelihood assessment** | ✅ `well_assess_livelihood` | ❌ Consumes only |
 | **Machine reliability** | ✅ `well_assess_reliability` | ❌ Consumes only |
+| **Governance reflection (G-WELL)** | ✅ `well_assess_governance`, `well_trace_decision` | ❌ Consumes only |
+| **Multi-organ consensus** | ✅ `well_validate_consensus` (local leg only) | ✅ Final judgment |
 | **MCP health reflection** | ✅ `mcp_health_check` (mirrored) | ❌ Owns raw probe |
-| **Coupled readiness** | ✅ Computes `human + machine + MCP` | ❌ Consumes only |
+| **Coupled readiness** | ✅ Computes `human + machine + G-WELL + MCP` | ❌ Consumes only |
 | **Constitutional verdict** | ❌ Never judges | ✅ `arif_judge_deliberate` |
 | **Routing / lanes** | ❌ Never routes | ✅ `arif_kernel_route` |
 | **Vault anchoring** | ❌ Requests only | ✅ `arif_vault_seal` |
@@ -103,6 +105,8 @@ WELL emits one canonical packet for arifOS consumption. arifOS ingests this at s
 | Field | Type | Source | arifOS Use |
 |-------|------|--------|------------|
 | `readiness` | `str` | `_resolve_readiness` | Human biological readiness gate |
+| `ground_state` | `str` | `_build_arifos_packet` | Derived ground state (GROUND/STRAINED/DEGRADED/UNSAFE/UNKNOWN) |
+| `decision_ceiling` | `str` | `_build_arifos_packet` | Max safe C-class (C0-C5) based on ground state |
 | `safe_mode` | `str` | `_resolve_readiness` | Forge bandwidth throttle |
 | `well_score` | `float` | State | Confidence degradation input |
 | `decision_classes_allowed` | `list[str]` | `_resolve_readiness` | C-class gate |
@@ -165,15 +169,66 @@ else:
 
 ---
 
-## 6. Versioning
+## 6. G-WELL Governance Bridge
 
-- **Packet version:** `schema_version` inside `mcp_snapshot` (e.g. `"2026.05.08"`)
+G-WELL is the **Machine Governance Mirror** — it reflects the health of the federated governance chain in constitutional terms.
+
+### 6.1 G-WELL Tools
+
+| Tool | Purpose | arifOS Use |
+|------|---------|------------|
+| `well_assess_governance` | Assess autonomic coherence, check/balance, floor compliance, evidence integrity, sovereignty preservation | Pre-verdict governance health check |
+| `well_trace_decision` | Trace decision lineage through the governance chain | Audit trail for 888_JUDGE |
+| `well_validate_consensus` | Validate multi-organ consensus before irreversible actions | Pre-execution multi-witness gate |
+
+### 6.2 Governance Handoff Packet
+
+When arifOS requests G-WELL context, WELL returns:
+
+```json
+{
+  "g_well_verdict": "COHERENT",
+  "g_well_score": 95.0,
+  "machine_verdict": "HEALTHY",
+  "governance_flags": [],
+  "pillars": {
+    "autonomic_coherence": ["Are governance organs...", "intact"],
+    "check_and_balance": ["Is no single organ...", "intact"]
+  },
+  "authority_boundary": "REFLECT_ONLY",
+  "w0": "OPERATOR_VETO_INTACT / HIERARCHY_INVARIANT"
+}
+```
+
+### 6.3 Verdict Grammar
+
+| `g_well_verdict` | Condition | arifOS Action |
+|-------------------|-----------|---------------|
+| `COHERENT` | No governance flags | Allow normal flow |
+| `STRESSED` | 1-2 governance flags | Narrow scope, recommend audit |
+| `FRAGMENTED` | 3+ governance flags | Gate to 888_JUDGE, human confirmation required |
+
+### 6.4 Consensus Gate (Irreversible Actions)
+
+For C4/C5 decisions, `well_validate_consensus` checks:
+1. **WELL witness:** Human readiness + G-WELL coherence
+2. **WEALTH witness:** Capital intelligence signal (via A2A)
+3. **GEOX witness:** Earth evidence signal (via A2A)
+4. **arifOS witness:** Constitutional floor compliance
+
+If any witness is HOLD or UNREACHABLE, consensus returns HOLD.
+
+---
+
+## 7. Versioning
+
+- **Packet version:** `schema_version` inside `mcp_snapshot` (e.g. `"2026.05.12"`)
 - **Contract version:** This document's `last_verified` field
 - **Compatibility rule:** arifOS must parse both unified and legacy shapes for 2 epochs after a breaking change
 
 ---
 
-## 7. Naming Conventions
+## 8. Naming Conventions
 
 | Project | Pattern | Example |
 |---------|---------|---------|
@@ -186,7 +241,7 @@ WELL deliberately uses `verb_noun` for readability. arifOS uses `noun_verb` for 
 
 ---
 
-## 8. Canonical Files
+## 9. Canonical Files
 
 | File | Repo | Role |
 |------|------|------|
@@ -198,11 +253,12 @@ WELL deliberately uses `verb_noun` for readability. arifOS uses `noun_verb` for 
 
 ---
 
-## 9. Change Log
+## 10. Change Log
 
 | Date | Change | Author |
 |------|--------|--------|
 | 2026-05-08 | v1.0 — Initial contract with unified substrate packet | Arif |
+| 2026-05-12 | v2.0 — Added G-WELL governance bridge, consensus validation, updated schema | Arif |
 
 ---
 

@@ -1125,6 +1125,176 @@ def test_omega_well_tools():
     asyncio.run(_test_omega_well_core())
 
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# G-WELL Registry Truth Gate
+# Every declared tool must be callable at runtime.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+def test_well_registry_declared_surface_matches_callable():
+    """
+    G-WELL Registry Truth Gate:
+    No declared tool may exist only in docs/manifest/schema.
+    Every declared tool must be callable at runtime.
+    """
+    print("\n🧪 Testing G-WELL Registry Truth Gate...")
+
+    # All tools that should exist at runtime
+    DECLARED_TOOLS = {
+        # Heartbeat
+        "mcp_health_check",
+        # Legacy (Phase 1-2)
+        "well_state", "well_log", "well_readiness", "well_init", "well_anchor",
+        "well_check_floors", "well_check_floor", "well_log_state", "well_get_readiness",
+        "well_list_log", "well_seal_vault", "well_get_health", "well_get_state",
+        "well_check_invariant", "well_log_signal", "well_list_events", "well_reflect_trend",
+        "well_reflect_readiness", "well_suggest_mode", "well_suggest_recovery",
+        "well_reflect_niat", "well_classify_task", "well_get_packet", "well_request_anchor",
+        "well_trend_analysis", "well_bandwidth_recommendation", "well_recovery_protocol",
+        "well_niat_check", "well_decision_classify", "well_arifos_packet", "well_consent_status",
+        "well_medical_boundary", "well_pressure_ledger", "well_daily_brief",
+        "well_machine_state", "well_coupled_readiness",
+        "well_decision_bandwidth", "well_forge_precheck", "well_forge_closeout",
+        # Ω-WELL aliases (13)
+        "well_000_init", "well_111_sense", "well_222_fetch", "well_333_mind",
+        "well_444_kernel", "well_555_memory", "well_666_heart", "well_777_forge",
+        "well_888_judge", "well_999_vault", "well_444_reply", "well_444_gateway",
+        "well_000_ops",
+        # Canonical 13
+        "well_classify_substrate", "well_trace_lineage", "well_detect_boundary",
+        "well_measure_gradient", "well_assess_metabolism", "well_assess_homeostasis",
+        "well_check_repair", "well_validate_vitality", "well_assess_livelihood",
+        "well_assess_reliability", "well_reflect_intelligence", "well_guard_dignity",
+        "well_anchor_evidence",
+        # G-WELL governance
+        "well_assess_governance", "well_trace_decision", "well_validate_consensus",
+        # M-WELL expansion
+        "well_machine_log_signal", "well_machine_trend", "well_machine_health_probe",
+        # H-WELL expansion
+        "well_fatigue_accumulator", "well_circadian_phase",
+    }
+
+    _write_canonical_state()
+    import asyncio
+
+    async def _check_registry():
+        tools = await mcp.call_tool("mcp_health_check")  # verify server is loaded
+        all_tools = await mcp.list_tools()
+        callable_names = {t.name for t in all_tools}
+
+        missing = DECLARED_TOOLS - callable_names
+        extra = callable_names - DECLARED_TOOLS
+
+        if missing:
+            print(f"\n  ❌ Missing from runtime: {sorted(missing)}")
+        if extra:
+            print(f"\n  📝 Undeclared but present: {sorted(extra)[:10]}...")
+
+        assert len(missing) == 0, f"G-WELL Registry Gate FAILED. {len(missing)} declared tools not callable: {sorted(missing)}"
+        assert len(callable_names) == len(DECLARED_TOOLS), f"Tool count mismatch: {len(callable_names)} callable vs {len(DECLARED_TOOLS)} declared"
+
+        print(f"  ✅ All {len(DECLARED_TOOLS)} declared tools callable at runtime")
+        print(f"  ✅ Registry size match: {len(callable_names)} = {len(DECLARED_TOOLS)}")
+        return callable_names
+
+    callable_set = asyncio.run(_check_registry())
+
+    # Verify all Ω-WELL aliases callable individually
+    for alias in ["well_000_init", "well_111_sense", "well_222_fetch", "well_333_mind",
+                  "well_444_kernel", "well_555_memory", "well_666_heart", "well_777_forge",
+                  "well_888_judge", "well_999_vault", "well_444_reply", "well_444_gateway",
+                  "well_000_ops"]:
+        assert alias in callable_set, f"Alias {alias} missing from runtime"
+
+    print("  ✅ Ω-WELL aliases: all 13 present")
+    print("\n✅ G-WELL Registry Truth Gate PASSED")
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Schema Compliance Gate
+# Every structured payload must include required fields.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+def test_well_todo_payload_requires_priority():
+    """
+    Schema compliance gate: todo objects must include priority field.
+    Prevents malformed payloads from reaching external tools.
+    Uses build_well_todo() from server module.
+    """
+    # Valid todo
+    todo = server_module.build_well_todo("Validate registry", "pending", "high")
+    assert todo["content"] == "Validate registry"
+    assert todo["status"] == "pending"
+    assert todo["priority"] == "high"
+
+    # Missing priority should raise
+    try:
+        server_module.build_well_todo("no status", status="invalid")
+        assert False, "Should have raised ValueError for invalid status"
+    except ValueError as e:
+        assert "status" in str(e)
+
+    try:
+        server_module.build_well_todo("no priority", status="pending", priority="urgent")
+        assert False, "Should have raised ValueError for invalid priority"
+    except ValueError as e:
+        assert "priority" in str(e)
+
+    try:
+        server_module.build_well_todo("", status="pending", priority="high")
+        assert False, "Should have raised ValueError for empty content"
+    except ValueError as e:
+        assert "content" in str(e)
+
+    print(f"  ✅ Schema gate catches: invalid status, invalid priority, empty content")
+
+
+def test_well_output_contains_w0():
+    """
+    Constitutional compliance gate: every tool output must carry w0 invariant.
+    """
+    REQUIRED_FIELDS = {"w0"}
+
+    state = _write_canonical_state()
+    import asyncio
+
+    async def _check_outputs():
+        output_tools = [
+            ("well_state", {}),
+            ("well_readiness", {}),
+            ("well_get_health", {}),
+            ("well_get_state", {}),
+            ("well_get_readiness", {}),
+            ("well_daily_brief", {}),
+            ("well_arifos_packet", {}),
+            ("well_coupled_readiness", {}),
+            ("well_forge_precheck", {"task_description": "test"}),
+            ("well_bandwidth_recommendation", {}),
+            ("well_assess_governance", {"mode": "full"}),
+            ("well_trace_decision", {}),
+            ("well_validate_consensus", {"action": "test"}),
+            ("well_machine_health_probe", {"targets": ["well"]}),
+            ("well_fatigue_accumulator", {"mode": "check"}),
+            ("well_circadian_phase", {}),
+        ]
+        failures = []
+        for name, args in output_tools:
+            try:
+                res = await mcp.call_tool(name, arguments=args)
+                data = json.loads(res.content[0].text)
+                if not REQUIRED_FIELDS.issubset(data.keys()):
+                    missing = REQUIRED_FIELDS - data.keys()
+                    failures.append(f"{name}: missing {missing}")
+            except Exception as e:
+                failures.append(f"{name}: error {e}")
+        return failures
+
+    failures = asyncio.run(_check_outputs())
+    assert len(failures) == 0, f"Output compliance failures:\n" + "\n".join(failures)
+    print(f"  ✅ All 16 tested outputs carry w0 invariant")
+
+
 if __name__ == "__main__":
     try:
         test_identity_invariants()
@@ -1134,6 +1304,9 @@ if __name__ == "__main__":
         test_well_unknown_telemetry()
         test_canonical_tools()
         test_omega_well_tools()
+        test_well_registry_declared_surface_matches_callable()
+        test_well_todo_payload_requires_priority()
+        test_well_output_contains_w0()
         print("\n✅ All AFWELL Audit tests passed!")
     except Exception as e:
         print(f"\n❌ Test failed: {e}")

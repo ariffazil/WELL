@@ -4,7 +4,7 @@
 > **Now expanded to Universal Substrate Governance — any substance, any substrate.**
 > **DITEMPA BUKAN DIBERI — Intelligence is forged, not given.**
 
-[![WELL](https://img.shields.io/badge/WELL-v2026.05.10-00D4AA?style=flat-square)](https://github.com/ariffazil/well)
+[![WELL](https://img.shields.io/badge/WELL-v2026.05.12-00D4AA?style=flat-square)](https://github.com/ariffazil/well)
 [![MCP](https://img.shields.io/badge/MCP-FastMCP-7C3AED?style=flat-square)](https://github.com/ariffazil/well)
 [![arifOS](https://img.shields.io/badge/arifOS-F1%E2%80%93F13_Governed-FF6B00?style=flat-square)](https://github.com/ariffazil/arifOS)
 [![License](https://img.shields.io/badge/License-AGPL_V3-4EAF0C?style=flat-square)](./LICENSE)
@@ -17,9 +17,10 @@ WELL is the **Universal Substrate Vitality Mirror** for arifOS. It provides high
 
 WELL is the **mirror** — it reflects the state of the human, machine, and any other substrate so arifOS can judge whether the current configuration is safe for the decision class at hand. It does not veto. It informs.
 
-WELL now operates across **10 substrate classes**:
+WELL now operates across **4 substrate layers + 1 governance abstraction**:
 - **H-WELL**: Human biological and cognitive state
 - **M-WELL**: Machine reliability and tool health
+- **G-WELL**: Machine governance health — autonomic coherence, check/balance integrity, floor compliance, evidence integrity, sovereignty preservation
 - **C-WELL**: Coupled human-machine readiness
 - **U-WELL**: Universal substrate classification (Phase 4)
   - Human livelihood (energy, time, role, meaning, dignity)
@@ -56,7 +57,7 @@ WELL informs  →  arifOS judges  →  A-FORGE executes  →  VAULT999 remembers
 
 | Capability | Count | Status |
 |------------|-------|--------|
-| **Tools** | 60 (13 canonical verb_noun + 13 stage aliases + 34 legacy) | ✅ Active |
+| **Tools** | 63 (13 canonical verb_noun + 13 stage aliases + 3 G-WELL governance + 34 legacy) | ✅ Active |
 | **Resources** | 6 canonical | ✅ Active |
 | **Prompts** | 4 canonical | ✅ Active |
 | **Instructions** | 1 server-level | ✅ Active |
@@ -71,6 +72,11 @@ WELL exposes **two canonical tool layers**:
 ## Ω-WELL — The 13-Tool Universal Stack
 
 Each Ω-WELL tool is **polymorphic** with a `mode` parameter. One tool covers ~4 of the original 50 tools.
+
+**G-WELL** (Machine Governance Mirror) adds 3 governance-specific tools:
+- `well_assess_governance` — Assess autonomic coherence, check/balance, floor compliance, evidence integrity, sovereignty
+- `well_trace_decision` — Trace decision lineage through the governance chain
+- `well_validate_consensus` — Validate multi-organ consensus before irreversible actions
 
 | # | Ω-WELL Tool | Ontology Layer | arifOS Stage | AAA Dimension | Modes | Compressed From |
 |---|-------------|----------------|--------------|---------------|-------|-----------------|
@@ -281,13 +287,19 @@ Arif (F13) → arif_session_init → arif_sense_observe → arif_evidence_fetch
 | Field | Value |
 |-------|-------|
 | Canonical repository | `https://github.com/ariffazil/well` |
-| Package version | `v2026.05.08-ΩWELL` |
+| Canonical branch | `main` |
+| Package version | `v2026.05.12-ΩWELL+GWELL` |
 | Framework | FastMCP >= 3.0 |
 | Entry point | `server.py` |
-| State | `/root/well/state.json` |
-| Events | `/root/well/events.jsonl` |
-| Vault ledger | `/root/well/vault_ledger.jsonl` |
+| State | `/root/WELL/state.json` |
+| Events | `/root/WELL/events.jsonl` |
+| Vault ledger | `/root/WELL/vault_ledger.jsonl` |
+| Schema | `/root/WELL/schema.json` (v2026.05.12) |
+| Manifest | `/root/WELL/tool_authority_manifest.yaml` (v2026.05.12) |
 | Health endpoint | `GET /health` |
+| Ready endpoint | `GET /ready` |
+| Public ready | `https://well.arif-fazil.com/ready` |
+| Live readiness snapshot | `WELL_PASS`, `authority=REFLECT_ONLY`, `has_telemetry=false` |
 
 ---
 

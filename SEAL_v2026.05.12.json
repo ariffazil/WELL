@@ -1,0 +1,49 @@
+{
+  "seal_type": "999_SEAL",
+  "organ": "WELL",
+  "version": "2026.05.12-ΩWELL+GWELL",
+  "epoch": "2026-05-12",
+  "git_sha": "aa02602",
+  "verdict": "WELL_PASS",
+  "authority": "REFLECT_ONLY",
+  "g_well_verdict": "COHERENT",
+  "test_verdict": "ALL_PASS",
+  "gates": {
+    "identity_invariant": "PASS",
+    "authority_grammar": "REFLECT_ONLY",
+    "truth_policy": "VERIFIED",
+    "g_well_registry_truth": "PASS (74/74 tools callable)",
+    "schema_compliance": "PASS",
+    "w0_output_gate": "PASS (16/16 outputs)",
+    "constitutional_floors": "ALL CLEAR",
+    "decision_ceiling": "C5"
+  },
+  "tool_surface": {
+    "canonical_13": "13/13",
+    "omega_well_aliases": "13/13",
+    "g_well_governance": "3/3",
+    "m_well_telemetry": "3/3",
+    "h_well_expansion": "2/3",
+    "legacy_compat": "40/40",
+    "total": "74/74"
+  },
+  "deployed": {
+    "container": "well",
+    "image": "ghcr.io/ariffazil/well:aa02602",
+    "port": 8083,
+    "status": "healthy",
+    "endpoint": "https://well.arif-fazil.com/health"
+  },
+  "floors": {
+    "W0": "INVARIANT",
+    "W1": "OK",
+    "W2": "OK",
+    "W3": "OK",
+    "W4": "OK",
+    "W5": "OK",
+    "W6": "OK",
+    "W7": "OK"
+  },
+  "w0": "OPERATOR_VETO_INTACT / HIERARCHY_INVARIANT",
+  "seal": "DITEMPA BUKAN DIBERI"
+}

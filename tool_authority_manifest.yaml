@@ -1,16 +1,20 @@
-# WELL Tool Authority Manifest
-# schema_version: 2026.05.08
+# WELL Tool Authority Manifest v2026.05.12
+# schema_version: 2026.05.12
 # final_authority: ARIF
+# SOT: /root/WELL/tool_authority_manifest.yaml
 #
 # Every tool declares: can it read? write? mutate? seal? execute? advise?
 # This prevents future agents from misusing the surface.
+#
+# DITEMPA BUKAN DIBERI — Intelligence is forged, not given.
 
 mcp: WELL
-schema_version: "2026.05.08"
+schema_version: "2026.05.12"
 final_authority: "ARIF"
 irreversible_requires_human_ack: true
 self_approval_forbidden: true
 
+# ── Heartbeat ──────────────────────────────────────────────────────────────────
 heartbeat:
   - tool: mcp_health_check
     type: heartbeat
@@ -19,105 +23,245 @@ heartbeat:
     requires_ack: false
     description: Federation liveness probe
 
+# ── Canonical 13 Tools (Ω-WELL verb_noun surface) ──────────────────────────────
 canonical_tools:
   - tool: well_classify_substrate
     type: reader
     mutation: false
     irreversible: false
     requires_ack: false
-    description: Chemistry-level substrate classification
+    description: "Ω-01: Substrate classification + session bootstrap (modes: init|assert|bootstrap|classify|boundary|scan)"
 
   - tool: well_trace_lineage
     type: reader
     mutation: false
     irreversible: false
     requires_ack: false
-    description: Biology-level lineage tracing
+    description: "Ω-02: Memory, trend, ledger, and vault chain tracing (modes: recall|trend|context|ledger|chain)"
 
   - tool: well_detect_boundary
     type: reader
     mutation: false
     irreversible: false
     requires_ack: false
-    description: Boundary and threshold detection
+    description: "Ω-03: Boundary detection + federation A2A gateway (modes: classify|boundary|scan|status|connect|handoff|manifest)"
 
   - tool: well_measure_gradient
     type: reader
     mutation: false
     irreversible: false
     requires_ack: false
-    description: Energy gradient measurement
+    description: "Ω-04: Evidence/energy gradient measurement (modes: evidence|quality|ingest)"
 
   - tool: well_assess_metabolism
     type: reflector
     mutation: false
     irreversible: false
     requires_ack: false
-    description: Metabolism assessment
+    description: "Ω-05: Substrate metabolism/throughput assessment (modes: human|machine|coupled|bio|material|institution|info|symbolic)"
 
   - tool: well_assess_homeostasis
     type: reflector
     mutation: false
     irreversible: false
     requires_ack: false
-    description: Homeostasis and regulation check
+    description: "Ω-06: Regulation, empathy, dignity critique (modes: critique|empathize|dignity|redteam|maruah)"
 
   - tool: well_check_repair
     type: reflector
     mutation: false
     irreversible: false
     requires_ack: false
-    description: Repair and resilience assessment
+    description: "Ω-07: Forge coupling, recovery, pressure, closeout (modes: precheck|mode|bandwidth|pressure|closeout)"
 
   - tool: well_validate_vitality
     type: guard
     mutation: false
     irreversible: false
     requires_ack: false
-    description: Vitality validation against thresholds
+    description: "Ω-08: Readiness, classification, NIAT, coupled, floors (modes: readiness|classify|niat|coupled|floors)"
 
   - tool: well_assess_livelihood
     type: reflector
     mutation: false
     irreversible: false
     requires_ack: false
-    description: Livelihood and sustainability assessment
+    description: "Ω-09: Human wellness, role, dignity, meaning (modes: human|machine|coupled|bio|material|institution|info|symbolic)"
 
   - tool: well_assess_reliability
     type: reader
     mutation: false
     irreversible: false
     requires_ack: false
-    description: Machine reliability assessment
+    description: "Ω-10: Machine/tool/infra reliability + medical boundary (modes: health|consent|medical|vitals)"
 
   - tool: well_reflect_intelligence
     type: reflector
     mutation: false
     irreversible: false
     requires_ack: false
-    description: Intelligence and deliberation reflection
+    description: "Ω-11: Cognition routing, lane selection, stage dispatch (modes: route|stage|lane|list)"
 
   - tool: well_guard_dignity
     type: guard
     mutation: false
     irreversible: false
     requires_ack: false
-    description: Dignity and meaning protection
+    description: "Ω-12: Dignity, symbolic boundary, maruah protection (modes: dignity|consent|critique|empathize|redteam|maruah)"
 
   - tool: well_anchor_evidence
     type: writer
     mutation: true
     irreversible: true
     requires_ack: true
-    description: Evidence anchoring to VAULT999
+    description: "Ω-13: Evidence anchoring, vault seal, packet composition (modes: seal|anchor|verify|chain|packet|brief|verdict|daily|unified)"
     authority_note: "Only Arif may authorize irreversible vault seals."
 
+# ── G-WELL Governance Abstraction Tools (Machine Governance Mirror) ────────────
+g_well_tools:
+  - tool: well_assess_governance
+    type: reflector
+    mutation: false
+    irreversible: false
+    requires_ack: false
+    description: "G-WELL: Assess constitutional governance state - autonomic coherence, check/balance integrity, floor compliance across all machine governance layers"
+
+  - tool: well_trace_decision
+    type: reader
+    mutation: false
+    irreversible: false
+    requires_ack: false
+    description: "G-WELL: Trace decision lineage through machine governance chain - who authorized what, when, under what substrate state"
+
+  - tool: well_validate_consensus
+    type: guard
+    mutation: false
+    irreversible: false
+    requires_ack: false
+    description: "G-WELL: Validate multi-organ consensus before irreversible actions - checks WELL + WEALTH + GEOX + arifOS alignment"
+
+# ── Ω-WELL Stage Aliases (deprecation bridge) ──────────────────────────────────
+omega_well_aliases:
+  - tool: well_000_init
+    canonical: well_classify_substrate
+    modes: [init, assert, bootstrap]
+    type: reader
+    mutation: false
+    deprecation_epoch: "2026-Q3"
+  - tool: well_111_sense
+    canonical: well_classify_substrate
+    modes: [classify, boundary, scan]
+    type: reader
+    mutation: false
+    deprecation_epoch: "2026-Q3"
+  - tool: well_222_fetch
+    canonical: well_measure_gradient
+    modes: [evidence, quality, ingest]
+    type: reader
+    mutation: false
+    deprecation_epoch: "2026-Q3"
+  - tool: well_333_mind
+    canonical: well_assess_metabolism
+    modes: [human, machine, coupled, bio, material, institution, info, symbolic]
+    type: reflector
+    mutation: false
+    deprecation_epoch: "2026-Q3"
+  - tool: well_444_kernel
+    canonical: well_reflect_intelligence
+    modes: [route, stage, lane, list]
+    type: reflector
+    mutation: false
+    deprecation_epoch: "2026-Q3"
+  - tool: well_555_memory
+    canonical: well_trace_lineage
+    modes: [recall, trend, ledger, context]
+    type: reader
+    mutation: false
+    deprecation_epoch: "2026-Q3"
+  - tool: well_666_heart
+    canonical: well_assess_homeostasis
+    modes: [critique, empathize, dignity, redteam, maruah]
+    type: reflector
+    mutation: false
+    deprecation_epoch: "2026-Q3"
+  - tool: well_777_forge
+    canonical: well_check_repair
+    modes: [precheck, mode, bandwidth, pressure, closeout]
+    type: reflector
+    mutation: false
+    deprecation_epoch: "2026-Q3"
+  - tool: well_888_judge
+    canonical: well_validate_vitality
+    modes: [readiness, classify, niat, coupled, floors]
+    type: guard
+    mutation: false
+    deprecation_epoch: "2026-Q3"
+  - tool: well_999_vault
+    canonical: well_trace_lineage
+    modes: [seal, anchor, verify, chain]
+    type: writer
+    mutation: true
+    irreversible: true
+    requires_ack: true
+    deprecation_epoch: "2026-Q3"
+  - tool: well_444_reply
+    canonical: well_anchor_evidence
+    modes: [packet, brief, verdict, daily]
+    type: reader
+    mutation: false
+    deprecation_epoch: "2026-Q3"
+  - tool: well_444_gateway
+    canonical: well_detect_boundary
+    modes: [status, connect, handoff, manifest]
+    type: reader
+    mutation: false
+    deprecation_epoch: "2026-Q3"
+  - tool: well_000_ops
+    canonical: well_assess_reliability
+    modes: [health, consent, medical, vitals]
+    type: reader
+    mutation: false
+    deprecation_epoch: "2026-Q3"
+
+# ── Legacy Wrappers (fully deprecated, removal eligible 2026-Q4) ───────────────
 legacy_wrappers:
   - tool: well_state
     canonical_delegate: well_validate_vitality
     delegate_mode: state
     type: reader
     mutation: false
+    irreversible: false
+    deprecation_epoch: "2026-Q3"
+
+  - tool: well_log
+    canonical_delegate: well_assess_metabolism
+    delegate_mode: human
+    type: writer
+    mutation: true
+    irreversible: false
+    deprecation_epoch: "2026-Q3"
+
+  - tool: well_pressure
+    canonical_delegate: well_check_repair
+    delegate_mode: pressure
+    type: writer
+    mutation: true
+    irreversible: false
+    deprecation_epoch: "2026-Q3"
+
+  - tool: well_readiness
+    canonical_delegate: well_validate_vitality
+    delegate_mode: readiness
+    type: reader
+    mutation: false
+    irreversible: false
+    deprecation_epoch: "2026-Q3"
+
+  - tool: well_init
+    canonical_delegate: well_classify_substrate
+    delegate_mode: init
+    type: writer
+    mutation: true
     irreversible: false
     deprecation_epoch: "2026-Q3"
 
@@ -138,9 +282,33 @@ legacy_wrappers:
     irreversible: false
     deprecation_epoch: "2026-Q3"
 
-  - tool: well_arifos_packet
-    canonical_delegate: well_get_packet
-    delegate_params: {target: arifos}
+  - tool: well_check_floor
+    canonical_delegate: well_validate_vitality
+    delegate_mode: floors
+    type: reader
+    mutation: false
+    irreversible: false
+    deprecation_epoch: "2026-Q3"
+
+  - tool: well_log_state
+    canonical_delegate: well_assess_metabolism
+    delegate_mode: log_state
+    type: writer
+    mutation: true
+    irreversible: false
+    deprecation_epoch: "2026-Q3"
+
+  - tool: well_get_readiness
+    canonical_delegate: well_validate_vitality
+    delegate_mode: readiness
+    type: reader
+    mutation: false
+    irreversible: false
+    deprecation_epoch: "2026-Q3"
+
+  - tool: well_list_log
+    canonical_delegate: well_trace_lineage
+    delegate_mode: recall
     type: reader
     mutation: false
     irreversible: false
@@ -155,13 +323,209 @@ legacy_wrappers:
     requires_ack: true
     deprecation_epoch: "2026-Q3"
 
+  - tool: well_trend_analysis
+    canonical_delegate: well_trace_lineage
+    delegate_mode: trend
+    type: reader
+    mutation: false
+    irreversible: false
+    deprecation_epoch: "2026-Q3"
+
+  - tool: well_bandwidth_recommendation
+    canonical_delegate: well_assess_metabolism
+    delegate_mode: bandwidth
+    type: reader
+    mutation: false
+    irreversible: false
+    deprecation_epoch: "2026-Q3"
+
+  - tool: well_recovery_protocol
+    canonical_delegate: well_check_repair
+    delegate_mode: recovery
+    type: reader
+    mutation: false
+    irreversible: false
+    deprecation_epoch: "2026-Q3"
+
+  - tool: well_niat_check
+    canonical_delegate: well_validate_vitality
+    delegate_mode: niat
+    type: reader
+    mutation: false
+    irreversible: false
+    deprecation_epoch: "2026-Q3"
+
+  - tool: well_decision_classify
+    canonical_delegate: well_validate_vitality
+    delegate_mode: classify
+    type: reader
+    mutation: false
+    irreversible: false
+    deprecation_epoch: "2026-Q3"
+
+  - tool: well_arifos_packet
+    canonical_delegate: well_anchor_evidence
+    delegate_mode: packet
+    delegate_params: {target: arifos}
+    type: reader
+    mutation: false
+    irreversible: false
+    deprecation_epoch: "2026-Q3"
+
+  - tool: well_consent_status
+    canonical_delegate: well_guard_dignity
+    delegate_mode: consent
+    type: reader
+    mutation: false
+    irreversible: false
+    deprecation_epoch: "2026-Q3"
+
+  - tool: well_medical_boundary
+    canonical_delegate: well_assess_reliability
+    delegate_mode: medical
+    type: reader
+    mutation: false
+    irreversible: false
+    deprecation_epoch: "2026-Q3"
+
+  - tool: well_pressure_ledger
+    canonical_delegate: well_trace_lineage
+    delegate_mode: ledger
+    type: reader
+    mutation: false
+    irreversible: false
+    deprecation_epoch: "2026-Q3"
+
+  - tool: well_daily_brief
+    canonical_delegate: well_anchor_evidence
+    delegate_mode: daily
+    type: reader
+    mutation: false
+    irreversible: false
+    deprecation_epoch: "2026-Q3"
+
+  - tool: well_machine_state
+    canonical_delegate: well_assess_reliability
+    delegate_mode: state
+    type: reader
+    mutation: false
+    irreversible: false
+    deprecation_epoch: "2026-Q3"
+
+  - tool: well_machine_log
+    canonical_delegate: well_assess_metabolism
+    delegate_mode: machine
+    type: writer
+    mutation: true
+    irreversible: false
+    deprecation_epoch: "2026-Q3"
+
+  - tool: well_machine_reliability
+    canonical_delegate: well_assess_reliability
+    delegate_mode: health
+    type: reader
+    mutation: false
+    irreversible: false
+    deprecation_epoch: "2026-Q3"
+
+  - tool: well_coupled_readiness
+    canonical_delegate: well_validate_vitality
+    delegate_mode: coupled
+    type: reader
+    mutation: false
+    irreversible: false
+    deprecation_epoch: "2026-Q3"
+
+  - tool: well_decision_bandwidth
+    canonical_delegate: well_reflect_intelligence
+    delegate_mode: route
+    type: reader
+    mutation: false
+    irreversible: false
+    deprecation_epoch: "2026-Q3"
+
+  - tool: well_forge_precheck
+    canonical_delegate: well_check_repair
+    delegate_mode: precheck
+    type: reader
+    mutation: false
+    irreversible: false
+    deprecation_epoch: "2026-Q3"
+
+  - tool: well_forge_pressure_update
+    canonical_delegate: well_check_repair
+    delegate_mode: pressure
+    type: writer
+    mutation: true
+    irreversible: false
+    deprecation_epoch: "2026-Q3"
+
+  - tool: well_forge_mode_recommend
+    canonical_delegate: well_check_repair
+    delegate_mode: mode
+    type: reader
+    mutation: false
+    irreversible: false
+    deprecation_epoch: "2026-Q3"
+
+  - tool: well_forge_closeout
+    canonical_delegate: well_check_repair
+    delegate_mode: closeout
+    type: writer
+    mutation: true
+    irreversible: false
+    deprecation_epoch: "2026-Q3"
+
+# ── U-WELL Internal Tools (absorbed into canonical modes, no public MCP surface) ──
+uwell_internal:
+  - tool: well_boundary_check
+    absorbed_into: well_detect_boundary(mode=boundary)
+    type: internal
+  - tool: well_evidence_quality_check
+    absorbed_into: well_measure_gradient(mode=evidence)
+    type: internal
+  - tool: well_verdict_packet
+    absorbed_into: well_anchor_evidence(mode=verdict)
+    type: internal
+  - tool: well_livelihood_energy_check
+    absorbed_into: well_assess_metabolism(mode=human)
+    type: internal
+  - tool: well_livelihood_time_check
+    absorbed_into: well_assess_metabolism(mode=human)
+    type: internal
+  - tool: well_livelihood_role_check
+    absorbed_into: well_assess_metabolism(mode=human)
+    type: internal
+  - tool: well_livelihood_meaning_check
+    absorbed_into: well_assess_metabolism(mode=human)
+    type: internal
+  - tool: well_livelihood_dignity_check
+    absorbed_into: well_assess_homeostasis(mode=dignity)
+    type: internal
+  - tool: well_bio_viability_check
+    absorbed_into: well_assess_metabolism(mode=bio)
+    type: internal
+  - tool: well_material_integrity_check
+    absorbed_into: well_assess_metabolism(mode=material)
+    type: internal
+  - tool: well_institution_entropy_check
+    absorbed_into: well_assess_metabolism(mode=institution)
+    type: internal
+  - tool: well_info_coherence_check
+    absorbed_into: well_assess_metabolism(mode=info)
+    type: internal
+  - tool: well_symbolic_domain_check
+    absorbed_into: well_assess_metabolism(mode=symbolic)
+    type: internal
+
+# ── Danger Taxonomy ────────────────────────────────────────────────────────────
 danger_taxonomy:
   L3:
     description: "vault seal / floor check — fail-closed mandatory"
-    tools: [well_anchor_evidence, well_seal_vault, well_request_anchor, well_check_floor]
+    tools: [well_anchor_evidence, well_seal_vault, well_request_anchor, well_check_floor, well_validate_consensus]
   L2:
-    description: "session / log / assess — fail-open with constraint"
-    tools: [well_validate_vitality, well_check_repair, well_guard_dignity, well_assess_metabolism, well_assess_homeostasis, well_assess_livelihood, well_assess_reliability, well_reflect_intelligence]
+    description: "session / log / assess / govern — fail-open with constraint"
+    tools: [well_validate_vitality, well_check_repair, well_guard_dignity, well_assess_metabolism, well_assess_homeostasis, well_assess_livelihood, well_assess_reliability, well_reflect_intelligence, well_assess_governance]
   L1:
-    description: "observe / health / readiness — fail-open with constraint"
-    tools: [well_classify_substrate, well_trace_lineage, well_detect_boundary, well_measure_gradient, mcp_health_check, well_state, well_get_packet, well_arifos_packet, well_readiness]
+    description: "observe / health / readiness / trace — fail-open with constraint"
+    tools: [well_classify_substrate, well_trace_lineage, well_detect_boundary, well_measure_gradient, well_trace_decision, mcp_health_check, well_state, well_get_packet, well_arifos_packet, well_readiness]
