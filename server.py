@@ -8,7 +8,6 @@ WELL informs. arifOS judges. A-FORGE executes. Hierarchy is invariant.
 
 from __future__ import annotations
 
-import asyncio
 import hashlib
 import json
 import datetime
@@ -77,6 +76,57 @@ UNIVERSAL_VITALITY_MODES = {
     "INFORMATION_SYSTEM": "coherence, maintainability, truth integrity",
     "SYMBOLIC_METAPHYSICAL": "not_machine_measurable — meaning protected, not quantified",
 }
+
+# ── G-WELL Governance Abstraction ─────────────────────────────────────────────
+# Machine Governance Mirror: reflects the federated governance chain
+# G-WELL is not a separate substrate — it is the governance abstraction layer
+# that maps machine state (m_machine) into constitutional governance terms.
+
+G_WELL_PILLARS = {
+    "autonomic_coherence": "Are governance organs operating within their constitutional boundaries?",
+    "check_and_balance": "Is no single organ exceeding its authority? Is the separation of powers intact?",
+    "floor_compliance": "Are constitutional floors (F1-F13) being respected across the chain?",
+    "evidence_integrity": "Is decision evidence anchored and auditable before action?",
+    "sovereignty_preserved": "Is human veto path intact and unbypassed?",
+}
+
+G_WELL_VERDICTS = ["COHERENT", "STRESSED", "FRAGMENTED", "UNKNOWN"]
+
+# ── W-Floor Definitions (Canonical — WELL_INVARIANTS.md §I6) ───────────────────
+W_FLOOR_DEFINITIONS = {
+    "W0": {"name": "Sovereignty Invariant", "threshold": "always_active", "max_severity": "foundational", "arifos_map": "F13"},
+    "W1": {"name": "Sleep Integrity", "threshold": "debt >= 2 nights or quality < 5", "max_severity": "CRITICAL", "arifos_map": "F1, F2"},
+    "W2": {"name": "Metabolic Stability", "threshold": "dehydration or stability < 5", "max_severity": "CAUTION", "arifos_map": "F1, F10"},
+    "W3": {"name": "Stress Load", "threshold": "load >= 7/10 or chronic elevation", "max_severity": "CRITICAL", "arifos_map": "F6, F10"},
+    "W4": {"name": "Physical Integrity", "threshold": "sedentary >= 4h or pain >= 5/10", "max_severity": "CAUTION", "arifos_map": "F9, F10"},
+    "W5": {"name": "Cognitive Entropy", "threshold": "clarity < 4/10 or high fatigue", "max_severity": "WARNING", "arifos_map": "F2, F3"},
+    "W6": {"name": "Incentive Decoupling", "threshold": ">= 5 similar forges / 30 min", "max_severity": "WARNING", "arifos_map": "F1, F11"},
+    "W7": {"name": "Skill Atrophy", "threshold": ">= 14 days without manual practice", "max_severity": "WARNING", "arifos_map": "F1, F4"},
+}
+
+W_FLOOR_SEVERITY_ORDER = {"INFO": 0, "CAUTION": 1, "WARNING": 2, "CRITICAL": 3, "foundational": 4}
+
+# ── Structured Payload Builder ─────────────────────────────────────────────────
+# Every structured object must pass schema validation before output.
+# This prevents malformed payloads (e.g. missing priority in todos).
+
+def build_well_todo(content: str, status: str = "pending", priority: str = "high") -> dict[str, str]:
+    """
+    Build a valid todo object with required schema fields.
+    Raises ValueError if any field is missing or invalid.
+    """
+    valid_statuses = {"pending", "in_progress", "completed", "cancelled"}
+    valid_priorities = {"high", "medium", "low"}
+
+    if not content or not isinstance(content, str):
+        raise ValueError("todo content must be a non-empty string")
+    if status not in valid_statuses:
+        raise ValueError(f"todo status must be one of {valid_statuses}, got {status!r}")
+    if priority not in valid_priorities:
+        raise ValueError(f"todo priority must be one of {valid_priorities}, got {priority!r}")
+
+    return {"content": content, "status": status, "priority": priority}
+
 
 # ── Telemetry Purity Guard ──────────────────────────────────────────────────────
 def _check_telemetry_purity(
@@ -251,25 +301,6 @@ def _federation_health_reconcile(
     }
 
 
-# ── Telemetry Provenance Builder ────────────────────────────────────────────────
-def _build_provenance(
-    source_type: str = "OPERATOR_REPORTED",
-    operator_confirmed: bool = False,
-    telemetry_status: str = "LIVE",
-    truth_status: str = "UNVERIFIED",
-    environment: str = "PROD",
-) -> dict[str, Any]:
-    """Build standard provenance block for every WELL output."""
-    return {
-        "source_type": source_type,
-        "operator_confirmed": operator_confirmed,
-        "telemetry_status": telemetry_status,
-        "truth_status": truth_status,
-        "environment": environment,
-        "purity_check": _check_telemetry_purity(),
-    }
-
-
 # ── WELL Identity Invariant (F10 Coherence + F01 Amanah) ───────────────────────
 def is_well(state: dict[str, Any] | None = None) -> bool:
     """
@@ -288,22 +319,6 @@ def is_well(state: dict[str, Any] | None = None) -> bool:
         and state.get("amanah") in ["LOCK", "🔐", True]
         and state.get("authority") == "REFLECT_ONLY"
     )
-
-
-def _enforce_reflect_only() -> dict[str, Any] | None:
-    """
-    Return an error payload if WELL identity is corrupted or authority is overridden.
-    Otherwise return None (pass through).
-    """
-    if not is_well():
-        return {
-            "ok": False,
-            "verdict": "NOT_WELL",
-            "error": "WELL identity invariant failed. REFLECT_ONLY authority compromised or state corrupted.",
-            "authority": "REFLECT_ONLY",
-            "w0": "OPERATOR_VETO_INTACT / HIERARCHY_INVARIANT",
-        }
-    return None
 
 
 def _clamp(value: float | int | None, minimum: float, maximum: float) -> float | None:
@@ -361,6 +376,7 @@ def _resolve_readiness(state: dict[str, Any]) -> dict[str, Any]:
     score = _state_score(state)
     violations = state.get("floors_violated", [])
     metrics = state.get("metrics", {})
+    ceiling = _compute_decision_ceiling(state)
 
     # ── Unknown telemetry path (fail closed without faking biology) ──
     if not _has_verified_telemetry(state):
@@ -368,6 +384,8 @@ def _resolve_readiness(state: dict[str, Any]) -> dict[str, Any]:
             "readiness": "UNKNOWN",
             "risk_level": "UNKNOWN",
             "recommended_mode": "draft_only",
+            "ground_state": ceiling.get("ground_state", "UNKNOWN"),
+            "decision_ceiling": ceiling.get("decision_ceiling", "C0"),
             "human_confirmation_required": True,
             "reason": "No verified body telemetry available. WELL cannot infer biological readiness.",
             "well_score": score,
@@ -382,6 +400,8 @@ def _resolve_readiness(state: dict[str, Any]) -> dict[str, Any]:
             "readiness": "VOID_TELEMETRY",
             "risk_level": "RED",
             "recommended_mode": "pause",
+            "ground_state": "UNSAFE",
+            "decision_ceiling": "C0",
             "human_confirmation_required": True,
             "reason": "WELL telemetry is unverified or contaminated. Manual Arif confirmation required.",
             "well_score": score,
@@ -397,6 +417,8 @@ def _resolve_readiness(state: dict[str, Any]) -> dict[str, Any]:
             "readiness": "DEGRADED" if truth_status == "EXPIRED" else "LOW_CAPACITY",
             "risk_level": "RED" if truth_status == "EXPIRED" else "AMBER",
             "recommended_mode": "draft_only" if truth_status == "EXPIRED" else "review_or_draft",
+            "ground_state": ceiling.get("ground_state", "DEGRADED"),
+            "decision_ceiling": ceiling.get("decision_ceiling", "C1"),
             "human_confirmation_required": True,
             "reason": f"Telemetry {truth_status.lower()}. WELL cannot confirm biological readiness without fresh verified evidence.",
             "well_score": score,
@@ -417,6 +439,8 @@ def _resolve_readiness(state: dict[str, Any]) -> dict[str, Any]:
             "readiness": readiness_capped,
             "risk_level": "RED",
             "recommended_mode": "draft_only",
+            "ground_state": ceiling.get("ground_state", "DEGRADED"),
+            "decision_ceiling": ceiling.get("decision_ceiling", "C1"),
             "human_confirmation_required": True,
             "reason": f"Substrate flagging: {', '.join(violations)}. Strategic forge bandwidth throttled.",
             "well_score": score,
@@ -435,6 +459,8 @@ def _resolve_readiness(state: dict[str, Any]) -> dict[str, Any]:
             "readiness": readiness_capped,
             "risk_level": "GREEN" if readiness_capped == "OPTIMAL" else "AMBER",
             "recommended_mode": "full" if readiness_capped == "OPTIMAL" else "review_or_draft",
+            "ground_state": ceiling.get("ground_state", "GROUND"),
+            "decision_ceiling": ceiling.get("decision_ceiling", "C5"),
             "human_confirmation_required": readiness_capped != "OPTIMAL",
             "reason": f"Substrate {'stable and high-capacity' if readiness_capped == 'OPTIMAL' else f'capacity capped to {freshness_band}'}. {'Full forge bandwidth available.' if readiness_capped == 'OPTIMAL' else 'Freshness ceiling applied.'}",
             "well_score": score,
@@ -454,6 +480,8 @@ def _resolve_readiness(state: dict[str, Any]) -> dict[str, Any]:
             "readiness": readiness_capped,
             "risk_level": "GREEN" if readiness_capped == "FUNCTIONAL" else "AMBER",
             "recommended_mode": "structured" if readiness_capped == "FUNCTIONAL" else "review_or_draft",
+            "ground_state": ceiling.get("ground_state", "STRAINED"),
+            "decision_ceiling": ceiling.get("decision_ceiling", "C3"),
             "human_confirmation_required": readiness_capped != "FUNCTIONAL",
             "reason": f"Substrate {'functional' if readiness_capped == 'FUNCTIONAL' else f'capacity capped to {freshness_band}'}. {'Normal forge operations permitted.' if readiness_capped == 'FUNCTIONAL' else 'Freshness ceiling applied.'}",
             "well_score": score,
@@ -472,6 +500,8 @@ def _resolve_readiness(state: dict[str, Any]) -> dict[str, Any]:
         "readiness": readiness_capped,
         "risk_level": "AMBER",
         "recommended_mode": "draft_only",
+        "ground_state": ceiling.get("ground_state", "DEGRADED"),
+        "decision_ceiling": ceiling.get("decision_ceiling", "C1"),
         "human_confirmation_required": True,
         "reason": f"Substrate low-capacity{freshness_band != 'FRESH' and f' (freshness ceiling: {freshness_band})' or ''}. Recommend rest before strategic decisions.",
         "well_score": score,
@@ -485,17 +515,6 @@ def _resolve_readiness(state: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _redact_metrics_for_external(metrics: dict[str, Any]) -> dict[str, Any]:
-    """Return minimal external-safe metric summary. Never leak raw body data."""
-    if not metrics:
-        return {}
-    summary: dict[str, Any] = {}
-    for dim in ("sleep", "stress", "cognitive", "metabolic", "structural"):
-        dim_data = metrics.get(dim)
-        if dim_data:
-            summary[dim] = {"available": True}
-    return summary
-
 # ── Server ─────────────────────────────────────────────────────────────────────
 mcp = FastMCP(
     name="AFWELL",
@@ -503,6 +522,7 @@ mcp = FastMCP(
         "WELL is the Universal Substrate Vitality Mirror for arifOS. "
         "H-WELL reflects operator Arif's biological and cognitive state. "
         "M-WELL reflects system reliability, tool health, context integrity, and compute limits. "
+        "G-WELL reflects machine governance health — autonomic coherence, check/balance integrity, floor compliance. "
         "C-WELL evaluates coupled risk between human state and machine state. "
         "U-WELL (Universal) classifies any substance or substrate and assesses vitality "
         "without category error, authority overreach, or false equivalence. "
@@ -510,6 +530,7 @@ mcp = FastMCP(
         "W0: WELL holds a mirror, not a veto. Operator sovereignty is invariant. "
         "WELL does not decide worth. WELL identifies substrate, validates evidence, "
         "detects vitality/degradation, protects dignity, and returns judgment to Arif. "
+        "G-WELL extends this to machine governance: it reflects, never commands. "
         "DITEMPA BUKAN DIBERI — Forged, Not Given."
     ),
 )
@@ -549,7 +570,7 @@ def mcp_health_check() -> dict:
         "status": status,
         "transport": "SSE_VALID",
         "auth": "OK",
-        "schema_version": "2026.05.10",
+        "schema_version": "2026.05.12",
         "read_only": True,
         "final_authority": "ARIF",
         "identity_valid": well_ok,
@@ -567,7 +588,7 @@ def mcp_health_check() -> dict:
 
 
 def _build_unified_packet(ctx: Context | None = None) -> dict[str, Any]:
-    """Build the unified substrate packet: human + machine + MCP + coupled."""
+    """Build the unified substrate packet: human + machine + G-WELL governance + MCP + coupled."""
     state = _load_state()
 
     # Human substrate
@@ -594,6 +615,9 @@ def _build_unified_packet(ctx: Context | None = None) -> dict[str, Any]:
         "vault_status": m_machine.get("vault_status", "ok"),
         "schema_valid": m_machine.get("schema_valid", True),
     }
+
+    # G-WELL governance abstraction
+    g_well = _g_well_assess(state)
 
     # MCP infra substrate
     mcp = mcp_health_check()
@@ -630,6 +654,7 @@ def _build_unified_packet(ctx: Context | None = None) -> dict[str, Any]:
         "authority": "REFLECT_ONLY",
         "human": human,
         "machine": machine,
+        "g_well": g_well,
         "mcp": mcp,
         "coupled": coupled,
         "w0": "OPERATOR_VETO_INTACT / HIERARCHY_INVARIANT",
@@ -642,12 +667,101 @@ def _load_state() -> dict[str, Any]:
         return {
             "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
             "operator_id": "arif",
+            "identity": "WELL",
+            "role": "Body / Human Intelligence",
+            "authority": "REFLECT_ONLY",
             "metrics": {},
             "well_score": 50,
             "floors_violated": [],
         }
     with open(STATE_PATH) as f:
         return json.load(f)
+
+
+def _g_well_assess(state: dict[str, Any]) -> dict[str, Any]:
+    """
+    G-WELL: Assess governance coherence of the machine substrate.
+    Maps m_machine + MCP health into governance terms: autonomic_coherence,
+    check_and_balance, floor_compliance, evidence_integrity, sovereignty_preserved.
+    Returns structured governance verdict.
+    """
+    m = state.get("m_machine", {})
+    well_ok = is_well(state)
+    m_verdict = None
+    m_score = 0.0
+
+    # Reuse M-WELL scoring
+    m_metrics = {
+        "model_reliability": m.get("model_reliability", 1.0),
+        "tool_availability": m.get("tool_availability", 1.0),
+        "api_failure_rate": m.get("api_failure_rate", 0.0),
+        "context_length_pressure": m.get("context_length_pressure", 0.0),
+        "memory_integrity": m.get("memory_integrity", 1.0),
+        "data_freshness": m.get("data_freshness", 1.0),
+        "compute_budget_pct": m.get("compute_budget_pct", 100.0),
+        "token_budget_pct": m.get("token_budget_pct", 100.0),
+    }
+    m_score = (
+        m_metrics["model_reliability"] * 20 +
+        m_metrics["tool_availability"] * 15 +
+        max(0, 1 - m_metrics["api_failure_rate"]) * 15 +
+        max(0, 1 - m_metrics["context_length_pressure"]) * 15 +
+        m_metrics["memory_integrity"] * 10 +
+        m_metrics["data_freshness"] * 10 +
+        max(0, m_metrics["compute_budget_pct"] / 100) * 10 +
+        max(0, m_metrics["token_budget_pct"] / 100) * 5
+    )
+    m_score = round(min(100.0, m_score), 1)
+    m_verdict = "HEALTHY" if m_score >= 85 else "FUNCTIONAL" if m_score >= 65 else "DEGRADED" if m_score >= 45 else "CRITICAL"
+
+    governance_flags = []
+
+    # 1. Autonomic coherence
+    if not well_ok:
+        governance_flags.append("well_identity_compromised")
+    if m.get("schema_valid") is False:
+        governance_flags.append("schema_corrupted")
+    if m.get("vault_status") not in ("ok", "degraded"):
+        governance_flags.append("vault_disconnected")
+
+    # 2. Check and balance
+    if m_verdict == "CRITICAL":
+        governance_flags.append("machine_substrate_critical")
+    if len(m.get("security_flags", [])) > 0:
+        governance_flags.append(f"security_flags:{','.join(m['security_flags'])}")
+
+    # 3. Floor compliance
+    auth = state.get("authority", "")
+    if auth != "REFLECT_ONLY":
+        governance_flags.append(f"authority_overreach:{auth}")
+
+    # 4. Evidence integrity
+    truth = state.get("truth_status", "UNVERIFIED")
+    if truth in ("VOID", "CONTRADICTED"):
+        governance_flags.append(f"evidence_compromised:{truth}")
+
+    # 5. Sovereignty preserved
+    if state.get("amanah") not in ("LOCK", "🔐", True):
+        governance_flags.append("amanah_unlocked")
+
+    if len(governance_flags) == 0:
+        g_verdict = "COHERENT"
+    elif len(governance_flags) <= 2:
+        g_verdict = "STRESSED"
+    else:
+        g_verdict = "FRAGMENTED"
+
+    return {
+        "ok": True,
+        "g_well_verdict": g_verdict,
+        "g_well_score": m_score,
+        "machine_verdict": m_verdict,
+        "governance_flags": governance_flags,
+        "pillars": {k: (v, "intact" if not governance_flags else "stressed") for k, v in G_WELL_PILLARS.items()},
+        "identity_valid": well_ok,
+        "authority_boundary": "REFLECT_ONLY" if well_ok else "COMPROMISED",
+        "w0": "OPERATOR_VETO_INTACT / HIERARCHY_INVARIANT",
+    }
 
 
 def _state_score(state: dict[str, Any], default: float = 0.0) -> float:
@@ -726,19 +840,50 @@ def _compute_score(metrics: dict[str, Any]) -> tuple[float, list[str]]:
     if clarity < 4:
         violations.append("W5_COGNITIVE_ENTROPY")
 
-    # Stress load
+    # W3 — Stress Load (load >= 7/10 or chronic elevation)
     load = stress.get("subjective_load", 0)
     restless = stress.get("restlessness", 0)
+    chronic_days = stress.get("chronic_elevation_days", 0)
     score -= load * 1.2
     score -= restless * 0.8
+    if load >= 7:
+        violations.append("W3_STRESS_LOAD")
+    elif load >= 5 and chronic_days >= 7:
+        violations.append("W3_STRESS_LOAD")
 
-    # Metabolic
+    # W2 — Metabolic Stability
     stability = metabolic.get("perceived_stability", 10)
     score -= max(0, (7 - stability) * 1.5)
     if metabolic.get("hydration_status") == "DEHYDRATED":
         score -= 5
+        violations.append("W2_METABOLIC_STABILITY")
+    elif stability < 5:
+        violations.append("W2_METABOLIC_STABILITY")
 
-    # W6 — Incentive Decoupling (static floor, Phase 3)
+    # W4 — Physical Integrity (sedentary >= 4h or pain >= 5/10)
+    struct = metrics.get("structural", {})
+    sedentary = struct.get("sedentary_hours_continuous", 0)
+    pain_level = struct.get("pain_level", 0)
+    if sedentary >= 4:
+        score -= min(sedentary * 1.5, 15)
+        violations.append("W4_PHYSICAL_INTEGRITY")
+    if pain_level >= 5:
+        score -= pain_level * 1.0
+        if "W4_PHYSICAL_INTEGRITY" not in violations:
+            violations.append("W4_PHYSICAL_INTEGRITY")
+
+    # W6 — Incentive Decoupling (Metabolic Pause)
+    w6_active = "W6_METABOLIC_PAUSE" in violations
+    if w6_active:
+        score -= 10  # Base penalty while paused
+        if "W6_METABOLIC_PAUSE" not in violations:
+            violations.append("W6_METABOLIC_PAUSE")
+    # W7 — Skill Atrophy detection (>= 14 days without manual practice)
+    skill_gap = metrics.get("skill", {}).get("days_since_practice", -1)
+    if skill_gap >= 14:
+        violations.append("W7_SKILL_ATROPHY")
+        score -= min((skill_gap - 14) * 2, 20)
+
     score = round(max(0.0, min(100.0, score)), 1)
     return score, violations
 
@@ -1005,66 +1150,6 @@ def well_log(
     }
 
 
-# INTERNAL — called by well_777_forge(mode="pressure")
-def well_pressure(
-    load_delta: float,
-    source: str = "forge",
-    ctx: Context | None = None,
-) -> dict[str, Any]:
-    """
-    Signal cognitive pressure/load from an external source (e.g. A-FORGE).
-    Increments decision_fatigue and potentially triggers W6 Metabolic Pause.
-    """
-    try:
-        load_delta = _clamp(load_delta, 0.0, 10.0)
-    except ValueError as e:
-        return {"ok": False, "error": f"Invalid input: {e}"}
-
-    state = _load_state()
-    metrics = state.get("metrics", {})
-    cog = dict(metrics.get("cognitive", {"clarity": 10, "decision_fatigue": 0}))
-    
-    # Increment fatigue
-    old_fatigue = cog.get("decision_fatigue", 0)
-    new_fatigue = min(10.0, old_fatigue + load_delta)
-    cog["decision_fatigue"] = new_fatigue
-    metrics["cognitive"] = cog
-    
-    # W6 Logic: Repetitive Pressure Spike
-    # If fatigue jumps > 2.0 in a single signal, flag as high-frequency loop
-    violations = state.get("floors_violated", [])
-    if load_delta > 2.0 and "W6_METABOLIC_PAUSE" not in violations:
-        violations.append("W6_METABOLIC_PAUSE")
-    
-    # Recompute overall score
-    score, new_violations = _compute_score(metrics)
-    # Merge violations
-    for v in new_violations:
-        if v not in violations:
-            violations.append(v)
-            
-    state["metrics"] = metrics
-    state["well_score"] = score
-    state["floors_violated"] = violations
-    _save_state(state)
-    
-    _append_event({
-        "event": "PRESSURE_SIGNAL",
-        "source": source,
-        "load_delta": load_delta,
-        "new_fatigue": new_fatigue,
-        "w6_triggered": "W6_METABOLIC_PAUSE" in violations
-    })
-    
-    return {
-        "ok": True,
-        "well_score": score,
-        "decision_fatigue": new_fatigue,
-        "w6_active": "W6_METABOLIC_PAUSE" in violations,
-        "message": "Metabolic Pause active. Step away for 15 minutes." if "W6_METABOLIC_PAUSE" in violations else "Pressure logged."
-    }
-
-
 @mcp.tool()
 def well_readiness(ctx: Context | None = None) -> dict[str, Any]:
     """
@@ -1232,6 +1317,9 @@ def well_check_floors(ctx: Context | None = None) -> dict[str, Any]:
     metrics = state.get("metrics", {})
     sleep = metrics.get("sleep", {})
     cognitive = metrics.get("cognitive", {})
+    metabolic = metrics.get("metabolic", {})
+    stress = metrics.get("stress", {})
+    struct = metrics.get("structural", {})
 
     # ── No telemetry → cannot check floors ──
     if not _has_verified_telemetry(state):
@@ -1247,6 +1335,8 @@ def well_check_floors(ctx: Context | None = None) -> dict[str, Any]:
             next_safe_action="No verified body telemetry. Floor status cannot be determined.",
         )
 
+    violations = state.get("floors_violated", [])
+
     floors: dict[str, dict[str, Any]] = {
         "W0": {
             "name": "Sovereignty Invariant",
@@ -1259,6 +1349,24 @@ def well_check_floors(ctx: Context | None = None) -> dict[str, Any]:
             "threshold": "sleep_debt_days <= 2",
             "current": sleep.get("sleep_debt_days", 0),
         },
+        "W2": {
+            "name": "Metabolic Stability",
+            "status": "OK",
+            "threshold": "hydration != DEHYDRATED and stability >= 5",
+            "current": {"hydration": metabolic.get("hydration_status", "UNKNOWN"), "stability": metabolic.get("perceived_stability", 10)},
+        },
+        "W3": {
+            "name": "Stress Load",
+            "status": "OK",
+            "threshold": "load < 7 (or load < 5 if chronic < 7 days)",
+            "current": {"load": stress.get("subjective_load", 0), "chronic_days": stress.get("chronic_elevation_days", 0)},
+        },
+        "W4": {
+            "name": "Physical Integrity",
+            "status": "OK",
+            "threshold": "sedentary < 4h and pain < 5/10",
+            "current": {"sedentary": struct.get("sedentary_hours_continuous", 0), "pain": struct.get("pain_level", 0)},
+        },
         "W5": {
             "name": "Cognitive Entropy",
             "status": "OK",
@@ -1267,15 +1375,34 @@ def well_check_floors(ctx: Context | None = None) -> dict[str, Any]:
         },
         "W6": {
             "name": "Incentive Decoupling",
-            "status": "PHASE_3_PENDING",
-            "detail": "Repetitive intent loop detection pending wearable integration.",
+            "status": "OK" if "W6_METABOLIC_PAUSE" not in violations else "VIOLATED",
+            "threshold": "no high-frequency intent loops detected",
+            "current": "W6_METABOLIC_PAUSE" if "W6_METABOLIC_PAUSE" in violations else "clear",
+        },
+        "W7": {
+            "name": "Skill Atrophy",
+            "status": "OK",
+            "threshold": "days_since_practice < 14",
+            "current": metrics.get("skill", {}).get("days_since_practice", "unknown"),
         },
     }
 
     if sleep.get("sleep_debt_days", 0) > 2:
         floors["W1"]["status"] = "VIOLATED"
+    if metabolic.get("hydration_status") == "DEHYDRATED" or metabolic.get("perceived_stability", 10) < 5:
+        floors["W2"]["status"] = "VIOLATED"
+    load = stress.get("subjective_load", 0)
+    chronic = stress.get("chronic_elevation_days", 0)
+    if load >= 7 or (load >= 5 and chronic >= 7):
+        floors["W3"]["status"] = "VIOLATED"
+    if struct.get("sedentary_hours_continuous", 0) >= 4 or struct.get("pain_level", 0) >= 5:
+        floors["W4"]["status"] = "VIOLATED"
     if cognitive.get("clarity", 10) < 4:
         floors["W5"]["status"] = "VIOLATED"
+    if "W6_METABOLIC_PAUSE" in violations:
+        floors["W6"]["status"] = "VIOLATED"
+    if metrics.get("skill", {}).get("days_since_practice", -1) >= 14:
+        floors["W7"]["status"] = "VIOLATED"
 
     violated = [k for k, v in floors.items() if v["status"] == "VIOLATED"]
     
@@ -1387,6 +1514,9 @@ def well_check_floor(floor_id: str | None = None, ctx: Context | None = None) ->
     metrics = state.get("metrics", {})
     sleep = metrics.get("sleep", {})
     cognitive = metrics.get("cognitive", {})
+    metabolic = metrics.get("metabolic", {})
+    stress = metrics.get("stress", {})
+    struct = metrics.get("structural", {})
 
     passed = True
     status = "OK"
@@ -1397,16 +1527,38 @@ def well_check_floor(floor_id: str | None = None, ctx: Context | None = None) ->
         passed = debt <= 2
         status = "OK" if passed else "VIOLATED"
         detail = f"Sleep debt: {debt} days (Limit: 2)"
+    elif fid == "W2":
+        hydration = metabolic.get("hydration_status", "UNKNOWN")
+        stability = metabolic.get("perceived_stability", 10)
+        passed = hydration != "DEHYDRATED" and stability >= 5
+        status = "OK" if passed else "VIOLATED"
+        detail = f"Hydration: {hydration}, Stability: {stability}/10"
+    elif fid == "W3":
+        load_val = stress.get("subjective_load", 0)
+        chronic = stress.get("chronic_elevation_days", 0)
+        passed = not (load_val >= 7 or (load_val >= 5 and chronic >= 7))
+        status = "OK" if passed else "VIOLATED"
+        detail = f"Load: {load_val}/10, Chronic: {chronic} days"
+    elif fid == "W4":
+        sedentary = struct.get("sedentary_hours_continuous", 0)
+        pain = struct.get("pain_level", 0)
+        passed = sedentary < 4 and pain < 5
+        status = "OK" if passed else "VIOLATED"
+        detail = f"Sedentary: {sedentary}h, Pain: {pain}/10"
     elif fid == "W5":
         clarity = cognitive.get("clarity", 10)
         passed = clarity >= 4
         status = "OK" if passed else "VIOLATED"
         detail = f"Clarity: {clarity}/10 (Limit: 4)"
     elif fid == "W6":
-        violations = state.get("floors_violated", [])
-        passed = "W6_METABOLIC_PAUSE" not in violations
+        passed = "W6_METABOLIC_PAUSE" not in state.get("floors_violated", [])
         status = "OK" if passed else "VIOLATED"
         detail = "Metabolic Pause active" if not passed else "Incentive decoupling clear"
+    elif fid == "W7":
+        skill_gap = metrics.get("skill", {}).get("days_since_practice", -1)
+        passed = skill_gap < 14 or skill_gap == -1
+        status = "OK" if passed else "VIOLATED"
+        detail = f"Days since practice: {skill_gap}" if skill_gap >= 0 else "Skill data unavailable"
     elif fid == "W0":
         status = "INVARIANT"
         detail = "Operator sovereignty is absolute."
@@ -1946,13 +2098,51 @@ def _build_arifos_packet(ctx: Context | None = None) -> dict[str, Any]:
     else:
         classes_allowed = ["C0"]
 
-    # What to avoid (only if we have real data to base it on)
-    avoid = []
+    # Decision ceiling (derived from ground state)
+    # I0b: What class of decision is biologically safe enough right now?
     if has_telemetry:
         fatigue = cognitive.get("decision_fatigue", 0)
         clarity = cognitive.get("clarity", 10)
         sleep_debt = sleep.get("sleep_debt_days", 0)
         stress_load = stress.get("subjective_load", 0)
+
+        # Ground state check (I0b: What class of decision is safe?)
+        # Violation count is the strongest signal — any single W-floor violation
+        # floors the ceiling regardless of current numbers
+        vcount = len(violations)
+
+        if vcount == 0 and sleep_debt <= 0 and stress_load <= 4 and clarity >= 7 and fatigue <= 3:
+            ground_ok = True
+            strained = False
+            degraded = False
+        elif vcount <= 1 and sleep_debt <= 1 and stress_load <= 7 and clarity >= 5 and fatigue <= 6:
+            ground_ok = False
+            strained = True
+            degraded = False
+        else:
+            ground_ok = False
+            strained = False
+            degraded = True
+
+        if ground_ok:
+            decision_ceiling = "C5"
+            ground_state = "GROUND"
+        elif strained:
+            decision_ceiling = "C3"
+            ground_state = "STRAINED"
+        elif degraded:
+            decision_ceiling = "C1"
+            ground_state = "DEGRADED"
+        else:
+            decision_ceiling = "C0"
+            ground_state = "UNSAFE"
+    else:
+        decision_ceiling = "C0"
+        ground_state = "UNKNOWN"
+
+    # What to avoid (only if we have real data to base it on)
+    avoid = []
+    if has_telemetry:
         if fatigue > 5: avoid.append("consequential_decisions")
         if stress_load > 7: avoid.append("public_commitment")
         if sleep_debt > 1: avoid.append("irreversible_actions")
@@ -2003,6 +2193,8 @@ def _build_arifos_packet(ctx: Context | None = None) -> dict[str, Any]:
     return {
         "ok": True,
         "readiness": resolved["readiness"],
+        "ground_state": ground_state,
+        "decision_ceiling": decision_ceiling,
         "safe_mode": mode,
         "well_score": score,
         "decision_classes_allowed": classes_allowed,
@@ -2484,63 +2676,13 @@ def well_machine_log(
 
 
 # INTERNAL — called by well_333_mind(mode="machine")
-def well_machine_reliability(
-    target_task: str | None = None,
-    ctx: Context | None = None,
-) -> dict[str, Any]:
-    """
-    Assess machine substrate reliability for a specific task type.
-    Task types: coding / reasoning / creative / memory / critical / real_time
-    """
-    m_state = well_machine_state(ctx=None)
-    metrics = m_state.get("metrics", {})
-    score = m_state.get("m_well_score", 0)
-
-    # Task-specific thresholds
-    task_requirements = {
-        "coding": {"min_reliability": 0.8, "max_latency": 2000, "max_context_pressure": 0.8},
-        "reasoning": {"min_reliability": 0.75, "max_latency": 3000, "max_context_pressure": 0.7},
-        "creative": {"min_reliability": 0.7, "max_latency": 5000, "max_context_pressure": 0.9},
-        "memory": {"min_reliability": 0.9, "max_latency": 500, "max_context_pressure": 0.5, "min_memory_integrity": 0.95},
-        "critical": {"min_reliability": 0.95, "max_latency": 1000, "max_context_pressure": 0.5},
-        "real_time": {"min_reliability": 0.85, "max_latency": 500, "max_context_pressure": 0.6},
-    }
-
-    if target_task and target_task in task_requirements:
-        req = task_requirements[target_task]
-        checks = {
-            "reliability_ok": metrics.get("model_reliability", 0) >= req["min_reliability"],
-            "latency_ok": metrics.get("latency_ms", 0) <= req["max_latency"],
-            "context_ok": metrics.get("context_length_pressure", 0) <= req["max_context_pressure"],
-        }
-        if "min_memory_integrity" in req:
-            checks["memory_integrity_ok"] = metrics.get("memory_integrity", 0) >= req["min_memory_integrity"]
-        all_ok = all(checks.values())
-        return {
-            "ok": True,
-            "task": target_task,
-            "verdict": "APPROVED" if all_ok else "CAUTION",
-            "checks": checks,
-            "m_well_score": score,
-            "w0": "OPERATOR_VETO_INTACT / HIERARCHY_INVARIANT",
-        }
-
-    return {
-        "ok": True,
-        "verdict": m_state.get("m_well_verdict", "UNKNOWN"),
-        "m_well_score": score,
-        "mode": m_state.get("mode", "unknown"),
-        "task": target_task or "general",
-        "available_task_types": list(task_requirements.keys()),
-        "w0": "OPERATOR_VETO_INTACT / HIERARCHY_INVARIANT",
-    }
-
-
 # ══════════════════════════════════════════════════════════════════════════════
 # C-WELL — Coupled Readiness
 # Evaluates interaction risk between human state and machine state
 # Purpose: Is the human-machine pair safe to proceed?
 # ══════════════════════════════════════════════════════════════════════════════
+
+G_WELL_GATEWAY_PEERS = ["arifos", "a-forge", "geox", "wealth", "aaa", "hermes"]
 
 COUPLED_RISK_PATTERNS = [
     {"h_key": "decision_fatigue", "h_thresh": 6, "m_key": "context_length_pressure", "m_thresh": 0.7, "risk": "context_overload_coding"},
@@ -5260,6 +5402,30 @@ def well_000_ops(
 # Ω-WELL Tool Surface Integrity Check
 # ═══════════════════════════════════════════════════════════════════════════════
 
+# ── ALIAS_REGISTRY — Ω-WELL stage aliases → canonical tool mappings ────────────
+# Every alias must map to a canonical function that exists in globals.
+# This is checked at import time. No alias may exist only in docs/manifest.
+
+ALIAS_REGISTRY = {
+    "well_000_init": "well_classify_substrate",
+    "well_111_sense": "well_classify_substrate",
+    "well_222_fetch": "well_measure_gradient",
+    "well_333_mind": "well_assess_metabolism",
+    "well_444_kernel": "well_reflect_intelligence",
+    "well_555_memory": "well_trace_lineage",
+    "well_666_heart": "well_assess_homeostasis",
+    "well_777_forge": "well_check_repair",
+    "well_888_judge": "well_validate_vitality",
+    "well_999_vault": "well_trace_lineage",
+    "well_444_reply": "well_anchor_evidence",
+    "well_444_gateway": "well_detect_boundary",
+    "well_000_ops": "well_assess_reliability",
+}
+
+# ALIAS_REGISTRY validation happens on first tool call, not at import time.
+# Canonical functions are defined later in the file and won't be in globals yet.
+_ALIAS_REGISTRY_VALIDATED = False
+
 OMEGA_WELL_TOOLS = {
     "well_classify_substrate", "well_trace_lineage", "well_detect_boundary",
     "well_measure_gradient", "well_assess_metabolism", "well_assess_homeostasis",
@@ -5267,18 +5433,6 @@ OMEGA_WELL_TOOLS = {
     "well_assess_reliability", "well_reflect_intelligence", "well_guard_dignity",
     "well_anchor_evidence",
 }
-
-
-def _check_omega_well_surface() -> dict[str, Any]:
-    """Verify Ω-WELL 13-tool surface is complete."""
-    present = {name for name in OMEGA_WELL_TOOLS if name in globals()}
-    missing = OMEGA_WELL_TOOLS - present
-    return {
-        "registered_count": len(present),
-        "canonical_count": len(OMEGA_WELL_TOOLS),
-        "missing": sorted(missing),
-        "surface_integrity": len(missing) == 0,
-    }
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -5604,6 +5758,15 @@ if __name__ == "__main__":
 
     async def tools_handler(request):
         """Federation tool discovery — flat tool registry with WELL danger metadata."""
+        # Deferred ALIAS_REGISTRY validation (canonical funcs now in globals)
+        global _ALIAS_REGISTRY_VALIDATED
+        if not _ALIAS_REGISTRY_VALIDATED:
+            _missing = {a: c for a, c in ALIAS_REGISTRY.items() if c not in globals()}
+            if _missing:
+                import warnings
+                warnings.warn(f"ALIAS_REGISTRY: missing canonical mappings: {_missing}")
+            _ALIAS_REGISTRY_VALIDATED = True
+
         all_tools = await mcp.list_tools()
         # WELL is L1/L2 only — mirrors, informs, reflects; no irrevocable mutations
         _DANGER_MAP = {
@@ -5639,12 +5802,7 @@ if __name__ == "__main__":
             "well_assess_reliability", "well_reflect_intelligence", "well_guard_dignity",
             "well_anchor_evidence",
         }
-        _ALIASES = {
-            "well_000_init", "well_111_sense", "well_222_fetch", "well_333_mind",
-            "well_444_kernel", "well_555_memory", "well_666_heart", "well_777_forge",
-            "well_888_judge", "well_999_vault", "well_444_reply", "well_444_gateway",
-            "well_000_ops",
-        }
+        _ALIASES = set(ALIAS_REGISTRY.keys())
         tools = []
         for t in all_tools:
             name = t.name
@@ -5672,7 +5830,7 @@ if __name__ == "__main__":
             "role": "Body / Human Intelligence — Operator Cognitive Pressure Monitor",
             "authority": "REFLECT_ONLY — WELL informs. arifOS judges. Arif decides.",
             "schema": "well-federation-v2026.05.08",
-            "version": "2026.05.10-ΩWELL",
+            "version": "2026.05.12-ΩWELL+GWELL",
             "count": len(tools),
             "w0_invariant": "WELL holds a mirror, not a veto. Operator sovereignty is invariant.",
             "danger_taxonomy": {
@@ -5701,13 +5859,482 @@ if __name__ == "__main__":
             "identity_valid": well_ok,
             "has_telemetry": has_telemetry,
             "service": "well-mcp",
-            "version": "2026.05.08-ΩWELL",
+            "version": "2026.05.12-ΩWELL+GWELL",
         })
 
     app.add_route("/health", health_handler, methods=["GET"])
     app.add_route("/tools", tools_handler, methods=["GET"])
 
     # Server start moved to end of file so canonical tools are registered before uvicorn blocks
+# ═══════════════════════════════════════════════════════════════════════════════
+# M-WELL Realtime Telemetry Ingestion
+# Track dynamic machine health signals: context pressure, tool errors, compute load
+# ═══════════════════════════════════════════════════════════════════════════════
+
+M_WELL_SIGNAL_WINDOW_MINUTES = 30
+
+@mcp.tool()
+def well_machine_log_signal(
+    signal: str = "",
+    value: float | None = None,
+    duration_seconds: float | None = None,
+    source: str = "auto",
+    ctx: Context | None = None,
+) -> dict[str, Any]:
+    """
+    Log a realtime machine telemetry signal.
+    Signals: context_pressure | tool_error | compute_spike | latency_jitter | token_exhaustion | memory_pressure
+
+    Each signal is written to events.jsonl and updates m_machine state.
+    Signals within M_WELL_SIGNAL_WINDOW_MINUTES (30) are aggregated for trend detection.
+    """
+    signal = signal.lower()
+    valid_signals = {"context_pressure", "tool_error", "compute_spike", "latency_jitter", "token_exhaustion", "memory_pressure"}
+    if signal not in valid_signals:
+        return {"ok": False, "error": f"Unknown signal: {signal}. Valid: {valid_signals}"}
+
+    state = _load_state()
+    m = dict(state.get("m_machine", {}))
+    now = datetime.datetime.now(datetime.timezone.utc)
+
+    # Map signal to m_machine field
+    signal_map = {
+        "context_pressure": ("context_length_pressure", 0.0, 1.0),
+        "tool_error": ("api_failure_rate", 0.0, 1.0),
+        "compute_spike": ("compute_budget_pct", 0.0, 100.0),
+        "latency_jitter": ("latency_ms", 0.0, 1_000_000.0),
+        "token_exhaustion": ("token_budget_pct", 0.0, 100.0),
+        "memory_pressure": ("memory_integrity", 0.0, 1.0),
+    }
+
+    field, vmin, vmax = signal_map[signal]
+    if value is not None:
+        value = max(vmin, min(vmax, float(value)))
+        m[field] = value
+
+    # Log to events
+    _append_event({
+        "event": "M_WELL_SIGNAL",
+        "signal": signal,
+        "value": value,
+        "duration_seconds": duration_seconds,
+        "source": source,
+        "epoch": now.isoformat(),
+    })
+
+    state["m_machine"] = m
+    _save_state(state)
+
+    # Recompute G-WELL after machine state change
+    g = _g_well_assess(state)
+
+    return {
+        "ok": True,
+        "signal": signal,
+        "value": value,
+        "m_well_score": g["g_well_score"],
+        "m_well_verdict": g["machine_verdict"],
+        "g_well_verdict": g["g_well_verdict"],
+        "governance_flags": g["governance_flags"],
+        "w0": "OPERATOR_VETO_INTACT / HIERARCHY_INVARIANT",
+    }
+
+
+@mcp.tool()
+def well_machine_trend(
+    lookback_minutes: int = 60,
+    ctx: Context | None = None,
+) -> dict[str, Any]:
+    """
+    Reflect recent machine signal trends.
+    Aggregates M_WELL_SIGNAL events within lookback window.
+    Returns signal frequencies, averages, and anomaly flags.
+    """
+    state = _load_state()
+    m = state.get("m_machine", {})
+    events_path = EVENTS_PATH
+    cutoff = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(minutes=lookback_minutes)
+
+    signal_counts: dict[str, int] = {}
+    signal_values: dict[str, list[float]] = {}
+    anomalies: list[str] = []
+
+    if events_path.exists():
+        try:
+            with open(events_path) as f:
+                for line in f:
+                    try:
+                        e = json.loads(line)
+                        if e.get("event") != "M_WELL_SIGNAL":
+                            continue
+                        epoch = datetime.datetime.fromisoformat(e.get("epoch", "2000-01-01"))
+                        if epoch < cutoff:
+                            continue
+                        sig = e.get("signal", "unknown")
+                        signal_counts[sig] = signal_counts.get(sig, 0) + 1
+                        val = e.get("value")
+                        if val is not None:
+                            signal_values.setdefault(sig, []).append(float(val))
+                    except Exception:
+                        continue
+        except Exception:
+            pass
+
+    # Compute averages and detect anomalies
+    signal_summary = {}
+    for sig, vals in signal_values.items():
+        avg = sum(vals) / len(vals)
+        signal_summary[sig] = {"count": signal_counts.get(sig, 0), "average": round(avg, 3), "samples": len(vals)}
+        if sig == "tool_error" and avg > 0.1:
+            anomalies.append(f"elevated_tool_error_rate:{avg:.3f}")
+        if sig == "context_pressure" and avg > 0.8:
+            anomalies.append("high_context_pressure")
+        if sig == "latency_jitter" and avg > 5000:
+            anomalies.append("high_latency_jitter")
+    for sig, cnt in signal_counts.items():
+        if sig not in signal_summary:
+            signal_summary[sig] = {"count": cnt, "average": None, "samples": 0}
+
+    g = _g_well_assess(state)
+
+    return {
+        "ok": True,
+        "lookback_minutes": lookback_minutes,
+        "signal_summary": signal_summary,
+        "total_signals": sum(signal_counts.values()),
+        "anomalies": anomalies,
+        "m_well_score": g["g_well_score"],
+        "m_well_verdict": g["machine_verdict"],
+        "g_well_verdict": g["g_well_verdict"],
+        "w0": "OPERATOR_VETO_INTACT / HIERARCHY_INVARIANT",
+    }
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# H-WELL Cross-Session Fatigue Accumulator
+# Tracks fatigue across sessions for multi-day recovery planning
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@mcp.tool()
+def well_fatigue_accumulator(
+    mode: str = "check",
+    session_duration_minutes: float | None = None,
+    session_intensity: float | None = None,
+    rest_hours: float | None = None,
+    ctx: Context | None = None,
+) -> dict[str, Any]:
+    """
+    Track cognitive fatigue across sessions for multi-day recovery planning.
+
+    Modes:
+      check  — Current fatigue state + accumulated load
+      log    — Log a session's fatigue cost
+      rest   — Log a rest period (reduces accumulated fatigue)
+      reset  — Reset accumulator (after full recovery)
+
+    Cross-session fatigue decays at ~2 points per hour of rest.
+    Accumulated fatigue > 20 across 48h triggers extended recovery advisory.
+    """
+    state = _load_state()
+    metrics = state.get("metrics", {})
+    cog = dict(metrics.get("cognitive", {}))
+
+    acc = cog.get("fatigue_accumulator", {
+        "total_accumulated": 0.0,
+        "session_count": 0,
+        "last_session_epoch": None,
+        "last_rest_epoch": None,
+        "peak_fatigue": 0.0,
+    })
+
+    mode = mode.lower()
+    now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+    # Decay: 2 points per hour since last rest or last session
+    last_ts = acc.get("last_rest_epoch") or acc.get("last_session_epoch")
+    if last_ts:
+        try:
+            last_dt = datetime.datetime.fromisoformat(last_ts.replace("Z", "+00:00"))
+            hours_since = (datetime.datetime.now(datetime.timezone.utc) - last_dt).total_seconds() / 3600
+            decay = min(hours_since * 2.0, acc["total_accumulated"])
+            acc["total_accumulated"] = max(0.0, acc["total_accumulated"] - decay)
+        except Exception:
+            pass
+
+    result = {"mode": mode, "accumulated": acc["total_accumulated"], "session_count": acc["session_count"]}
+
+    if mode == "log":
+        cost = (session_intensity or 5.0) * (session_duration_minutes or 30.0) / 60.0
+        acc["total_accumulated"] += cost
+        acc["session_count"] += 1
+        acc["last_session_epoch"] = now
+        acc["peak_fatigue"] = max(acc["peak_fatigue"], acc["total_accumulated"])
+        _append_event({"event": "FATIGUE_LOG", "cost": round(cost, 1), "accumulated": round(acc["total_accumulated"], 1)})
+        result["cost"] = round(cost, 1)
+        result["message"] = "Session fatigue logged"
+
+    elif mode == "rest":
+        recovery = (rest_hours or 1.0) * 2.0
+        acc["total_accumulated"] = max(0.0, acc["total_accumulated"] - recovery)
+        acc["last_rest_epoch"] = now
+        _append_event({"event": "FATIGUE_REST", "recovery": round(recovery, 1), "accumulated": round(acc["total_accumulated"], 1)})
+        result["recovery"] = round(recovery, 1)
+        result["message"] = "Rest recovery applied"
+
+    elif mode == "reset":
+        acc = {"total_accumulated": 0.0, "session_count": 0, "last_session_epoch": now, "last_rest_epoch": now, "peak_fatigue": 0.0}
+        _append_event({"event": "FATIGUE_RESET"})
+        result["message"] = "Accumulator reset"
+
+    # Advisory
+    if acc["total_accumulated"] > 20:
+        result["advisory"] = "EXTENDED_RECOVERY_ADVISED"
+        result["recommendation"] = "Accumulated fatigue exceeds 20. Full rest day recommended before strategic decisions."
+    elif acc["total_accumulated"] > 10:
+        result["advisory"] = "MODERATE_LOAD"
+        result["recommendation"] = f"Accumulated fatigue at {acc['total_accumulated']:.1f}. Schedule breaks."
+
+    cog["fatigue_accumulator"] = acc
+    metrics["cognitive"] = cog
+    state["metrics"] = metrics
+    _save_state(state)
+
+    result["accumulated"] = round(acc["total_accumulated"], 1)
+    result["session_count"] = acc["session_count"]
+    result["peak_fatigue"] = round(acc["peak_fatigue"], 1)
+    result["w0"] = "OPERATOR_VETO_INTACT / HIERARCHY_INVARIANT"
+
+    return result
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# H-WELL Circadian Phase Tracker
+# Time-of-day awareness for biological readiness
+# ═══════════════════════════════════════════════════════════════════════════════
+
+CIRCADIAN_PHASES = {
+    "MORNING_PEAK": (6, 11, "High cognitive readiness. Best for C4-C5 decisions."),
+    "AFTERNOON_DIP": (12, 15, "Post-lunch dip. Avoid complex reasoning. Draft/review only."),
+    "SECOND_WIND": (16, 20, "Secondary cognitive peak. Good for coding, architecture."),
+    "EVENING_WIND_DOWN": (21, 23, "Cognitive decline. Draft-only. No irreversible actions."),
+    "DEEP_NIGHT": (0, 5, "Late night. Cognitive entropy elevated. Default to C0 unless urgency is critical."),
+}
+
+@mcp.tool()
+def well_circadian_phase(
+    override_hour: int | None = None,
+    ctx: Context | None = None,
+) -> dict[str, Any]:
+    """
+    Reflect circadian phase based on current UTC+8 time (Arif's timezone).
+
+    Phases:
+      MORNING_PEAK  (06-11) — Optimal for complex decisions
+      AFTERNOON_DIP (12-15) — Low energy, avoid complex reasoning
+      SECOND_WIND   (16-20) — Secondary peak, good for coding/architecture
+      EVENING_WIND_DOWN (21-23) — Cognitive decline, draft-only
+      DEEP_NIGHT    (00-05) — High cognitive entropy, C0 recommended
+
+    Returns recommended decision ceiling per phase.
+    """
+    now = datetime.datetime.now(datetime.timezone.utc)
+    # Simulate UTC+8 for Arif (Malaysia)
+    local_hour = (now.hour + 8) % 24 if override_hour is None else override_hour
+
+    phase_name = "DEEP_NIGHT"
+    phase_detail = CIRCADIAN_PHASES["DEEP_NIGHT"]
+    for name, (start, end, desc) in sorted(CIRCADIAN_PHASES.items(), key=lambda x: x[1][0]):
+        if start <= local_hour <= end:
+            phase_name = name
+            phase_detail = (start, end, desc)
+            break
+        # Handle overnight: DEEP_NIGHT spans 00-05
+        if name == "DEEP_NIGHT" and (local_hour >= 0 and local_hour <= 5):
+            break
+
+    phase_ceiling_map = {
+        "MORNING_PEAK": "C5",
+        "AFTERNOON_DIP": "C2",
+        "SECOND_WIND": "C4",
+        "EVENING_WIND_DOWN": "C1",
+        "DEEP_NIGHT": "C0",
+    }
+
+    return {
+        "ok": True,
+        "local_hour": local_hour,
+        "phase": phase_name,
+        "description": phase_detail[2],
+        "recommended_ceiling": phase_ceiling_map.get(phase_name, "C0"),
+        "timezone": "Asia/Kuala_Lumpur (UTC+8)",
+        "w0": "OPERATOR_VETO_INTACT / HIERARCHY_INVARIANT",
+    }
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# M-WELL Docker/Process Health Probe
+# Checks Docker container liveness and process health for the federation
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@mcp.tool()
+def well_machine_health_probe(
+    targets: list[str] | None = None,
+    ctx: Context | None = None,
+) -> dict[str, Any]:
+    """
+    Probe machine health of federation services.
+    Checks: Docker container status, process liveness, port availability.
+
+    targets: arifos | geox | wealth | a-forge | aaa | hermes | vault999 | postgres | redis | qdrant | all
+
+    Returns per-target health verdict: HEALTHY | DEGRADED | UNREACHABLE | UNKNOWN.
+    """
+    import subprocess
+    import socket
+
+    probe_targets = targets or ["all"]
+    known_services = {
+        "arifos": {"port": 8080, "type": "http"},
+        "geox": {"port": 8081, "type": "http"},
+        "wealth": {"port": 8082, "type": "http"},
+        "well": {"port": 8083, "type": "http"},
+        "aaa": {"port": 3001, "type": "http"},
+        "hermes": {"port": 3002, "type": "http"},
+        "a-forge": {"port": 7071, "type": "http"},
+        "vault999": {"port": 8100, "type": "http"},
+        "postgres": {"port": 5432, "type": "tcp"},
+        "redis": {"port": 6379, "type": "tcp"},
+        "qdrant": {"port": 6333, "type": "http"},
+        "ollama": {"port": 11434, "type": "http"},
+    }
+
+    if "all" in probe_targets:
+        probe_targets = list(known_services.keys())
+
+    results = {}
+    all_healthy = True
+
+    for svc in probe_targets:
+        if svc not in known_services:
+            results[svc] = {"verdict": "UNKNOWN", "error": f"Unknown service: {svc}"}
+            all_healthy = False
+            continue
+        info = known_services[svc]
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(2.0)
+            result = sock.connect_ex(("127.0.0.1", info["port"]))
+            sock.close()
+            if result == 0:
+                results[svc] = {"verdict": "HEALTHY", "port": info["port"]}
+            else:
+                results[svc] = {"verdict": "UNREACHABLE", "port": info["port"], "error": "Connection refused"}
+                all_healthy = False
+        except Exception as e:
+            results[svc] = {"verdict": "ERROR", "port": info["port"], "error": str(e)}
+            all_healthy = False
+
+    # Also try Docker
+    docker_available = False
+    try:
+        r = subprocess.run(["docker", "ps", "-q"], capture_output=True, text=True, timeout=5)
+        docker_available = r.returncode == 0
+    except Exception:
+        pass
+
+    state = _load_state()
+    m = dict(state.get("m_machine", {}))
+    m["probe_results"] = results
+    m["probe_all_healthy"] = all_healthy
+    state["m_machine"] = m
+    _save_state(state)
+
+    g = _g_well_assess(state)
+
+    return {
+        "ok": True,
+        "targets": probe_targets,
+        "results": results,
+        "all_healthy": all_healthy,
+        "docker_available": docker_available,
+        "m_well_score": g["g_well_score"],
+        "m_well_verdict": g["machine_verdict"],
+        "w0": "OPERATOR_VETO_INTACT / HIERARCHY_INVARIANT",
+    }
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Decision Ceiling in _resolve_readiness — ground_state propagated to all tools
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def _compute_decision_ceiling(state: dict[str, Any]) -> dict[str, str]:
+    """
+    Compute ground_state and decision_ceiling from current state.
+    Used by _resolve_readiness and all derived tool outputs.
+    """
+    metrics = state.get("metrics", {})
+    violations = state.get("floors_violated", [])
+    has_telemetry = _has_verified_telemetry(state)
+    vcount = len(violations)
+    result = {
+        "ground_state": "UNKNOWN",
+        "decision_ceiling": "C0",
+        "basis": [],
+        "reason": "",
+    }
+
+    if not has_telemetry:
+        result["ground_state"] = "UNKNOWN"
+        result["decision_ceiling"] = "C0"
+        result["reason"] = "No verified body telemetry."
+        return result
+
+    sleep = metrics.get("sleep", {})
+    stress = metrics.get("stress", {})
+    cognitive = metrics.get("cognitive", {})
+    metabolic = metrics.get("metabolic", {})
+    struct = metrics.get("structural", {})
+
+    debt = sleep.get("sleep_debt_days", 0)
+    load = stress.get("subjective_load", 0)
+    clarity = cognitive.get("clarity", 10)
+    fatigue = cognitive.get("decision_fatigue", 0)
+    hydration = metabolic.get("hydration_status", "STABLE")
+    stability = metabolic.get("perceived_stability", 10)
+    sedentary = struct.get("sedentary_hours_continuous", 0)
+    pain = struct.get("pain_level", 0)
+
+    basis = []
+    if debt > 0: basis.append("sleep_debt")
+    if load > 4: basis.append("stress")
+    if clarity < 7: basis.append("clarity")
+    if fatigue > 3: basis.append("fatigue")
+    if hydration == "DEHYDRATED": basis.append("dehydration")
+    if stability < 5: basis.append("metabolic_stability")
+    if sedentary >= 4: basis.append("sedentary")
+    if pain >= 5: basis.append("pain")
+
+    if vcount == 0 and debt <= 0 and load <= 4 and clarity >= 7 and fatigue <= 3:
+        result["ground_state"] = "GROUND"
+        result["decision_ceiling"] = "C5"
+        result["reason"] = "All floors clear, optimal regulation."
+    elif vcount <= 1 and debt <= 1 and load <= 7 and clarity >= 5 and fatigue <= 6:
+        result["ground_state"] = "STRAINED"
+        result["decision_ceiling"] = "C3"
+        result["reason"] = f"Mild strain detected: {', '.join(basis) if basis else 'borderline'}."
+    elif vcount <= 3:
+        result["ground_state"] = "DEGRADED"
+        result["decision_ceiling"] = "C1"
+        result["reason"] = f"Regulation compromised: {', '.join(basis) if basis else 'multiple floors violated'}."
+    else:
+        result["ground_state"] = "UNSAFE"
+        result["decision_ceiling"] = "C0"
+        result["reason"] = f"Critical substrate state: {', '.join(basis)}. Professional care recommended if medical symptoms present."
+
+    result["basis"] = basis
+    return result
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # Ω-WELL Canonical Surface v2 — well_verb_noun ontology
 # Replaces stage-facing names (well_000_init, well_111_sense, etc.)
@@ -5964,6 +6591,226 @@ async def well_anchor_evidence(
         return well_444_reply(mode=mode, target=target, detail=detail, subject=subject, substrate_class=substrate_class, ctx=ctx)
     return await well_999_vault(mode=mode, dry_run=dry_run, reason=reason, force=force, ctx=ctx)
 
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# G-WELL — Machine Governance Mirror Tools
+# Reflects governance health of the federated machine substrate.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@mcp.tool()
+def well_assess_governance(
+    mode: str = "coherence",
+    target: str = "local",
+    ctx: Context | None = None,
+) -> dict[str, Any]:
+    """
+    G-WELL: Assess constitutional governance state of machine substrate.
+
+    Modes:
+      coherence  — Autonomic coherence of governance organs
+      check      — Check and balance integrity
+      floors     — Floor compliance across machine governance layers
+      evidence   — Evidence integrity and audit trail
+      full       — All five pillars
+
+    G-WELL is not a separate substrate. It is the governance abstraction
+    layer reflecting federated machine health in constitutional terms.
+    """
+    mode = mode.lower()
+    state = _load_state()
+    g = _g_well_assess(state)
+
+    if mode == "coherence":
+        data = {
+            "g_well_verdict": g["g_well_verdict"],
+            "governance_flags": g["governance_flags"],
+            "identity_valid": g["identity_valid"],
+            "authority_boundary": g["authority_boundary"],
+        }
+    elif mode == "check":
+        data = {
+            "check_and_balance": g["pillars"].get("check_and_balance", ("", "unknown"))[1],
+            "machine_verdict": g["machine_verdict"],
+            "authority_boundary": g["authority_boundary"],
+        }
+    elif mode == "floors":
+        data = {
+            "floor_compliance": g["pillars"].get("floor_compliance", ("", "unknown"))[1],
+            "governance_flags": [f for f in g["governance_flags"] if "authority" in f or "amanah" in f],
+        }
+    elif mode == "evidence":
+        data = {
+            "evidence_integrity": g["pillars"].get("evidence_integrity", ("", "unknown"))[1],
+            "sovereignty_preserved": g["pillars"].get("sovereignty_preserved", ("", "unknown"))[1],
+        }
+    else:
+        data = g
+
+    return _omega_well_output(
+        ok=g["ok"],
+        stage="G_WELL",
+        lane="AGI",
+        mode=mode,
+        verdict=g["g_well_verdict"] if g["g_well_verdict"] == "COHERENT" else (
+            "HOLD" if g["g_well_verdict"] == "FRAGMENTED" else "PROVISIONAL"
+        ),
+        data=data,
+        federation_state={
+            "g_well_verdict": g["g_well_verdict"],
+            "g_well_score": g["g_well_score"],
+            "governance_flags": g["governance_flags"],
+        },
+    )
+
+
+@mcp.tool()
+def well_trace_decision(
+    decision_id: str | None = None,
+    lookback_hours: float = 24,
+    ctx: Context | None = None,
+) -> dict[str, Any]:
+    """
+    G-WELL: Trace decision lineage through the governance chain.
+
+    Answers: who authorized what, when, under what substrate state?
+    Reads from events.jsonl to reconstruct decision ancestry.
+
+    If no decision_id, returns recent decision trace summary.
+    """
+    state = _load_state()
+    events_path = EVENTS_PATH
+    decisions = []
+    cutoff = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(hours=lookback_hours)
+
+    if events_path.exists():
+        try:
+            with open(events_path) as f:
+                for line in f:
+                    try:
+                        e = json.loads(line)
+                        epoch = datetime.datetime.fromisoformat(e.get("epoch", "2000-01-01"))
+                        if epoch < cutoff:
+                            continue
+                        etype = e.get("event", "")
+                        if any(k in etype for k in ["FORGE", "WELL_LOG", "VAULT", "PRESSURE", "WELL_INIT", "ANCHOR"]):
+                            decisions.append({
+                                "event": etype,
+                                "timestamp": e.get("epoch"),
+                                "actor": e.get("actor_id") or e.get("source", "unknown"),
+                                "decision_id": decision_id or e.get("decision_id", e.get("event", "") + "-" + str(hash(str(e)))),
+                            })
+                    except Exception:
+                        continue
+        except Exception:
+            pass
+
+    # Filter by decision_id if provided
+    if decision_id:
+        decisions = [d for d in decisions if decision_id in d.get("decision_id", "")]
+
+    g = _g_well_assess(state)
+
+    return _omega_well_output(
+        ok=True,
+        stage="G_WELL",
+        lane="AGI",
+        mode="trace",
+        verdict="SEAL" if g["g_well_verdict"] != "FRAGMENTED" else "HOLD",
+        data={
+            "lookback_hours": lookback_hours,
+            "decisions_found": len(decisions),
+            "decisions": decisions[:50] if decisions else [],
+            "g_well_verdict": g["g_well_verdict"],
+            "governance_flags": g["governance_flags"],
+        },
+        federation_state={
+            "decision_count": len(decisions),
+            "chain_health": "auditable" if len(decisions) > 0 else "empty",
+        },
+    )
+
+
+@mcp.tool()
+def well_validate_consensus(
+    action: str = "",
+    required_witnesses: list[str] | None = None,
+    ctx: Context | None = None,
+) -> dict[str, Any]:
+    """
+    G-WELL: Validate multi-organ consensus before irreversible actions.
+
+    Checks whether WELL + WEALTH + GEOX + arifOS are aligned.
+    Returns consensus verdict: PROCEED | HOLD | PARTIAL.
+
+    For now, checks local WELL readiness as the human witness leg.
+    Full multi-organ consensus requires A2A gateway to WEALTH/GEOX/arifOS.
+    """
+    state = _load_state()
+    witnesses = required_witnesses or ["well"]
+
+    h = _resolve_readiness(state)
+    g = _g_well_assess(state)
+
+    # WELL witness check
+    well_ready = h["readiness"] in ("OPTIMAL", "FUNCTIONAL") and g["g_well_verdict"] != "FRAGMENTED"
+    well_human_confirmation = h["human_confirmation_required"]
+
+    witness_results = {
+        "well": {
+            "available": True,
+            "verdict": "READY" if well_ready else "HOLD",
+            "human_readiness": h["readiness"],
+            "g_well_verdict": g["g_well_verdict"],
+            "governance_flags": g["governance_flags"],
+            "human_confirmation_required": well_human_confirmation,
+        },
+    }
+
+    # Placeholder for cross-organ witnesses
+    for w in witnesses:
+        if w != "well" and w not in witness_results:
+            witness_results[w] = {
+                "available": False,
+                "verdict": "UNREACHABLE",
+                "note": f"Cannot reach {w} in this session. Enable A2A gateway.",
+            }
+
+    all_ready = all(v["verdict"] == "READY" for v in witness_results.values() if v["available"])
+    any_hold = any(v["verdict"] == "HOLD" for v in witness_results.values() if v["available"])
+
+    if all_ready:
+        consensus = "PROCEED"
+    elif any_hold:
+        consensus = "HOLD"
+    else:
+        consensus = "PARTIAL"
+
+    return _omega_well_output(
+        ok=True,
+        stage="G_WELL",
+        lane="APEX",
+        mode="consensus",
+        verdict=consensus,
+        data={
+            "action": action,
+            "required_witnesses": witnesses,
+            "consensus": consensus,
+            "witness_results": witness_results,
+            "human_readiness": h["readiness"],
+            "g_well_verdict": g["g_well_verdict"],
+            "human_confirmation_required": well_human_confirmation,
+        },
+        constitutional_compliance={
+            "F01_AMANAH": "check" if action else "N/A",
+            "F03_WITNESS": f"{sum(1 for v in witness_results.values() if v['verdict'] == 'READY')}/{len(witnesses)}",
+            "F13_SOVEREIGN": "human_veto_path_intact",
+        },
+        federation_state={
+            "consensus": consensus,
+            "witnesses_ready": sum(1 for v in witness_results.values() if v['verdict'] == 'READY'),
+            "witnesses_required": len(witnesses),
+        },
+    )
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

@@ -1,21 +1,39 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "AFWELL State Schema",
-  "description": "Biological and Machine telemetry for the Human-Machine Readiness Mirror.",
+  "title": "AFWELL State Schema v2026.05.12",
+  "description": "Unified substrate state for Human, Machine, and Universal governance. SOT: /root/WELL/schema.json",
   "type": "object",
-  "required": ["timestamp", "metrics", "well_score", "identity", "role", "authority", "delta_s", "peace2", "kappa_r", "rasa", "amanah"],
+  "required": ["timestamp", "identity", "role", "authority", "delta_s", "peace2", "kappa_r", "rasa", "amanah"],
   "additionalProperties": true,
   "properties": {
     "timestamp": { "type": "string", "format": "date-time" },
+    "schema_version": { "type": "string", "default": "2026.05.12" },
     "operator_id": { "type": "string", "default": "arif" },
     "identity": { "type": "string", "enum": ["WELL"] },
     "role": { "type": "string", "enum": ["Body", "Body / Human Intelligence", "Biological Substrate Governance"] },
     "authority": { "type": "string", "enum": ["REFLECT_ONLY"] },
-    "delta_s": { "type": "number", "minimum": 0 },
-    "peace2": { "type": "number", "minimum": 1.0 },
-    "kappa_r": { "type": "number", "minimum": 0.95, "maximum": 1.0 },
-    "rasa": { "type": "boolean" },
-    "amanah": { "type": "string", "enum": ["LOCK", "🔐"] },
+    "delta_s": { "type": "number", "minimum": 0, "description": "Thermodynamic entropy — must be >= 0 for valid identity" },
+    "peace2": { "type": "number", "minimum": 1.0, "description": "Peace invariant — must be >= 1.0" },
+    "kappa_r": { "type": "number", "minimum": 0.95, "maximum": 1.0, "description": "Readiness confidence coefficient" },
+    "rasa": { "type": "boolean", "description": "Rasa (taste/judgment) gate — must be true" },
+    "amanah": { "type": "string", "enum": ["LOCK", "🔐"], "description": "Trust/amanah seal — must be LOCK or 🔐" },
+    "truth_status": {
+      "type": "string",
+      "enum": ["VERIFIED", "UNVERIFIED", "CONTRADICTED", "VOID", "TEST"],
+      "default": "UNVERIFIED"
+    },
+    "freshness_band": {
+      "type": "string",
+      "enum": ["FRESH", "CURRENT", "AGED", "STALE"],
+      "default": "STALE"
+    },
+    "environment": {
+      "type": "string",
+      "enum": ["PROD", "TEST", "DEV"],
+      "default": "PROD"
+    },
+    "well_score": { "type": "number", "minimum": 0, "maximum": 100 },
+    "floors_violated": { "type": "array", "items": { "type": "string" } },
     "metrics": {
       "type": "object",
       "properties": {
@@ -32,7 +50,19 @@
           "properties": {
             "hrv_proxy": { "type": "number" },
             "subjective_load": { "type": "number", "minimum": 0, "maximum": 10 },
-            "restlessness": { "type": "number", "minimum": 0, "maximum": 10 }
+            "restlessness": { "type": "number", "minimum": 0, "maximum": 10 },
+            "chronic_elevation_days": { "type": "number", "minimum": 0, "maximum": 365 }
+          }
+        },
+        "cognitive": {
+          "type": "object",
+          "properties": {
+            "clarity": { "type": "number", "minimum": 0, "maximum": 10 },
+            "decision_fatigue": { "type": "number", "minimum": 0, "maximum": 10 },
+            "focus_durability": { "type": "number", "minimum": 0, "maximum": 10 },
+            "pressure_sources": { "type": "object" },
+            "session_count": { "type": "number", "minimum": 0 },
+            "last_rest_period_minutes": { "type": "number", "minimum": 0 }
           }
         },
         "metabolic": {
@@ -43,26 +73,67 @@
             "hydration_status": { "type": "string", "enum": ["DEHYDRATED", "STABLE", "HYDRATED"] }
           }
         },
-        "cognitive": {
-          "type": "object",
-          "properties": {
-            "clarity": { "type": "number", "minimum": 0, "maximum": 10 },
-            "decision_fatigue": { "type": "number", "minimum": 0, "maximum": 10 },
-            "focus_durability": { "type": "number", "minimum": 0, "maximum": 10 },
-            "pressure_sources": { "type": "object" }
-          }
-        },
         "structural": {
           "type": "object",
           "properties": {
             "pain_map": { "type": "array", "items": { "type": "string" } },
-            "movement_frequency_daily": { "type": "number", "minimum": 0 }
+            "pain_level": { "type": "number", "minimum": 0, "maximum": 10 },
+            "movement_frequency_daily": { "type": "number", "minimum": 0 },
+            "sedentary_hours_continuous": { "type": "number", "minimum": 0, "maximum": 24 }
           }
         }
       }
     },
+    "g_well": {
+      "type": "object",
+      "description": "G-WELL — Governance abstraction layer for M-WELL (machine governance mirror)",
+      "properties": {
+        "model": {
+          "type": "object",
+          "properties": {
+            "reliability": { "type": "number", "minimum": 0, "maximum": 1 },
+            "family": { "type": "string" },
+            "variant": { "type": "string" },
+            "provider": { "type": "string" },
+            "latency_ms": { "type": "number", "minimum": 0 },
+            "context_length_pressure": { "type": "number", "minimum": 0, "maximum": 1 },
+            "memory_integrity": { "type": "number", "minimum": 0, "maximum": 1 }
+          }
+        },
+        "tools": {
+          "type": "object",
+          "properties": {
+            "total_registered": { "type": "integer", "minimum": 0 },
+            "canonical_registered": { "type": "integer", "minimum": 0 },
+            "availability": { "type": "number", "minimum": 0, "maximum": 1 },
+            "api_failure_rate": { "type": "number", "minimum": 0, "maximum": 1 }
+          }
+        },
+        "infrastructure": {
+          "type": "object",
+          "properties": {
+            "compute_budget_pct": { "type": "number", "minimum": 0, "maximum": 100 },
+            "token_budget_pct": { "type": "number", "minimum": 0, "maximum": 100 },
+            "vault_status": { "type": "string", "enum": ["ok", "degraded", "offline", "unknown"] },
+            "data_freshness": { "type": "number", "minimum": 0, "maximum": 1 },
+            "schema_valid": { "type": "boolean" }
+          }
+        },
+        "security": {
+          "type": "object",
+          "properties": {
+            "flags": { "type": "array", "items": { "type": "string" } },
+            "auth_boundary": { "type": "string", "enum": ["intact", "compromised"] },
+            "mutations_locked": { "type": "boolean" }
+          }
+        },
+        "score": { "type": "number", "minimum": 0, "maximum": 100 },
+        "verdict": { "type": "string", "enum": ["HEALTHY", "FUNCTIONAL", "DEGRADED", "CRITICAL"] }
+      }
+    },
     "m_machine": {
       "type": "object",
+      "description": "Legacy machine substrate — maintained for backward compatibility",
       "properties": {
         "model_reliability": { "type": "number", "minimum": 0, "maximum": 1 },
         "tool_availability": { "type": "number", "minimum": 0, "maximum": 1 },
@@ -78,8 +149,6 @@
         "schema_valid": { "type": "boolean" }
       }
     },
-    "well_score": { "type": "number", "minimum": 0, "maximum": 100 },
-    "floors_violated": { "type": "array", "items": { "type": "string" } },
     "substrates": {
       "type": "object",
       "description": "Universal substrate registry (U-WELL)",
@@ -107,7 +176,6 @@
     },
     "institution": {
       "type": "object",
-      "description": "Institutional substrate state (I-WELL)",
       "properties": {
         "mission_clarity": { "type": "number", "minimum": 0, "maximum": 10 },
         "cashflow_status": { "type": "string", "enum": ["positive", "surplus", "strong", "break_even", "stable", "negative", "deficit", "critical", "unknown"] },
@@ -118,7 +186,6 @@
     },
     "information": {
       "type": "object",
-      "description": "Information system coherence (INFO-WELL)",
       "properties": {
         "internal_consistency": { "type": "number", "minimum": 0, "maximum": 10 },
         "version_integrity": { "type": "boolean" },

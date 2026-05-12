@@ -1,6 +1,6 @@
 # WELL Invariants
 **Canonical reference — arifOS federation · human substrate governance layer**
-`version: 1.0 · epoch: 2026-05-03 · status: SEALED`
+`version: 2.0 · epoch: 2026-05-12 · status: SEALED`
 
 ***
 
@@ -12,6 +12,38 @@
 Every feature, sensor, floor, tool, and output must justify itself against this question.
 If it does not improve OFS classification, floor detection, readiness scoring, or throttle
 explanation — it does not belong in WELL.
+
+### I0a — Ground State Definition (v2026.05.12)
+
+WELL defines the **human ground state** as:
+
+> *A rested, hydrated, fed, low-threat, pain-minimized, emotionally regulated state
+> where judgment is available before action.*
+
+Not optimal. Not superhuman. Not productive. Just **safe enough for reversible judgment**.
+
+```text
+HUMAN_GROUND_STATE = the minimum stable biological condition under which
+perception, emotion, cognition, and motor control remain sufficiently
+regulated for reversible judgment.
+```
+
+The ground state is the biological equivalent of **clean boot + stable clock + low thermal load**.
+
+### I0b — Decision Ceiling (derived from ground state)
+
+WELL does not say "good/bad health." It says:
+
+> **What class of decision is biologically safe enough right now?**
+
+| State | Meaning | Decision Ceiling |
+|-------|---------|-----------------|
+| **GROUND** | Stable regulation, all floors clear | C0-C5 (full) |
+| **STRAINED** | Load rising, 1-2 floors violated | C0-C3 (narrowed) |
+| **DEGRADED** | Regulation compromised, 3+ floors violated | C0-C1 (draft only) |
+| **UNSAFE** | Medical/acute danger | Emergency/professional care |
+
+The `decision_ceiling` field is derived at handoff time (see WELL_ARIFOS_CONTRACT §3.2).
 
 ***
 
@@ -199,7 +231,60 @@ WELL follows adaptive automation etiquette. Throttle outputs must always:
 
 ***
 
-## I10 — Irreversibility Gate
+## I10 — Human Body Limits Table
+
+WELL codifies the following **human body limit classes** as canonical. These inform all floor triggers, throttle etiquette, and governance responses.
+
+| Limit Class | Early Signal | Floor | Governance Response |
+|---|---|---|---|
+| Sleep debt | Fog, irritability, slower reaction | W1 | Avoid C4/C5 |
+| Dehydration | Thirst, dark urine, dizziness | W2 | Hydrate, pause heat/load |
+| Metabolic instability | Shakiness, crash, poor focus | W2 | Food/rest before decision |
+| Stress overload | Urgency, anger, tunnel vision | W3 | Delay irreversible action |
+| Sedentary load | Stiffness, back/neck pain | W4 | Movement reset |
+| Pain | Attention captured | W4 | Reduce scope |
+| Skill decay | Rusty execution | W7 | Practice before high-stakes use |
+| Tool/machine unreliability | Errors, stale data | G-WELL / M-WELL | Require evidence witness |
+| Coupled instability | Tired human + failing tools | C-WELL / G-WELL | Hold, simplify, verify |
+
+The body's true limit is not strength. It is **regulation** — how much disturbance can be absorbed before regulation becomes unstable.
+
+## I11 — Emergency Boundary (Non-Negotiable)
+
+WELL must fail closed and advise professional care for acute symptoms. These are **not floors** — they are external medical boundaries beyond WELL's scope.
+
+| Signal | Recommended Action |
+|---|---|
+| Chest pain, severe shortness of breath | Emergency medical care |
+| Fainting, loss of consciousness | Emergency medical care |
+| Confusion, altered mental status, seizure | Emergency medical care |
+| Stroke-like symptoms (numbness, slurred speech) | Emergency medical care |
+| Heat stroke signs (very high body temp, hot dry skin) | Emergency medical care |
+| Suicidal ideation or self-harm risk | Crisis line / emergency care |
+| Severe dehydration (cannot keep fluids down) | Urgent medical care |
+| Severe or worsening pain | Urgent medical care |
+
+WELL never diagnoses these. It recommends professional care and halts all non-essential governance operations.
+
+## I12 — The 5-Minute Body Check
+
+Before C3-C5 action, WELL recommends Arif verify:
+
+```text
+1. Did I sleep enough?
+2. Am I hydrated?
+3. Is stress driving urgency?
+4. Is pain or fatigue taxing attention?
+5. Is the toolchain reliable?
+6. Is the data fresh?
+7. Is this reversible?
+```
+
+If 2+ are degraded → AMBER. If stress is high + decision is irreversible → RED/HOLD.
+
+---
+
+## I13 — Irreversibility Gate
 
 For any action that is irreversible, production-impacting, auth-related, deletion-related,
 schema-migrating, or data-exporting:
