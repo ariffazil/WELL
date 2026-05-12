@@ -62,12 +62,19 @@ def bridge_to_vault(force=False):
     last_score = get_last_anchored_score()
     violations = state.get("floors_violated", [])
 
-    # 1. Condition logic: High-Signal Only
+    # Metabolic flux telemetry
+    flux = state.get("metabolic_flux", {})
+    flux_val = flux.get("metabolic_flux", 0.0) if isinstance(flux, dict) else 0.0
+    flux_verdict = flux.get("verdict", "UNKNOWN") if isinstance(flux, dict) else "UNKNOWN"
+    compulsory = flux.get("compulsory_reallocation", False) if isinstance(flux, dict) else False
+
+    # 1. Condition logic: High-Signal Only (+ thermodynamic trigger)
     is_degraded = len(violations) > 0
     is_low_capacity = current_score < 70
     is_significant_delta = last_score is None or abs(current_score - last_score) >= 10
+    is_flux_critical = flux_verdict in ("COMPULSORY_REALLOCATION", "SYSTEM_HOLD")
 
-    if not (is_degraded or is_low_capacity or is_significant_delta or force):
+    if not (is_degraded or is_low_capacity or is_significant_delta or is_flux_critical or force):
         return {"status": "SKIPPED", "message": "Signal-to-noise suppressed. Ledger remains clean."}
 
     # 2. Build VAULT999 Payload
@@ -77,8 +84,11 @@ def bridge_to_vault(force=False):
         "well_score": current_score,
         "status": "DEGRADED" if is_degraded else "LOW" if is_low_capacity else "STABLE",
         "violations": violations,
+        "metabolic_flux": flux_val,
+        "flux_verdict": flux_verdict,
+        "compulsory_reallocation": compulsory,
         "w0_assertion": "OPERATOR_VETO_INTACT / HIERARCHY_INVARIANT",  # Permanent Constitutional Anchor
-        "trigger": "VIOLATION" if is_degraded else "CAPACITY" if is_low_capacity else "DELTA" if is_significant_delta else "MANUAL"
+        "trigger": "FLUX_CRITICAL" if is_flux_critical else "VIOLATION" if is_degraded else "CAPACITY" if is_low_capacity else "DELTA" if is_significant_delta else "MANUAL"
     }
 
     payload["hash"] = hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()
@@ -95,4 +105,3 @@ def bridge_to_vault(force=False):
 if __name__ == "__main__":
     force_sync = "--force" in sys.argv
     result = bridge_to_vault(force=force_sync)
-    print(json.dumps(result, indent=2))

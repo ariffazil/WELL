@@ -214,6 +214,141 @@ WELL_FRESHNESS_BANDS = {
 }
 
 
+# ── Thermodynamic Flux Engine (Phase 3) ──────────────────────────────────────────
+# Maps metabolic_flux = cognitive_entropy_rate + machine_entropy.
+# Thresholds: 0.40 warning, 0.65 compulsory reallocation, 0.85 system hold.
+
+METABOLIC_FLUX_WEIGHTS = {
+    "cognitive_entropy": 0.30,
+    "compute_budget_pressure": 0.25,
+    "api_failure_rate": 0.20,
+    "context_pressure": 0.15,
+    "memory_pressure": 0.10,
+}
+
+FLUX_THRESHOLDS = {
+    "WARNING": 0.40,
+    "COMPULSORY_REALLOCATION": 0.65,
+    "SYSTEM_HOLD": 0.85,
+}
+
+FLUX_VERDICTS = {
+    "NOMINAL": "Metabolic flux within nominal range. No reallocation needed.",
+    "WARNING": "Metabolic flux elevated. Single dimension stress detected. Reallocation advised.",
+    "COMPULSORY_REALLOCATION": "Metabolic flux critical. Multiple dimensions degrading + prediction contradictions. Compulsory reallocation triggered. Routing to 441_SURPRISE.",
+    "SYSTEM_HOLD": "Metabolic flux severe. System in distress. 888 intervention required.",
+}
+
+
+def _compute_cognitive_entropy_rate(state: dict[str, Any]) -> float:
+    """Compute cognitive_entropy_rate from contradiction tracking.
+
+    Formula:
+      cognitive_entropy_rate = (contradiction_count / max(total_predictions, 1))
+                               × average_confidence_of_failures / 10
+    Range: 0.0–1.0
+    """
+    metrics = state.get("metrics", {})
+    cognitive = metrics.get("cognitive", {})
+    contradiction_count = cognitive.get("contradiction_count", 0)
+    total_predictions = cognitive.get("total_predictions", 0)
+    avg_confidence_failures = cognitive.get("avg_confidence_of_failures", 5.0)
+
+    if total_predictions == 0:
+        return 0.0
+    return min(1.0, (contradiction_count / total_predictions) * (avg_confidence_failures / 10.0))
+
+
+def _compute_machine_entropy(state: dict[str, Any]) -> float:
+    """Compute machine substrate entropy from M-WELL state.
+
+    Formula:
+      machine_entropy = 1.0 - (m_well_score / 100.0)
+    Range: 0.0–1.0
+    """
+    m = state.get("m_machine", {})
+    m_score = m.get("m_well_score", 100)
+    return max(0.0, min(1.0, 1.0 - (m_score / 100.0)))
+
+
+def _compute_metabolic_flux(state: dict[str, Any]) -> dict[str, Any]:
+    """Compute the unified metabolic_flux metric: a 0.0–1.0 scalar
+    representing the system's entropy rate across cognitive and machine planes.
+
+    Formula:
+      cognitive_entropy = _compute_cognitive_entropy_rate(state)
+      machine_entropy   = _compute_machine_entropy(state)
+      context_pressure  = state metrics context_pressure (0–1)
+      compute_pressure  = 1.0 - (compute_budget_pct / 100.0)
+      api_failure_rate  = state m_machine api_failure_rate (0–1)
+      memory_pressure   = state m_machine context_length_pressure (0–1)
+
+      metabolic_flux = Σ(w_i × component_i)
+
+    Returns structured payload with components, weighted flux, verdict, and
+    reallocation signal.
+    """
+    metrics = state.get("metrics", {})
+    cognitive = metrics.get("cognitive", {})
+    m_machine = state.get("m_machine", {})
+
+    cognitive_entropy = _compute_cognitive_entropy_rate(state)
+    machine_entropy = _compute_machine_entropy(state)
+    context_pressure = m_machine.get("context_pressure", 0.0)
+    if isinstance(context_pressure, bool):
+        context_pressure = 1.0 if context_pressure else 0.0
+    compute_budget_pct = m_machine.get("compute_budget_pct", 100)
+    compute_pressure = max(0.0, 1.0 - (compute_budget_pct / 100.0))
+    api_failure_rate = m_machine.get("api_failure_rate", 0.0)
+    memory_pressure = m_machine.get("context_length_pressure", 0.0)
+
+    # Weighted flux sum
+    flux = (
+        METABOLIC_FLUX_WEIGHTS["cognitive_entropy"] * cognitive_entropy
+        + METABOLIC_FLUX_WEIGHTS["compute_budget_pressure"] * compute_pressure
+        + METABOLIC_FLUX_WEIGHTS["api_failure_rate"] * api_failure_rate
+        + METABOLIC_FLUX_WEIGHTS["context_pressure"] * context_pressure
+        + METABOLIC_FLUX_WEIGHTS["memory_pressure"] * memory_pressure
+    )
+    flux = round(max(0.0, min(1.0, flux)), 4)
+
+    # Determine verdict
+    if flux >= FLUX_THRESHOLDS["SYSTEM_HOLD"]:
+        verdict = "SYSTEM_HOLD"
+    elif flux >= FLUX_THRESHOLDS["COMPULSORY_REALLOCATION"]:
+        verdict = "COMPULSORY_REALLOCATION"
+    elif flux >= FLUX_THRESHOLDS["WARNING"]:
+        verdict = "WARNING"
+    else:
+        verdict = "NOMINAL"
+
+    # Reallocation signal
+    compulsory = flux >= FLUX_THRESHOLDS["COMPULSORY_REALLOCATION"]
+
+    return {
+        "ok": True,
+        "metabolic_flux": flux,
+        "verdict": verdict,
+        "verdict_message": FLUX_VERDICTS[verdict],
+        "components": {
+            "cognitive_entropy": cognitive_entropy,
+            "machine_entropy": machine_entropy,
+            "compute_pressure": compute_pressure,
+            "api_failure_rate": api_failure_rate,
+            "context_pressure": context_pressure,
+            "memory_pressure": memory_pressure,
+        },
+        "thresholds": {
+            "warning": FLUX_THRESHOLDS["WARNING"],
+            "compulsory_reallocation": FLUX_THRESHOLDS["COMPULSORY_REALLOCATION"],
+            "system_hold": FLUX_THRESHOLDS["SYSTEM_HOLD"],
+        },
+        "compulsory_reallocation": compulsory,
+        "reallocation_target": "441_SURPRISE" if compulsory else None,
+        "w0": "OPERATOR_VETO_INTACT / HIERARCHY_INVARIANT",
+    }
+
+
 def _get_freshness_band(state: dict[str, Any]) -> str:
     """Determine freshness band from state timestamp."""
     ts = state.get("timestamp", "")
@@ -2726,6 +2861,11 @@ def well_coupled_readiness(ctx: Context | None = None) -> dict[str, Any]:
     # Human verdict — use resolver, never fake
     h_verdict = h_resolved["readiness"]
 
+    # Metabolic flux override — thermodynamic threshold check
+    flux = _compute_metabolic_flux(h_state)
+    flux_verdict = flux["verdict"]
+    flux_val = flux["metabolic_flux"]
+
     # Coupled risk detection (only if we have real body data)
     h_vals: dict[str, float] = {}
     if has_telemetry:
@@ -2746,16 +2886,31 @@ def well_coupled_readiness(ctx: Context | None = None) -> dict[str, Any]:
             if h_triggered and m_triggered:
                 risks_found.append(pattern["risk"])
 
-    # Coupled risk level
+    # Coupled risk level — flux verdict takes priority when critical
     risk_count = len(risks_found)
     if not has_telemetry:
         coupled_risk = "UNKNOWN"
         recommended_mode = "draft_only"
         status = "HOLD"
+    elif flux_verdict == "SYSTEM_HOLD":
+        coupled_risk = "RED"
+        recommended_mode = "suspended"
+        status = "HOLD"
+        risks_found.append("FLUX_SYSTEM_HOLD")
+    elif flux_verdict == "COMPULSORY_REALLOCATION":
+        coupled_risk = "RED"
+        recommended_mode = "suspended"
+        status = "HOLD"
+        risks_found.append("FLUX_COMPULSORY_REALLOCATION")
     elif risk_count >= 3 or (h_verdict == "LOW_CAPACITY" and m_verdict in ("DEGRADED", "CRITICAL")):
         coupled_risk = "RED"
         recommended_mode = "suspended"
         status = "HOLD"
+    elif flux_verdict == "WARNING":
+        coupled_risk = "AMBER"
+        recommended_mode = "draft_only"
+        status = "CAUTION"
+        risks_found.append("FLUX_WARNING")
     elif risk_count >= 1 or (h_verdict == "DEGRADED" and m_verdict != "HEALTHY"):
         coupled_risk = "AMBER"
         recommended_mode = "draft_only"
@@ -5430,7 +5585,8 @@ OMEGA_WELL_TOOLS = {
     "well_classify_substrate", "well_trace_lineage", "well_detect_boundary",
     "well_measure_gradient", "well_assess_metabolism", "well_assess_homeostasis",
     "well_check_repair", "well_validate_vitality", "well_assess_livelihood",
-    "well_assess_reliability", "well_reflect_intelligence", "well_guard_dignity",
+    "well_assess_reliability", "well_compute_metabolic_flux",
+    "well_reflect_intelligence", "well_guard_dignity",
     "well_anchor_evidence",
 }
 
@@ -5506,6 +5662,7 @@ def afwell_vitals_arif() -> str:
     """Readiness vitals — triage color, score, violations."""
     state = _load_state()
     resolved = _resolve_readiness(state)
+    flux = _compute_metabolic_flux(state)
     vitals = {
         "well_score": resolved["well_score"],
         "readiness": resolved["readiness"],
@@ -5514,6 +5671,9 @@ def afwell_vitals_arif() -> str:
         "active_violations": resolved["active_violations"],
         "has_telemetry": resolved["has_telemetry"],
         "human_confirmation_required": resolved["human_confirmation_required"],
+        "metabolic_flux": flux["metabolic_flux"],
+        "flux_verdict": flux["verdict"],
+        "compulsory_reallocation": flux["compulsory_reallocation"],
     }
     return json.dumps(vitals, indent=2)
 
@@ -6527,6 +6687,56 @@ def well_assess_reliability(
 
 
 @mcp.tool()
+def well_compute_metabolic_flux(
+    mode: str = "compute",
+    force_recompute: bool = False,
+    ctx: Context | None = None,
+) -> dict[str, Any]:
+    """Ω-WELL-10b: Compute metabolic_flux — unified thermodynamic entropy rate.
+
+    Computes cognitive_entropy_rate + machine_entropy into a 0.0–1.0 scalar.
+    Triggers compulsory_reallocation signal at flux >= 0.65, and system_hold at >= 0.85.
+
+    Modes:
+      compute  — Compute current metabolic flux from state.
+      status   — Return cached flux verdict without recompute.
+      trigger  — Force evaluate reallocation threshold and return signal.
+    """
+    mode = mode.lower()
+    state = _load_state()
+
+    if mode == "status":
+        cached = state.get("metabolic_flux", {})
+        if cached:
+            return cached
+        return {"ok": True, "metabolic_flux": None, "verdict": "UNKNOWN", "compulsory_reallocation": False, "message": "No cached flux. Call compute mode first."}
+
+    flux = _compute_metabolic_flux(state)
+
+    if mode == "trigger":
+        return {
+            "ok": True,
+            "compulsory_reallocation": flux["compulsory_reallocation"],
+            "verdict": flux["verdict"],
+            "metabolic_flux": flux["metabolic_flux"],
+            "reallocation_target": flux["reallocation_target"],
+            "w0": "OPERATOR_VETO_INTACT / HIERARCHY_INVARIANT",
+        }
+
+    # Cache flux into state
+    state["metabolic_flux"] = flux
+    _save_state(state)
+    _append_event({
+        "event": "METABOLIC_FLUX_COMPUTED",
+        "metabolic_flux": flux["metabolic_flux"],
+        "verdict": flux["verdict"],
+        "compulsory_reallocation": flux["compulsory_reallocation"],
+    })
+
+    return flux
+
+
+@mcp.tool()
 def well_reflect_intelligence(
     mode: str = "route",
     task_description: str | None = None,
@@ -6867,6 +7077,13 @@ _WELL_WISDOM: dict[str, dict[str, Any]] = {
         "livelihood_dimensions": {"energy": "body budget", "role_clarity": "social stability", "duty_load": "obligation pressure", "dignity": "maruah preserved", "purpose": "niat aligned"},
         "authority": "Dignity is not a resource to be spent.",
     },
+    "well_compute_metabolic_flux": {
+        "axiom": "Entropy is the tax intelligence pays for existence. Metabolic flux is the rate of that tax. When flux exceeds 0.65, the system must reallocate before it dissolves into noise.",
+        "carbon_lesson": "A tired mind makes more errors. Each error increases cognitive entropy. Entropy compounds faster than recovery can clear it.",
+        "silica_lesson": "Stone under stress develops microfractures. The fracture network grows faster than the applied load — this is stone's metabolic flux.",
+        "machine_lesson": "Prediction contradiction rate is the machine's cognitive entropy. A model that contradicts itself at high confidence is a model that has lost its epistemic grounding.",
+        "authority": "Flux ≤ 0.40: nominal. Flux > 0.65: compulsory reallocation. Flux > 0.85: system hold. These are thermodynamic thresholds, not suggestions.",
+    },
     "well_assess_reliability": {
         "axiom": "Machine reliability is physical, not moral. Machine health is substrate condition, not trustworthiness.",
         "three_plane_mapping": {"delta KUKUH": "physical state solid", "delta RETAK": "physical state degraded", "delta ROSAK": "physical state broken", "psi": "governance trust — not a machine property", "omega": "reasoning discipline — not a machine property"},
@@ -6926,37 +7143,185 @@ def _inject_well_wisdom(response: dict[str, Any], tool_name: str) -> dict[str, A
 # Universal wisdom injection — monkey-patch all registered tool functions
 # ═══════════════════════════════════════════════════════════════════════════════
 
-def _wrap_well_outputs(mcp_server: FastMCP) -> None:
-    """Inject substrate_wisdom into every WELL tool response."""
-    import inspect
+# ── Somatic/Autonomic Boundary ──────────────────────────────────────────────────
+# Canonical tools visible to external agents (14).
+# All other @mcp.tool() functions are autonomic — callable internally via
+# the canonical dispatchers but hidden from agent tool listing.
+SOMATIC_TOOLS = {
+    "mcp_health_check",
+    "well_classify_substrate", "well_trace_lineage", "well_detect_boundary",
+    "well_measure_gradient", "well_assess_metabolism", "well_assess_homeostasis",
+    "well_check_repair", "well_validate_vitality", "well_assess_livelihood",
+    "well_assess_reliability", "well_compute_metabolic_flux",
+    "well_reflect_intelligence", "well_guard_dignity", "well_anchor_evidence",
+}
+
+# ── Federation Tool Manifest Registration ──────────────────────────────────────
+# Populates FEDERATION_TOOLS with cognitive_axis for every WELL MCP tool.
+# Replaces ad-hoc SOMATIC_TOOLS set with manifest-based filtering.
+_WELL_MANIFEST: list[dict[str, object]] = [
+    # Somatic (visible) tools with cognitive axis
+    {"name": "mcp_health_check",            "axis": "identity",   "expose": True},
+    {"name": "well_classify_substrate",     "axis": "identity",   "expose": True},
+    {"name": "well_trace_lineage",          "axis": "trace",      "expose": True},
+    {"name": "well_detect_boundary",        "axis": "boundary",   "expose": True},
+    {"name": "well_measure_gradient",       "axis": "observe",    "expose": True},
+    {"name": "well_assess_metabolism",      "axis": "reason",     "expose": True},
+    {"name": "well_assess_homeostasis",     "axis": "vitality",   "expose": True},
+    {"name": "well_check_repair",           "axis": "repair",     "expose": True},
+    {"name": "well_validate_vitality",      "axis": "judge",      "expose": True},
+    {"name": "well_assess_livelihood",      "axis": "vitality",   "expose": True},
+    {"name": "well_assess_reliability",     "axis": "vitality",   "expose": True},
+    {"name": "well_compute_metabolic_flux", "axis": "vitality",   "expose": True},
+    {"name": "well_reflect_intelligence",   "axis": "reflect",    "expose": True},
+    {"name": "well_guard_dignity",          "axis": "critique",   "expose": True},
+    {"name": "well_anchor_evidence",        "axis": "seal",       "expose": True},
+    # Autonomic phase-1 tools (legacy but active)
+    {"name": "well_get_health",             "axis": "identity",   "expose": False},
+    {"name": "well_get_state",              "axis": "observe",    "expose": False},
+    {"name": "well_check_invariant",        "axis": "identity",   "expose": False},
+    {"name": "well_log_signal",             "axis": "observe",    "expose": False},
+    {"name": "well_list_events",            "axis": "trace",      "expose": False},
+    {"name": "well_reflect_trend",          "axis": "reflect",    "expose": False},
+    {"name": "well_reflect_readiness",      "axis": "judge",      "expose": False},
+    {"name": "well_suggest_mode",           "axis": "judge",      "expose": False},
+    {"name": "well_suggest_recovery",       "axis": "repair",     "expose": False},
+    {"name": "well_reflect_niat",           "axis": "reflect",    "expose": False},
+    {"name": "well_classify_task",          "axis": "reason",     "expose": False},
+    {"name": "well_get_packet",             "axis": "identity",   "expose": False},
+    {"name": "well_request_anchor",         "axis": "seal",       "expose": False},
+    # Ω-WELL stage aliases (autonomic)
+    {"name": "well_000_init",               "axis": "identity",   "expose": False},
+    {"name": "well_111_sense",              "axis": "observe",    "expose": False},
+    {"name": "well_222_fetch",              "axis": "verify",     "expose": False},
+    {"name": "well_333_mind",               "axis": "reason",     "expose": False},
+    {"name": "well_444_kernel",             "axis": "reflect",    "expose": False},
+    {"name": "well_555_memory",             "axis": "trace",      "expose": False},
+    {"name": "well_666_heart",              "axis": "critique",   "expose": False},
+    {"name": "well_777_forge",              "axis": "execute",    "expose": False},
+    {"name": "well_888_judge",              "axis": "judge",      "expose": False},
+    {"name": "well_999_vault",              "axis": "seal",       "expose": False},
+    {"name": "well_444_reply",              "axis": "reflect",    "expose": False},
+    {"name": "well_444_gateway",            "axis": "boundary",   "expose": False},
+    {"name": "well_000_ops",                "axis": "vitality",   "expose": False},
+    # Core human substrate tools (autonomic)
+    {"name": "well_state",                  "axis": "observe",    "expose": False},
+    {"name": "well_log",                    "axis": "observe",    "expose": False},
+    {"name": "well_readiness",              "axis": "judge",      "expose": False},
+    {"name": "well_init",                   "axis": "identity",   "expose": False},
+    {"name": "well_anchor",                 "axis": "seal",       "expose": False},
+    {"name": "well_check_floors",           "axis": "judge",      "expose": False},
+    {"name": "well_check_floor",            "axis": "judge",      "expose": False},
+    {"name": "well_log_state",              "axis": "observe",    "expose": False},
+    {"name": "well_get_readiness",          "axis": "judge",      "expose": False},
+    {"name": "well_list_log",               "axis": "trace",      "expose": False},
+    {"name": "well_seal_vault",             "axis": "seal",       "expose": False},
+    {"name": "well_trend_analysis",         "axis": "reflect",    "expose": False},
+    {"name": "well_bandwidth_recommendation","axis": "vitality",  "expose": False},
+    {"name": "well_recovery_protocol",      "axis": "repair",     "expose": False},
+    {"name": "well_niat_check",             "axis": "reflect",    "expose": False},
+    {"name": "well_decision_classify",      "axis": "reason",     "expose": False},
+    {"name": "well_arifos_packet",          "axis": "identity",   "expose": False},
+    {"name": "well_consent_status",         "axis": "boundary",   "expose": False},
+    {"name": "well_medical_boundary",       "axis": "boundary",   "expose": False},
+    {"name": "well_pressure_ledger",        "axis": "observe",    "expose": False},
+    {"name": "well_daily_brief",            "axis": "reflect",    "expose": False},
+    {"name": "well_machine_state",          "axis": "observe",    "expose": False},
+    # C-WELL coupled + forge bridge (autonomic)
+    {"name": "well_coupled_readiness",      "axis": "vitality",   "expose": False},
+    {"name": "well_decision_bandwidth",     "axis": "judge",      "expose": False},
+    {"name": "well_forge_precheck",         "axis": "execute",    "expose": False},
+    {"name": "well_forge_pressure_update",  "axis": "vitality",   "expose": False},
+    {"name": "well_forge_mode_recommend",   "axis": "judge",      "expose": False},
+    {"name": "well_forge_closeout",         "axis": "repair",     "expose": False},
+    # M-WELL machine telemetry (autonomic)
+    {"name": "well_machine_log_signal",     "axis": "observe",    "expose": False},
+    {"name": "well_machine_trend",          "axis": "reflect",    "expose": False},
+    {"name": "well_machine_health_probe",   "axis": "vitality",   "expose": False},
+    # H-WELL cross-session (autonomic)
+    {"name": "well_fatigue_accumulator",    "axis": "vitality",   "expose": False},
+    {"name": "well_circadian_phase",        "axis": "observe",    "expose": False},
+    # G-WELL governance (autonomic)
+    {"name": "well_assess_governance",      "axis": "critique",   "expose": False},
+    {"name": "well_trace_decision",         "axis": "trace",      "expose": False},
+    {"name": "well_validate_consensus",     "axis": "judge",      "expose": False},
+    # U-WELL universal substrate (autonomic)
+    {"name": "well_boundary_check",         "axis": "boundary",   "expose": False},
+    {"name": "well_evidence_quality_check", "axis": "verify",     "expose": False},
+    {"name": "well_verdict_packet",         "axis": "judge",      "expose": False},
+    {"name": "well_livelihood_energy_check","axis": "vitality",   "expose": False},
+    {"name": "well_livelihood_time_check",  "axis": "vitality",   "expose": False},
+    {"name": "well_livelihood_role_check",  "axis": "vitality",   "expose": False},
+    {"name": "well_livelihood_meaning_check","axis": "vitality",  "expose": False},
+    {"name": "well_livelihood_dignity_check","axis": "critique",  "expose": False},
+    {"name": "well_bio_viability_check",    "axis": "vitality",   "expose": False},
+    {"name": "well_material_integrity_check","axis": "verify",    "expose": False},
+    {"name": "well_institution_entropy_check","axis":"critique",  "expose": False},
+    {"name": "well_info_coherence_check",   "axis": "verify",     "expose": False},
+    {"name": "well_symbolic_domain_check",  "axis": "critique",   "expose": False},
+]
+
+try:
+    from federation.tool_manifest import FEDERATION_TOOLS, ToolManifest, CognitiveAxis as _CA, is_tool_somatic
+    for _entry in _WELL_MANIFEST:
+        _name = str(_entry["name"])
+        FEDERATION_TOOLS[_name] = ToolManifest(
+            name=_name,
+            description="",
+            expose=bool(_entry["expose"]),
+            cognitive_axis=_CA(str(_entry["axis"])),
+            organ="well",
+        )
+except Exception:
+    pass  # federation module may not exist in all environments
+
+
+def _enforce_somatic_boundary(mcp_server: FastMCP) -> None:
+    """Remove autonomic tools from the public MCP surface.
+
+    Uses FEDERATION_TOOLS manifest (is_tool_somatic) as single source of truth.
+    Falls back to SOMATIC_TOOLS set if federation manifest is unavailable.
+    """
     provider = getattr(mcp_server, "_local_provider", None)
     if not provider:
         return
-    for key, tool in getattr(provider, "_components", {}).items():
+    removed: list[str] = []
+    somatic_count = 0
+    for key in list(getattr(provider, "_components", {}).keys()):
         if not key.startswith("tool:"):
             continue
-        original_fn = getattr(tool, "fn", None)
-        if not original_fn:
-            continue
-        tool_name = key[5:].rstrip("@")
+        tool_name = key[5:].rstrip("@v")
+        try:
+            from federation.tool_manifest import is_tool_somatic as _its
+            visible = _its(tool_name)
+        except Exception:
+            visible = tool_name in SOMATIC_TOOLS
+        if not visible:
+            try:
+                mcp_server.remove_tool(tool_name)
+                removed.append(tool_name)
+            except Exception:
+                pass
+        else:
+            somatic_count += 1
+    import logging as _logging
+    _logging.getLogger(__name__).info(
+        "Somatic boundary enforced: %d somatic, %d autonomic removed",
+        somatic_count, len(removed),
+    )
 
-        async def _wisdom_wrapper(*args: Any, __orig=original_fn, __name=tool_name, **kwargs: Any) -> Any:
-            result = __orig(*args, **kwargs)
-            if inspect.isawaitable(result):
-                result = await result
-            if isinstance(result, dict):
-                result = _inject_well_wisdom(result, __name)
-            return result
 
-        tool.fn = _wisdom_wrapper
-
-
-_wrap_well_outputs(mcp)
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# Server bootstrap — must run AFTER all canonical tools are registered
-# ═══════════════════════════════════════════════════════════════════════════════
+# Server bootstrap — somatic boundary applied before uvicorn starts
+if _os.environ.get("FEDERATION_SOMATIC_BOUNDARY", "0") == "1" or _os.environ.get("WELL_SOMATIC_BOUNDARY", "0") == "1":
+    _enforce_somatic_boundary(mcp)
 
 if __name__ == "__main__":
+    # If this __main__ block is not the first one (at ~line 5911),
+    # this fallback ensures uvicorn starts
     import uvicorn
-    uvicorn.run(app, host=host, port=port, log_level=_os.environ.get("LOG_LEVEL", "info"))
+    host = _os.environ.get("HOST", "0.0.0.0")
+    port = int(_os.environ.get("PORT", 8083))
+    uvicorn.run(
+        mcp.http_app(path="/mcp", transport="streamable-http", json_response=True, stateless_http=True),
+        host=host, port=port, log_level=_os.environ.get("LOG_LEVEL", "info"),
+    )

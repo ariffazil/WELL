@@ -1172,6 +1172,8 @@ def test_well_registry_declared_surface_matches_callable():
         "well_machine_log_signal", "well_machine_trend", "well_machine_health_probe",
         # H-WELL expansion
         "well_fatigue_accumulator", "well_circadian_phase",
+        # Thermodynamic Flux Engine
+        "well_compute_metabolic_flux",
     }
 
     _write_canonical_state()
