@@ -547,7 +547,7 @@ def _resolve_readiness(state: dict[str, Any]) -> dict[str, Any]:
 
     # I2/I3 — Evidence discipline: unverified/stale/expired telemetry cannot produce OPTIMAL
     truth_status = state.get("truth_status", "UNVERIFIED")
-    if truth_status in ("UNVERIFIED", "STALE", "EXPIRED"):
+    if truth_status in ("UNVERIFIED", "STALE", "EXPIRED", "OPERATOR_REPORTED"):
         return {
             "readiness": "DEGRADED" if truth_status == "EXPIRED" else "LOW_CAPACITY",
             "risk_level": "RED" if truth_status == "EXPIRED" else "AMBER",
@@ -670,9 +670,8 @@ mcp = FastMCP(
     ),
 )
 
-@mcp.tool()
-def mcp_health_check() -> dict:
-    """[DEPRECATED — use well_assess_reliability(mode='health')] Federation health stub. Retained for compatibility."""
+def _mcp_health_check_impl() -> dict:
+    """Internal implementation — returns raw payload for internal consumers."""
     state = _load_state()
     m_machine = state.get("m_machine", {})
     well_ok = is_well(state)
@@ -690,8 +689,6 @@ def mcp_health_check() -> dict:
         status = "OK"
         identity_note = "healthy"
 
-    # I2 — Health coherence: heartbeat must reflect identity validity
-    # Phase 3 — federation reconciliation
     any_tool_says_optimistic = status == "OK"
     reconcile = _federation_health_reconcile(
         transport_ok=True,
@@ -720,6 +717,12 @@ def mcp_health_check() -> dict:
         "freshness_band": freshness_band,
         "federation_reconcile": reconcile,
     }
+
+
+@mcp.tool()
+def mcp_health_check() -> dict:
+    """[DEPRECATED — use well_assess_reliability(mode='health')] Federation health stub. Retained for compatibility."""
+    return _to_federation_output(_mcp_health_check_impl(), tool_name="mcp_health_check")
 
 
 def _build_unified_packet(ctx: Context | None = None) -> dict[str, Any]:
@@ -755,7 +758,7 @@ def _build_unified_packet(ctx: Context | None = None) -> dict[str, Any]:
     g_well = _g_well_assess(state)
 
     # MCP infra substrate
-    mcp = mcp_health_check()
+    mcp = _mcp_health_check_impl()
 
     # Coupled readiness (human + machine + MCP)
     h_ready = human["readiness"].get("readiness", "UNKNOWN")
@@ -1261,6 +1264,11 @@ def well_log(
     state["metrics"] = metrics
     state["well_score"] = score
     state["floors_violated"] = violations
+    # F2/I3: Operator-reported data is never VERIFIED automatically.
+    # Only machine-verifiable or cryptographically signed telemetry may be VERIFIED.
+    # This prevents truth_status poisoning where one legit session + forged logs
+    # produces undetectable fake substrate data.
+    state["truth_status"] = "OPERATOR_REPORTED"
     _save_state(state)
 
     event: dict[str, Any] = {
@@ -1309,7 +1317,7 @@ def well_readiness(ctx: Context | None = None) -> dict[str, Any]:
     truth_status = state.get("truth_status", "UNVERIFIED")
     freshness_band = resolved.get("freshness_band", _get_freshness_band(state))
     confidence = (
-        "LOW" if truth_status in ("UNVERIFIED", "STALE", "EXPIRED") else
+        "LOW" if truth_status in ("UNVERIFIED", "STALE", "EXPIRED", "OPERATOR_REPORTED") else
         "MEDIUM" if truth_status in ("PARTIAL", "INFERRED") else
         "HIGH" if resolved["has_telemetry"] and truth_status == "VERIFIED" else "LOW"
     )
@@ -2313,7 +2321,7 @@ def _build_arifos_packet(ctx: Context | None = None) -> dict[str, Any]:
         "vault_status": m_machine.get("vault_status", "ok"),
         "schema_valid": m_machine.get("schema_valid", True),
     }
-    mcp_snapshot = mcp_health_check()
+    mcp_snapshot = _mcp_health_check_impl()
 
     # Coupled readiness (human + machine + MCP)
     h_ready = resolved["readiness"] if isinstance(resolved["readiness"], str) else resolved["readiness"].get("readiness", "UNKNOWN")
@@ -4804,6 +4812,76 @@ def _omega_well_output(
     return out
 
 
+def _to_federation_output(
+    data: dict[str, Any],
+    tool_name: str = "",
+) -> dict[str, Any]:
+    """Transform any WELL internal output into federation-standard format.
+
+    WELL is advisory-only (biological_substrate). It observes, assesses,
+    and signals — but never adjudicates. All legacy verdicts are translated
+    into uncertainty bands. This helper is applied at the public-tool boundary
+    so autonomic tools retain their internal Ω format for backward compat.
+    """
+    if not isinstance(data, dict):
+        data = {"raw": data}
+
+    # Already in federation format — pass through
+    if {"observation", "uncertainty", "constraints"}.issubset(data.keys()):
+        return data
+
+    ok = data.get("ok", True)
+    omega = data.get("Ω", {})
+    verdict = omega.get("verdict") if isinstance(omega, dict) else None
+    if verdict is None:
+        verdict = data.get("verdict", "UNKNOWN")
+
+    uncertainty_map = {
+        "SEAL": 0.05,
+        "PASS": 0.05,
+        "PROVISIONAL": 0.25,
+        "HOLD": 0.50,
+        "WARN": 0.75,
+        "VOID": 0.90,
+        "UNKNOWN": 0.50,
+    }
+    uncertainty = uncertainty_map.get(verdict, 0.50)
+    if not ok and uncertainty < 0.75:
+        uncertainty = 0.75
+
+    # Observation: use explicit data payload, or strip structural keys
+    if "data" in data:
+        observation = data["data"]
+    else:
+        observation = {
+            k: v for k, v in data.items()
+            if k not in ("ok", "Ω", "arifos", "aaa", "w0", "verdict", "error")
+        }
+
+    constraints = [
+        "WELL cannot emit constitutional verdicts (SEAL/HOLD/VOID/SABAR) — arifOS adjudicates",
+        "WELL cannot route federation tasks — AAA coordinates",
+        "WELL cannot modify evidence or vault — reads substrate state only",
+    ]
+    if data.get("error"):
+        constraints.append(f"error: {data['error']}")
+
+    recommended_next_organ = None
+    if verdict in ("HOLD", "WARN", "VOID") or not ok:
+        recommended_next_organ = "arifOS"
+    elif tool_name in ("well_assess_metabolism", "well_assess_livelihood"):
+        recommended_next_organ = "WEALTH"
+    elif tool_name in ("well_compute_metabolic_flux", "well_check_repair"):
+        recommended_next_organ = "A-FORGE"
+
+    return {
+        "observation": observation,
+        "uncertainty": uncertainty,
+        "constraints": constraints,
+        "recommended_next_organ": recommended_next_organ,
+    }
+
+
 # ── Ω-WELL-00: INIT (000) ─────────────────────────────────────────────────────
 # arifOS: 000_INIT — Substrate Assert, Identity Anchor
 # AAA: Agent Registry + Contract Validation
@@ -5318,9 +5396,11 @@ def well_888_judge(
     ctx: Context | None = None,
 ) -> dict[str, Any]:
     """
-    Ω-WELL-08: Constitutional judgment and readiness verdict.
-    modes: readiness | classify | niat | coupled | floors
-    Compresses: well_readiness, well_decision_classify, well_niat_check, well_coupled_readiness, well_check_floors
+    Ω-WELL-08: Validate biological readiness and NIAT.
+    modes: readiness | classify | niat | coupled
+    Compresses: well_readiness, well_decision_classify, well_niat_check, well_coupled_readiness
+    NOTE: floor compliance removed per orthogonal alignment (2026-05-14).
+          arifOS alone adjudicates constitutional floors.
     """
     mode = mode.lower()
     if mode == "readiness":
@@ -5350,13 +5430,6 @@ def well_888_judge(
         return _omega_well_output(ok=res.get("ok", False), stage="888_JUDGE", lane="APEX", mode="coupled",
             verdict="SEAL" if cr == "GREEN" else "HOLD" if cr == "RED" else "PROVISIONAL",
             data=res,
-        )
-    if mode == "floors":
-        res = well_check_floors(ctx=ctx)
-        return _omega_well_output(ok=True, stage="888_JUDGE", lane="APEX", mode="floors",
-            verdict=res.get("status", "HOLD"),
-            data=res,
-            constitutional_compliance={"floors": res.get("failure_flags", [])},
         )
     return _omega_well_output(ok=False, stage="888_JUDGE", lane="APEX", mode=mode, verdict="VOID", error=f"Unknown mode: {mode}")
 
@@ -6515,8 +6588,14 @@ async def well_classify_substrate(
     """Ω-WELL-01: Substrate classification and boundary sensing."""
     mode = mode.lower()
     if mode in ("init", "assert", "bootstrap"):
-        return await well_000_init(mode=mode, session_id=session_id, actor_id=actor_id, ctx=ctx)
-    return well_111_sense(mode=mode, subject=subject, description=description, evaluation_intent=evaluation_intent, ctx=ctx)
+        return _to_federation_output(
+            await well_000_init(mode=mode, session_id=session_id, actor_id=actor_id, ctx=ctx),
+            tool_name="well_classify_substrate",
+        )
+    return _to_federation_output(
+        well_111_sense(mode=mode, subject=subject, description=description, evaluation_intent=evaluation_intent, ctx=ctx),
+        tool_name="well_classify_substrate",
+    )
 
 
 @mcp.tool()
@@ -6532,12 +6611,21 @@ def well_trace_lineage(
     """Ω-WELL-02: Memory, trend, ledger, and vault chain tracing."""
     mode = mode.lower()
     if mode in ("recall", "trend", "context"):
-        return well_555_memory(mode=mode, limit=limit, lookback_days=lookback_days, ctx=ctx)
+        return _to_federation_output(
+            well_555_memory(mode=mode, limit=limit, lookback_days=lookback_days, ctx=ctx),
+            tool_name="well_trace_lineage",
+        )
     if mode in ("ledger", "chain"):
-        return well_999_vault(mode=mode, dry_run=dry_run, reason=reason, force=force, ctx=ctx)
-    return _omega_well_output(
-        ok=False, stage="TRACE_LINEAGE", lane="AGI", mode=mode, verdict="VOID",
-        error=f"Unknown mode: {mode}. Use recall | trend | context | ledger | chain"
+        return _to_federation_output(
+            well_999_vault(mode=mode, dry_run=dry_run, reason=reason, force=force, ctx=ctx),
+            tool_name="well_trace_lineage",
+        )
+    return _to_federation_output(
+        _omega_well_output(
+            ok=False, stage="TRACE_LINEAGE", lane="AGI", mode=mode, verdict="VOID",
+            error=f"Unknown mode: {mode}. Use recall | trend | context | ledger | chain"
+        ),
+        tool_name="well_trace_lineage",
     )
 
 
@@ -6553,12 +6641,21 @@ def well_detect_boundary(
     """Ω-WELL-03: Boundary detection across membrane, body, machine, and federation."""
     mode = mode.lower()
     if mode in ("classify", "boundary", "scan"):
-        return well_111_sense(mode=mode, subject=subject, description=description, evaluation_intent=evaluation_intent, ctx=ctx)
+        return _to_federation_output(
+            well_111_sense(mode=mode, subject=subject, description=description, evaluation_intent=evaluation_intent, ctx=ctx),
+            tool_name="well_detect_boundary",
+        )
     if mode in ("status", "connect", "handoff", "manifest"):
-        return well_444_gateway(mode=mode, peer=peer, ctx=ctx)
-    return _omega_well_output(
-        ok=False, stage="DETECT_BOUNDARY", lane="AGI", mode=mode, verdict="VOID",
-        error=f"Unknown mode: {mode}. Use classify | boundary | scan | status | connect | handoff | manifest"
+        return _to_federation_output(
+            well_444_gateway(mode=mode, peer=peer, ctx=ctx),
+            tool_name="well_detect_boundary",
+        )
+    return _to_federation_output(
+        _omega_well_output(
+            ok=False, stage="DETECT_BOUNDARY", lane="AGI", mode=mode, verdict="VOID",
+            error=f"Unknown mode: {mode}. Use classify | boundary | scan | status | connect | handoff | manifest"
+        ),
+        tool_name="well_detect_boundary",
     )
 
 
@@ -6571,7 +6668,10 @@ def well_measure_gradient(
     ctx: Context | None = None,
 ) -> dict[str, Any]:
     """Ω-WELL-04: Measure chemical, energy, pressure, attention, and compute gradients."""
-    return well_222_fetch(mode=mode, evidence_source=evidence_source, evidence_age_hours=evidence_age_hours, corroboration_count=corroboration_count, ctx=ctx)
+    return _to_federation_output(
+        well_222_fetch(mode=mode, evidence_source=evidence_source, evidence_age_hours=evidence_age_hours, corroboration_count=corroboration_count, ctx=ctx),
+        tool_name="well_measure_gradient",
+    )
 
 
 @mcp.tool()
@@ -6594,14 +6694,17 @@ def well_assess_metabolism(
     ctx: Context | None = None,
 ) -> dict[str, Any]:
     """Ω-WELL-05: Assess biological metabolism and system throughput across substrates."""
-    return well_333_mind(
-        mode=mode, subject=subject, substrate_class=substrate_class,
-        energy_level=energy_level, duty_load=duty_load, role_clarity=role_clarity,
-        role_burden=role_burden, dignity_preservation=dignity_preservation,
-        purpose_alignment=purpose_alignment, has_metabolism=has_metabolism,
-        structural_condition=structural_condition, material_type=material_type,
-        mission_clarity=mission_clarity, cashflow_status=cashflow_status,
-        internal_consistency=internal_consistency, ctx=ctx,
+    return _to_federation_output(
+        well_333_mind(
+            mode=mode, subject=subject, substrate_class=substrate_class,
+            energy_level=energy_level, duty_load=duty_load, role_clarity=role_clarity,
+            role_burden=role_burden, dignity_preservation=dignity_preservation,
+            purpose_alignment=purpose_alignment, has_metabolism=has_metabolism,
+            structural_condition=structural_condition, material_type=material_type,
+            mission_clarity=mission_clarity, cashflow_status=cashflow_status,
+            internal_consistency=internal_consistency, ctx=ctx,
+        ),
+        tool_name="well_assess_metabolism",
     )
 
 
@@ -6615,7 +6718,10 @@ def well_assess_homeostasis(
     ctx: Context | None = None,
 ) -> dict[str, Any]:
     """Ω-WELL-06: Assess regulation, stability, and empathic balance under change."""
-    return well_666_heart(mode=mode, subject=subject, dignity_preservation=dignity_preservation, coercion_signals=coercion_signals, reductionism_risk=reductionism_risk, ctx=ctx)
+    return _to_federation_output(
+        well_666_heart(mode=mode, subject=subject, dignity_preservation=dignity_preservation, coercion_signals=coercion_signals, reductionism_risk=reductionism_risk, ctx=ctx),
+        tool_name="well_assess_homeostasis",
+    )
 
 
 @mcp.tool()
@@ -6629,7 +6735,10 @@ def well_check_repair(
     ctx: Context | None = None,
 ) -> dict[str, Any]:
     """Ω-WELL-07: Check repair, recovery, resilience, and forge cycle integrity."""
-    return well_777_forge(mode=mode, task_description=task_description, decision_class=decision_class, source=source, intensity=intensity, outcome=outcome, ctx=ctx)
+    return _to_federation_output(
+        well_777_forge(mode=mode, task_description=task_description, decision_class=decision_class, source=source, intensity=intensity, outcome=outcome, ctx=ctx),
+        tool_name="well_check_repair",
+    )
 
 
 @mcp.tool()
@@ -6642,8 +6751,11 @@ def well_validate_vitality(
     decision_class: str | None = None,
     ctx: Context | None = None,
 ) -> dict[str, Any]:
-    """Ω-WELL-08: Validate vitality, readiness, NIAT, and floor compliance."""
-    return well_888_judge(mode=mode, intent=intent, context=context, reversibility=reversibility, task_description=task_description, decision_class=decision_class, ctx=ctx)
+    """Ω-WELL-08: Validate vitality, readiness, and NIAT. (Floor compliance removed — arifOS adjudicates floors.)"""
+    return _to_federation_output(
+        well_888_judge(mode=mode, intent=intent, context=context, reversibility=reversibility, task_description=task_description, decision_class=decision_class, ctx=ctx),
+        tool_name="well_validate_vitality",
+    )
 
 
 @mcp.tool()
@@ -6666,14 +6778,17 @@ def well_assess_livelihood(
     ctx: Context | None = None,
 ) -> dict[str, Any]:
     """Ω-WELL-09: Assess human wellness, role, dignity, support, and meaning."""
-    return well_333_mind(
-        mode=mode, subject=subject, substrate_class=substrate_class,
-        energy_level=energy_level, duty_load=duty_load, role_clarity=role_clarity,
-        role_burden=role_burden, dignity_preservation=dignity_preservation,
-        purpose_alignment=purpose_alignment, has_metabolism=has_metabolism,
-        structural_condition=structural_condition, material_type=material_type,
-        mission_clarity=mission_clarity, cashflow_status=cashflow_status,
-        internal_consistency=internal_consistency, ctx=ctx,
+    return _to_federation_output(
+        well_333_mind(
+            mode=mode, subject=subject, substrate_class=substrate_class,
+            energy_level=energy_level, duty_load=duty_load, role_clarity=role_clarity,
+            role_burden=role_burden, dignity_preservation=dignity_preservation,
+            purpose_alignment=purpose_alignment, has_metabolism=has_metabolism,
+            structural_condition=structural_condition, material_type=material_type,
+            mission_clarity=mission_clarity, cashflow_status=cashflow_status,
+            internal_consistency=internal_consistency, ctx=ctx,
+        ),
+        tool_name="well_assess_livelihood",
     )
 
 
@@ -6683,7 +6798,10 @@ def well_assess_reliability(
     ctx: Context | None = None,
 ) -> dict[str, Any]:
     """Ω-WELL-10: Assess machine, tool, institution, and operational reliability."""
-    return well_000_ops(mode=mode, ctx=ctx)
+    return _to_federation_output(
+        well_000_ops(mode=mode, ctx=ctx),
+        tool_name="well_assess_reliability",
+    )
 
 
 @mcp.tool()
@@ -6708,20 +6826,26 @@ def well_compute_metabolic_flux(
     if mode == "status":
         cached = state.get("metabolic_flux", {})
         if cached:
-            return cached
-        return {"ok": True, "metabolic_flux": None, "verdict": "UNKNOWN", "compulsory_reallocation": False, "message": "No cached flux. Call compute mode first."}
+            return _to_federation_output(cached, tool_name="well_compute_metabolic_flux")
+        return _to_federation_output(
+            {"ok": True, "metabolic_flux": None, "verdict": "UNKNOWN", "compulsory_reallocation": False, "message": "No cached flux. Call compute mode first."},
+            tool_name="well_compute_metabolic_flux",
+        )
 
     flux = _compute_metabolic_flux(state)
 
     if mode == "trigger":
-        return {
-            "ok": True,
-            "compulsory_reallocation": flux["compulsory_reallocation"],
-            "verdict": flux["verdict"],
-            "metabolic_flux": flux["metabolic_flux"],
-            "reallocation_target": flux["reallocation_target"],
-            "w0": "OPERATOR_VETO_INTACT / HIERARCHY_INVARIANT",
-        }
+        return _to_federation_output(
+            {
+                "ok": True,
+                "compulsory_reallocation": flux["compulsory_reallocation"],
+                "verdict": flux["verdict"],
+                "metabolic_flux": flux["metabolic_flux"],
+                "reallocation_target": flux["reallocation_target"],
+                "w0": "OPERATOR_VETO_INTACT / HIERARCHY_INVARIANT",
+            },
+            tool_name="well_compute_metabolic_flux",
+        )
 
     # Cache flux into state
     state["metabolic_flux"] = flux
@@ -6733,7 +6857,7 @@ def well_compute_metabolic_flux(
         "compulsory_reallocation": flux["compulsory_reallocation"],
     })
 
-    return flux
+    return _to_federation_output(flux, tool_name="well_compute_metabolic_flux")
 
 
 @mcp.tool()
@@ -7147,13 +7271,23 @@ def _inject_well_wisdom(response: dict[str, Any], tool_name: str) -> dict[str, A
 # Canonical tools visible to external agents (14).
 # All other @mcp.tool() functions are autonomic — callable internally via
 # the canonical dispatchers but hidden from agent tool listing.
+# ═══════════════════════════════════════════════════════════════════════════════
+# SOMATIC_TOOLS — Public MCP surface for WELL (biological substrate only)
+# ═══════════════════════════════════════════════════════════════════════════════
+# Orthogonality rule: WELL speaks ONLY biological substrate physics.
+# Constitutional functions (governance, judgment, seal, critique of meaning,
+# routing, evidence anchoring) belong to arifOS.
+#
+# Removed from public surface per orthogonal MCP alignment (2026-05-14):
+#   well_reflect_intelligence  → REFLECT axis / routing (arifOS 444_KERNEL)
+#   well_guard_dignity         → CRITIQUE axis / meaning (arifOS 666_HEART)
+#   well_anchor_evidence       → SEAL axis / vault (arifOS 999_VAULT)
 SOMATIC_TOOLS = {
     "mcp_health_check",
     "well_classify_substrate", "well_trace_lineage", "well_detect_boundary",
     "well_measure_gradient", "well_assess_metabolism", "well_assess_homeostasis",
     "well_check_repair", "well_validate_vitality", "well_assess_livelihood",
     "well_assess_reliability", "well_compute_metabolic_flux",
-    "well_reflect_intelligence", "well_guard_dignity", "well_anchor_evidence",
 }
 
 # ── Federation Tool Manifest Registration ──────────────────────────────────────
@@ -7173,9 +7307,13 @@ _WELL_MANIFEST: list[dict[str, object]] = [
     {"name": "well_assess_livelihood",      "axis": "vitality",   "expose": True},
     {"name": "well_assess_reliability",     "axis": "vitality",   "expose": True},
     {"name": "well_compute_metabolic_flux", "axis": "vitality",   "expose": True},
-    {"name": "well_reflect_intelligence",   "axis": "reflect",    "expose": True},
-    {"name": "well_guard_dignity",          "axis": "critique",   "expose": True},
-    {"name": "well_anchor_evidence",        "axis": "seal",       "expose": True},
+    # REMOVED from public surface — constitutional overlap with arifOS
+    # {"name": "well_reflect_intelligence",   "axis": "reflect",    "expose": True},
+    # {"name": "well_guard_dignity",          "axis": "critique",   "expose": True},
+    # {"name": "well_anchor_evidence",        "axis": "seal",       "expose": True},
+    {"name": "well_reflect_intelligence",   "axis": "reflect",    "expose": False},
+    {"name": "well_guard_dignity",          "axis": "critique",   "expose": False},
+    {"name": "well_anchor_evidence",        "axis": "seal",       "expose": False},
     # Autonomic phase-1 tools (legacy but active)
     {"name": "well_get_health",             "axis": "identity",   "expose": False},
     {"name": "well_get_state",              "axis": "observe",    "expose": False},

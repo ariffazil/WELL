@@ -95,50 +95,18 @@ canonical_tools:
     requires_ack: false
     description: "Ω-10: Machine/tool/infra reliability + medical boundary (modes: health|consent|medical|vitals)"
 
-  - tool: well_reflect_intelligence
-    type: reflector
-    mutation: false
-    irreversible: false
-    requires_ack: false
-    description: "Ω-11: Cognition routing, lane selection, stage dispatch (modes: route|stage|lane|list)"
-
-  - tool: well_guard_dignity
-    type: guard
-    mutation: false
-    irreversible: false
-    requires_ack: false
-    description: "Ω-12: Dignity, symbolic boundary, maruah protection (modes: dignity|consent|critique|empathize|redteam|maruah)"
-
-  - tool: well_anchor_evidence
-    type: writer
-    mutation: true
-    irreversible: true
-    requires_ack: true
-    description: "Ω-13: Evidence anchoring, vault seal, packet composition (modes: seal|anchor|verify|chain|packet|brief|verdict|daily|unified)"
-    authority_note: "Only Arif may authorize irreversible vault seals."
+  # REMOVED per orthogonal MCP alignment (2026-05-14):
+  # well_reflect_intelligence  → REFLECT/routing (arifOS 444_KERNEL)
+  # well_guard_dignity         → CRITIQUE/meaning (arifOS 666_HEART)
+  # well_anchor_evidence       → SEAL/vault (arifOS 999_VAULT)
+  # These tools are now autonomic-only (not on public MCP surface).
 
 # ── G-WELL Governance Abstraction Tools (Machine Governance Mirror) ────────────
-g_well_tools:
-  - tool: well_assess_governance
-    type: reflector
-    mutation: false
-    irreversible: false
-    requires_ack: false
-    description: "G-WELL: Assess constitutional governance state - autonomic coherence, check/balance integrity, floor compliance across all machine governance layers"
-
-  - tool: well_trace_decision
-    type: reader
-    mutation: false
-    irreversible: false
-    requires_ack: false
-    description: "G-WELL: Trace decision lineage through machine governance chain - who authorized what, when, under what substrate state"
-
-  - tool: well_validate_consensus
-    type: guard
-    mutation: false
-    irreversible: false
-    requires_ack: false
-    description: "G-WELL: Validate multi-organ consensus before irreversible actions - checks WELL + WEALTH + GEOX + arifOS alignment"
+# REMOVED per orthogonal MCP alignment (2026-05-14):
+# G-WELL tools overlap with arifOS constitutional governance.
+# They remain in code as internal functions but are hidden from public surface.
+g_well_tools: []
+# (All G-WELL tools removed from public surface per orthogonal alignment)
 
 # ── Ω-WELL Stage Aliases (deprecation bridge) ──────────────────────────────────
 omega_well_aliases:
@@ -166,12 +134,7 @@ omega_well_aliases:
     type: reflector
     mutation: false
     deprecation_epoch: "2026-Q3"
-  - tool: well_444_kernel
-    canonical: well_reflect_intelligence
-    modes: [route, stage, lane, list]
-    type: reflector
-    mutation: false
-    deprecation_epoch: "2026-Q3"
+  # REMOVED: well_444_kernel alias (well_reflect_intelligence is autonomic-only)
   - tool: well_555_memory
     canonical: well_trace_lineage
     modes: [recall, trend, ledger, context]
@@ -196,20 +159,8 @@ omega_well_aliases:
     type: guard
     mutation: false
     deprecation_epoch: "2026-Q3"
-  - tool: well_999_vault
-    canonical: well_trace_lineage
-    modes: [seal, anchor, verify, chain]
-    type: writer
-    mutation: true
-    irreversible: true
-    requires_ack: true
-    deprecation_epoch: "2026-Q3"
-  - tool: well_444_reply
-    canonical: well_anchor_evidence
-    modes: [packet, brief, verdict, daily]
-    type: reader
-    mutation: false
-    deprecation_epoch: "2026-Q3"
+  # REMOVED: well_999_vault alias (well_trace_lineage handles trace; seal is arifOS)
+  # REMOVED: well_444_reply alias (well_anchor_evidence is autonomic-only)
   - tool: well_444_gateway
     canonical: well_detect_boundary
     modes: [status, connect, handoff, manifest]
@@ -521,11 +472,11 @@ uwell_internal:
 # ── Danger Taxonomy ────────────────────────────────────────────────────────────
 danger_taxonomy:
   L3:
-    description: "vault seal / floor check — fail-closed mandatory"
-    tools: [well_anchor_evidence, well_seal_vault, well_request_anchor, well_check_floor, well_validate_consensus]
+    description: "vault seal / floor check — fail-closed mandatory (arifOS only)"
+    tools: [well_seal_vault, well_request_anchor, well_check_floor]
   L2:
-    description: "session / log / assess / govern — fail-open with constraint"
-    tools: [well_validate_vitality, well_check_repair, well_guard_dignity, well_assess_metabolism, well_assess_homeostasis, well_assess_livelihood, well_assess_reliability, well_reflect_intelligence, well_assess_governance]
+    description: "session / log / assess / repair — fail-open with constraint"
+    tools: [well_validate_vitality, well_check_repair, well_assess_metabolism, well_assess_homeostasis, well_assess_livelihood, well_assess_reliability]
   L1:
     description: "observe / health / readiness / trace — fail-open with constraint"
-    tools: [well_classify_substrate, well_trace_lineage, well_detect_boundary, well_measure_gradient, well_trace_decision, mcp_health_check, well_state, well_get_packet, well_arifos_packet, well_readiness]
+    tools: [well_classify_substrate, well_trace_lineage, well_detect_boundary, well_measure_gradient, mcp_health_check]
