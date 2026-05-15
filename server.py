@@ -715,6 +715,7 @@ def _mcp_health_check_impl() -> dict:
         "identity_note": identity_note,
         "truth_status": truth_status,
         "freshness_band": freshness_band,
+        "clarity": state.get("metrics", {}).get("cognitive", {}).get("clarity"),
         "federation_reconcile": reconcile,
     }
 
