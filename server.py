@@ -3401,7 +3401,7 @@ def well_machine_log(
 # Purpose: Is the human-machine pair safe to proceed?
 # ══════════════════════════════════════════════════════════════════════════════
 
-G_WELL_GATEWAY_PEERS = ["arifos", "a-forge", "geox", "wealth", "aaa", "hermes"]
+G_WELL_GATEWAY_PEERS = ["arifos", "a-forge", "geox", "wealth", "aaa", "apex"]
 
 COUPLED_RISK_PATTERNS = [
     {
@@ -4887,7 +4887,7 @@ def _well_classify_substrate_impl(
         "arif",
         "geox",
         "wealth",
-        "hermes",
+        "apex",  # was hermes — renamed 2026-05-16
         "aaa",
     ]
     MACHINE_PHRASE_BLOCKS = [
@@ -8214,7 +8214,7 @@ def well_machine_health_probe(
         "wealth": {"port": 8082, "type": "http"},
         "well": {"port": 8083, "type": "http"},
         "aaa": {"port": 3001, "type": "http"},
-        "hermes": {"port": 3002, "type": "http"},
+        "apex": {"port": 3002, "type": "http"},  # was hermes — renamed 2026-05-16
         "a-forge": {"port": 7071, "type": "http"},
         "vault999": {"port": 8100, "type": "http"},
         "postgres": {"port": 5432, "type": "tcp"},
@@ -9106,6 +9106,56 @@ def well_validate_consensus(
     )
 
 
+@mcp.tool()
+def well_system_registry_status() -> dict[str, Any]:
+    """WELL registry truth probe — somatic surface vs autonomic internals.
+
+    Returns which tools are publicly callable, which are autonomic (intentionally
+    hidden), and canonical alias mappings. Use this before assuming any WELL tool
+    is available or broken. registry_truth: PASS = surface matches manifest.
+    """
+    somatic = list(SOMATIC_TOOLS | {"well_guard_dignity"})
+    autonomic_names = [e["name"] for e in _WELL_AUTONOMIC_TOOLS]
+    canonical_aliases = {k: v for k, v in ALIAS_REGISTRY.items()}
+
+    # Cross-check: any alias pointing to a non-somatic canonical is a gap
+    alias_gaps = {
+        alias: canon
+        for alias, canon in canonical_aliases.items()
+        if canon not in somatic
+    }
+
+    registry_truth = "WARN" if alias_gaps else "PASS"
+
+    return _omega_well_output(
+        ok=True,
+        stage="WELL_SYSTEM",
+        lane="MACHINE",
+        mode="registry",
+        verdict="PASS" if registry_truth == "PASS" else "WARN",
+        data={
+            "service": "well-mcp",
+            "version": "2026.05.15-ΩWELL+GWELL+FEDERATION",
+            "somatic_tools": sorted(somatic),
+            "somatic_count": len(somatic),
+            "autonomic_tools": sorted(autonomic_names),
+            "autonomic_count": len(autonomic_names),
+            "canonical_aliases": canonical_aliases,
+            "alias_gaps": alias_gaps,
+            "registry_truth": registry_truth,
+            "boundary_notice": "Autonomic tools are intentionally hidden — not broken. "
+            "They exist in code but are excluded from the MCP surface "
+            "by somatic boundary enforcement.",
+            "canonical_replacements": {
+                "well_get_health": "well_assess_reliability(mode='health')",
+                "well_000_ops": "well_assess_reliability(mode='health')",
+                "well_machine_health_probe": "well_assess_reliability(mode='machine')",
+            },
+            "final_authority": "ARIF",
+        },
+    )
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # ATLAS13-WELL — Substrate Wisdom Anchors (13 axioms for WELL MCP tools)
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -9297,6 +9347,8 @@ SOMATIC_TOOLS = {
     "well_assess_livelihood",
     "well_assess_reliability",
     "well_compute_metabolic_flux",
+    "well_guard_dignity",
+    "well_system_registry_status",
 }
 
 # ── Federation Tool Manifest Registration ──────────────────────────────────────
@@ -9321,13 +9373,16 @@ _WELL_SOMATIC_MANIFEST: list[dict[str, object]] = [
     {"name": "well_assess_livelihood", "axis": "vitality", "expose": True},
     {"name": "well_assess_reliability", "axis": "vitality", "expose": True},
     {"name": "well_compute_metabolic_flux", "axis": "vitality", "expose": True},
+    {"name": "well_guard_dignity", "axis": "critique", "expose": True},
+    {"name": "well_system_registry_status", "axis": "identity", "expose": True},
 ]
 
 _WELL_AUTONOMIC_TOOLS: list[dict[str, object]] = [
     # REMOVED from public surface — constitutional overlap with arifOS
     {"name": "well_reflect_intelligence", "axis": "reflect", "expose": False},
-    {"name": "well_guard_dignity", "axis": "critique", "expose": False},
     {"name": "well_anchor_evidence", "axis": "seal", "expose": False},
+    # NOTE: well_guard_dignity promoted to somatic (2026-05-16) — dignity protection
+    # is WELL's substrate responsibility, not arifOS constitutional routing.
     # Autonomic phase-1 tools (legacy but active)
     {"name": "well_get_health", "axis": "identity", "expose": False},
     {"name": "well_get_state", "axis": "observe", "expose": False},
