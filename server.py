@@ -4679,7 +4679,7 @@ def _check_data_freshness(state: dict[str, Any]) -> dict[str, Any]:
 
 # ── WELL-01 well_get_health ───────────────────────────────────────────────────
 # DEPRECATED: Use well_assess_reliability(mode="health") instead.
-@mcp.tool("well_get_health")  # restored — used by well_000_ops and gateway
+# NOTE: Expose=False in SOMATIC_TOOLS — not in public MCP tools/list, not a phantom
 def well_get_health(ctx: Context | None = None) -> dict[str, Any]:
     """
     Canonical three-layer health check.
@@ -7562,7 +7562,6 @@ def well_444_reply(
 # AAA: A2A Gateway + Agent Card Dispatch
 
 
-@mcp.tool("well_444_gateway")  # restored
 def well_444_gateway(
     mode: str = "status",
     peer: str | None = None,
