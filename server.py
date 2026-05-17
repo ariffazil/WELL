@@ -728,6 +728,25 @@ def _compute_metabolic_flux(state: dict[str, Any]) -> dict[str, Any]:
     )
     flux = round(max(0.0, min(1.0, flux)), 4)
 
+    # ── Data-quality gate ─────────────────────────────────────────────────────────
+    # If m_machine is absent from state, the machine_entropy and all substrate
+    # components are default values (not real measurements). Flag this explicitly
+    # so the caller knows the flux is an "idle system" reading, not a real one.
+    _m_machine_absent = "m_machine" not in state
+    _cognitive_absent = not cognitive.get("contradiction_count") and not cognitive.get(
+        "total_predictions"
+    )
+
+    data_quality: str
+    if _m_machine_absent and _cognitive_absent:
+        data_quality = "UNMEASURED — m_machine and cognitive counters absent from state; all components default to idle values (machine_entropy=0, cognitive_entropy=0)"
+    elif _m_machine_absent:
+        data_quality = "PARTIAL — m_machine absent from state; machine components default to idle; cognitive metrics real"
+    elif _cognitive_absent:
+        data_quality = "PARTIAL — cognitive counters absent; cognitive_entropy=0; machine metrics real"
+    else:
+        data_quality = "REAL — all components from live state"
+
     # Determine verdict
     if flux >= FLUX_THRESHOLDS["SYSTEM_HOLD"]:
         verdict = "SYSTEM_HOLD"
@@ -762,6 +781,7 @@ def _compute_metabolic_flux(state: dict[str, Any]) -> dict[str, Any]:
         "compulsory_reallocation": compulsory,
         "reallocation_target": "441_SURPRISE" if compulsory else None,
         "w0": "OPERATOR_VETO_INTACT / HIERARCHY_INVARIANT",
+        "data_quality": data_quality,
     }
 
 
@@ -7883,6 +7903,142 @@ def afwell_substrate_registry() -> str:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# TREE777 WIKI RESOURCES — Federation Canonical Knowledge Tree
+# ═══════════════════════════════════════════════════════════════════════════════
+# Exposes WELL-domain slice of the TREE777 wiki as MCP Resources.
+# URI scheme:
+#   tree777://skills/well/{name}   — WELL skill pages
+#   tree777://well/concepts/{name} — Vitality concept pages
+#   tree777://well/scars/{name}    — WELL scar/incident records
+# Wiki root: /root/AAA/wiki (shared across all 4 federation servers)
+# Rule: Resources grow. Tools stay bounded. Judgment remains Arif.
+# DITEMPA BUKAN DIBERI — Intelligence is forged, not given.
+
+TREE777_WIKI_ROOT = Path(_os.environ.get("TREE777_WIKI_ROOT", "/root/AAA/wiki"))
+TREE777_SKILLS_DIR = TREE777_WIKI_ROOT / "skills" / "well"
+TREE777_CONCEPTS_DIR = TREE777_WIKI_ROOT / "concepts"
+TREE777_SCAR_DIR = TREE777_WIKI_ROOT / "scars"
+
+
+def _well_read_wiki_file(file_path: str | Path) -> str:
+    """Read a wiki file, returning frontmatter-stripped content."""
+    path = Path(file_path)
+    if not path.exists():
+        return f"ERROR: File not found: {path}"
+    content = path.read_text()
+    if content.startswith("---"):
+        end = content.find("\n---\n", 4)
+        if end != -1:
+            content = content[end + 5 :]
+    return content.strip()
+
+
+def _well_tree777_index() -> dict[str, Any]:
+    """Build the TREE777 index for WELL domain slice."""
+    skills = []
+    if TREE777_SKILLS_DIR.exists():
+        for f in TREE777_SKILLS_DIR.glob("*.md"):
+            skills.append({"name": f.stem, "uri": f"tree777://skills/well/{f.stem}"})
+
+    concepts = []
+    if TREE777_CONCEPTS_DIR.exists():
+        for f in TREE777_CONCEPTS_DIR.glob("*.md"):
+            concepts.append(
+                {"name": f.stem, "uri": f"tree777://well/concepts/{f.stem}"}
+            )
+
+    scars = []
+    if TREE777_SCAR_DIR.exists():
+        for f in TREE777_SCAR_DIR.glob("*.md"):
+            if "well" in f.stem or "vital" in f.stem or "niat" in f.stem:
+                scars.append({"name": f.stem, "uri": f"tree777://well/scars/{f.stem}"})
+
+    return {
+        "domain": "well",
+        "skills": skills,
+        "concepts": concepts,
+        "scars": scars,
+        "total": len(skills) + len(concepts) + len(scars),
+    }
+
+
+@mcp.resource(
+    "tree777://index",
+    description=(
+        "TREE777 wiki full index. Lists all federation skills, concepts, and scars. "
+        "Use this to discover available resources across the arifOS, GEOX, WELL, and WEALTH domains."
+    ),
+)
+def well_tree777_index() -> str:
+    return json.dumps(_well_tree777_index(), indent=2)
+
+
+@mcp.resource(
+    "tree777://skills/well/{name}",
+    description=(
+        "Individual WELL skill page from the TREE777 wiki. "
+        "Returns markdown content (frontmatter-stripped) with metadata. "
+        "Example: tree777://skills/well/governance-ops"
+    ),
+)
+def well_tree777_skill(name: str) -> str:
+    file_path = TREE777_SKILLS_DIR / f"{name}.md"
+    if not file_path.exists():
+        return json.dumps(
+            {
+                "error": f"Skill not found: {name}",
+                "uri": f"tree777://skills/well/{name}",
+            }
+        )
+    content = _well_read_wiki_file(file_path)
+    return json.dumps(
+        {"uri": f"tree777://skills/well/{name}", "content": content}, indent=2
+    )
+
+
+@mcp.resource(
+    "tree777://well/concepts/{name}",
+    description=(
+        "Vitality concept page from the TREE777 wiki. "
+        "Example: tree777://well/concepts/TREE777"
+    ),
+)
+def well_tree777_concept(name: str) -> str:
+    file_path = TREE777_CONCEPTS_DIR / f"{name}.md"
+    if not file_path.exists():
+        return json.dumps(
+            {
+                "error": f"Concept not found: {name}",
+                "uri": f"tree777://well/concepts/{name}",
+            }
+        )
+    content = _well_read_wiki_file(file_path)
+    return json.dumps(
+        {"uri": f"tree777://well/concepts/{name}", "content": content}, indent=2
+    )
+
+
+@mcp.resource(
+    "tree777://well/scars/{name}",
+    description=(
+        "WELL scar/incident record from the TREE777 wiki. "
+        "Documents failures and lessons learned for vitality operations. "
+        "Example: tree777://well/scars/well-fatigue-breach"
+    ),
+)
+def well_tree777_scar(name: str) -> str:
+    file_path = TREE777_SCAR_DIR / f"{name}.md"
+    if not file_path.exists():
+        return json.dumps(
+            {"error": f"Scar not found: {name}", "uri": f"tree777://well/scars/{name}"}
+        )
+    content = _well_read_wiki_file(file_path)
+    return json.dumps(
+        {"uri": f"tree777://well/scars/{name}", "content": content}, indent=2
+    )
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # MCP Prompts — Canonical 4
 # User-controlled structured interactions (not model-controlled like tools)
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -8084,6 +8240,80 @@ def prompt_substrate_classify(subject: str = "") -> str:
 - For MACHINE_SYSTEM: WELL assesses reliability. It does NOT claim life.
 
 > "Life is not mere structure. Life is structure that maintains itself against entropy through embodied energetic regulation."
+"""
+    return prompt
+
+
+# ── Additional Domain Prompts ────────────────────────────────────────────────
+
+
+@mcp.prompt()
+def prompt_niat_check(task: str = "") -> str:
+    """
+    NIAT (Niat/Intent) check for Arif.
+    User-controlled prompt — Arif triggers this, not the model.
+    W0: WELL holds a mirror, not a veto. Arif decides.
+    """
+    if not task:
+        return "# NIAT Check\n\nPlease provide the task or intent you want to examine."
+
+    prompt = f"""# NIAT (Intention) Check — "{task}"
+
+## W0 Invariant
+WELL holds a mirror, not a veto. Arif decides.
+
+## NIAT Assessment
+1. **Origin**: Where does this intention come from? Internal conviction or external pressure?
+2. **Clarity**: Is the outcome you want clearly defined?
+3. **Alignment**: Does this intention align with your stated values and priorities?
+4. **Coercion**: Is any part of this being forced by obligation, guilt, or fear?
+5. ** Sovereignty**: Are you freely choosing this, or is it a should?
+
+## Reflection
+- What would you do if no one would ever know?
+- What would you advise a close friend in the same situation?
+- Does this feel like yours, or like something you're doing for someone else?
+
+## Output
+State your NIAT clearly. Is this truly your intention?
+"""
+    return prompt
+
+
+@mcp.prompt()
+def prompt_fatigue_boundary_review(
+    fatigue_level: str = "unknown",
+    pressure: str = "normal",
+    days_without_break: int = 0,
+) -> str:
+    """
+    Fatigue boundary review for Arif.
+    User-controlled prompt — Arif triggers this, not the model.
+    W0: WELL holds a mirror, not a veto. Arif decides.
+    """
+    prompt = f"""# Fatigue Boundary Review
+
+## Current State
+- Fatigue Level: {fatigue_level}
+- Pressure: {pressure}
+- Days Without Break: {days_without_break}
+
+## Boundary Assessment
+1. **Fatigue check**: On a 1-10 scale, where is your cognitive energy?
+2. **Decision quality**: Are you making decisions sharper or more impulsive than usual?
+3. **Recovery need**: What would recovery look like?
+4. **Load tolerance**: How much more can you carry before degradation?
+
+## Key Questions
+- Are you operating from clarity or from momentum?
+- Is there something being avoided by staying busy?
+- What would "stop" look like, and is that a viable option?
+
+## W0 Sovereignty Reminder
+WELL reflects. Arif decides. You are not your fatigue, but you are not unaffected by it either.
+
+## Output
+Recognize the boundary. What is the next wise action?
 """
     return prompt
 
@@ -9149,6 +9379,163 @@ def well_assess_livelihood(
         ),
         tool_name="well_assess_livelihood",
     )
+
+
+@mcp.tool(name="well_daily_checkin")
+def well_daily_checkin(
+    energy_level: float = 7.0,
+    hours_slept: float = 7.0,
+    duty_load: float = 5.0,
+    stress_level: float | None = None,
+    pain_level: float | None = None,
+    note: str | None = None,
+    ctx: Context | None = None,
+) -> dict[str, Any]:
+    """Ω-WELL-S2: Daily operator check-in — log daily body telemetry for WELL substrate governance.
+
+    This is the canonical S2 daily telemetry entry point. Call once per day with:
+    - energy_level:    Energy level 1-10 (1=exhausted, 10=fully charged)
+    - hours_slept:     Hours slept last night (float, e.g. 7.5)
+    - duty_load:       Cognitive/work load 1-10 (1=idle, 10=max capacity)
+    - stress_level:    Subjective stress 1-10 (optional, defaults to duty_load proxy)
+    - pain_level:      Physical pain 1-10 (optional, 0=no pain)
+    - note:            Free-text note (optional, max 500 chars)
+
+    Writes a WELL_LOG event to events.jsonl and updates state.json.
+    Computes well_score and flags any W-floor violations (W1 sleep, W3 load, etc.).
+
+    Example:
+      well_daily_checkin(energy_level=6.5, hours_slept=6.0, duty_load=7.0,
+                         stress_level=6.0, note="Felt tired after long meeting")
+    """
+    # ── Clamp and validate inputs ───────────────────────────────────────────
+    energy_level = float(_clamp(energy_level, 1.0, 10.0))
+    hours_slept = float(_clamp(hours_slept, 0.0, 24.0))
+    duty_load = float(_clamp(duty_load, 1.0, 10.0))
+    stress_level_f = (
+        float(_clamp(stress_level, 1.0, 10.0)) if stress_level is not None else None
+    )
+    pain_level_f = (
+        float(_clamp(pain_level, 0.0, 10.0)) if pain_level is not None else 0.0
+    )
+    note_clean = _sanitize_note(note) if note else None
+
+    # ── Derive sleep metrics ─────────────────────────────────────────────────
+    # Sleep debt: assume 8h is baseline; accumulate deviation over days
+    # For daily check-in, we compute acute debt from tonight's deviation
+    last_night_deficit = max(0.0, 8.0 - hours_slept)
+    # Simple proxy: sleep_quality derived from hours (8h = 10, <6h = degrades fast)
+    sleep_quality = float(_clamp(10.0 - max(0.0, 8.0 - hours_slept) * 1.5, 1.0, 10.0))
+
+    # ── Build metrics dict (aligned with _compute_score expectations) ───────
+    metrics = {
+        "sleep": {
+            "last_night_hours": hours_slept,
+            "sleep_debt_days": 0.0,  # Reset daily; rolling debt tracked over window
+            "quality_score": sleep_quality,
+        },
+        "cognitive": {
+            "clarity": energy_level,  # energy → clarity proxy
+            "decision_fatigue": max(0.0, 10.0 - energy_level) * 0.3,
+        },
+        "stress": {
+            "subjective_load": stress_level_f
+            if stress_level_f is not None
+            else duty_load,
+            "restlessness": 0.0,
+            "chronic_elevation_days": 0,
+        },
+        "metabolic": {
+            "perceived_stability": energy_level,
+            "hydration_status": "OK",
+        },
+        "structural": {
+            "pain_level": pain_level_f,
+            "sedentary_hours_continuous": 0.0,
+        },
+    }
+
+    # ── Compute well_score ───────────────────────────────────────────────────
+    score, violations = _compute_score(metrics)
+    score = round(max(0.0, min(100.0, score)), 1)
+
+    # ── Load existing state, merge metrics ─────────────────────────────────
+    state = _load_state()
+    existing_metrics = state.get("metrics", {})
+
+    # Merge: update each dimension with new values, preserve other dimensions
+    for dim, values in metrics.items():
+        existing = existing_metrics.get(dim, {})
+        existing_metrics[dim] = {**existing, **values}
+
+    state["metrics"] = existing_metrics
+    state["well_score"] = score
+    state["floors_violated"] = violations
+    state["truth_status"] = "OPERATOR_REPORTED"
+    state["confidence"] = "HIGH"
+    state["freshness"] = "FRESH"
+
+    # ── Write event to events.jsonl ─────────────────────────────────────────
+    event = {
+        "event": "WELL_LOG",
+        "source": "USER_CONFIRMED",
+        "well_score": score,
+        "floors_violated": violations,
+        "metrics_snapshot": metrics,
+        "daily_input": {
+            "energy_level": energy_level,
+            "hours_slept": hours_slept,
+            "duty_load": duty_load,
+            "stress_level": stress_level_f,
+            "pain_level": pain_level_f,
+        },
+        "note": note_clean,
+        "environment": "PROD",
+    }
+    _append_event(event)
+
+    # ── Save state ──────────────────────────────────────────────────────────
+    _save_state(state)
+
+    # ── Build response ─────────────────────────────────────────────────────
+    violation_descriptions = []
+    for v in violations:
+        if v == "W1_SLEEP_DEBT":
+            violation_descriptions.append(
+                f"W1 Sleep Debt — hours slept {hours_slept:.1f}h below optimal"
+            )
+        elif v == "W3_STRESS_LOAD":
+            violation_descriptions.append(
+                f"W3 Stress Load — duty_load={duty_load:.1f}/10"
+            )
+        elif v == "W5_COGNITIVE_ENTROPY":
+            violation_descriptions.append(
+                f"W5 Cognitive Entropy — energy_level={energy_level:.1f}/10"
+            )
+        elif v == "W2_METABOLIC_STABILITY":
+            violation_descriptions.append(
+                f"W2 Metabolic Stability — energy_level={energy_level:.1f}/10 below threshold"
+            )
+        elif v == "W4_PHYSICAL_INTEGRITY":
+            violation_descriptions.append(
+                f"W4 Physical Integrity — pain_level={pain_level_f:.1f}/10"
+            )
+
+    return {
+        "ok": True,
+        "event": "well_daily_checkin",
+        "epoch": event["epoch"],
+        "well_score": score,
+        "floors_violated": violations,
+        "violation_descriptions": violation_descriptions,
+        "daily_input": event["daily_input"],
+        "note": note_clean,
+        "state_updated": True,
+        "freshness": "FRESH",
+        "confidence": "HIGH",
+        "w0": "OPERATOR_VETO_INTACT / HIERARCHY_INVARIANT",
+        "boundary_notice": "Not diagnosis. Not therapy. Reflective substrate governance only. Arif remains final judge.",
+    }
 
 
 @mcp.tool()
