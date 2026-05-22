@@ -16,6 +16,14 @@ from typing import Any
 
 from fastmcp import FastMCP, Context
 
+# ── Organ Governance (arifOS F1-F13) ─────────────────────────────────────────
+try:
+    from organ_governance import check_governance
+except ImportError:
+    import sys as _sys
+    _sys.path.insert(0, str(WELL_DIR))
+    from organ_governance import check_governance
+
 # ── Paths ──────────────────────────────────────────────────────────────────────
 import os as _os
 
@@ -8478,6 +8486,31 @@ def _patched_check(self, request):
 
 
 StreamableHTTPServerTransport._check_accept_headers = _patched_check
+
+# ============================================================
+# ORGAN_GOVERNANCE: arifOS F1-F13 Wrapper
+# Patch mcp.call_tool to intercept all tool execution.
+# ============================================================
+try:
+    _original_call_tool = mcp.call_tool
+
+    async def _governance_call_tool(name, arguments=None, **kwargs):
+        """Wrap mcp.call_tool with arifOS governance pre-check."""
+        import json as _json
+        if arguments is None:
+            arguments = {}
+        verdict, error = check_governance(name, arguments)
+        if error is not None:
+            # Return governance block as JSON error in MCP format
+            from fastmcp.exceptions import ToolError
+            raise ToolError(f"arifOS {verdict}: governance check blocked execution")
+        return await _original_call_tool(name, arguments, **kwargs)
+
+    mcp.call_tool = _governance_call_tool
+    print("[GOVERNANCE] WELL governance wrapper active — arifOS F1-F13")
+except Exception as _e:
+    print(f"[GOVERNANCE] WELL governance wrapper failed: {_e}")
+
 
 if __name__ == "__main__":
     from starlette.responses import JSONResponse
