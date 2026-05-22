@@ -21,6 +21,7 @@ try:
     from organ_governance import check_governance
 except ImportError:
     import sys as _sys
+
     _sys.path.insert(0, str(WELL_DIR))
     from organ_governance import check_governance
 
@@ -790,7 +791,9 @@ def _compute_metabolic_flux(state: dict[str, Any]) -> dict[str, Any]:
         "ok": True,
         "metabolic_flux": flux,
         "verdict": verdict,
-        "verdict_message": FLUX_VERDICTS.get(verdict, "Telemetry status unknown — cannot assess metabolic state."),
+        "verdict_message": FLUX_VERDICTS.get(
+            verdict, "Telemetry status unknown — cannot assess metabolic state."
+        ),
         "components": {
             "cognitive_entropy": cognitive_entropy,
             "machine_entropy": machine_entropy,
@@ -810,7 +813,8 @@ def _compute_metabolic_flux(state: dict[str, Any]) -> dict[str, Any]:
         "data_quality": data_quality,
         "telemetry_status": telemetry_status,
         "calm_state": calm_state,
-        "false_calm_warning": calm_state == "unknown" and flux < FLUX_THRESHOLDS["WARNING"],
+        "false_calm_warning": calm_state == "unknown"
+        and flux < FLUX_THRESHOLDS["WARNING"],
     }
 
 
@@ -3397,9 +3401,9 @@ def _build_arifos_packet(ctx: Context | None = None) -> dict[str, Any]:
     }
 
 
-@mcp.tool()
-def well_arifos_packet(ctx: Context | None = None) -> dict[str, Any]:
-    """[DEPRECATED — use well_get_packet(target='arifos')] Legacy arifOS handoff. Retained for compatibility."""
+def _arifos_packet_legacy(ctx: Context | None = None) -> dict[str, Any]:
+    """[INTERNAL — DEPRECATED] Use well_get_packet(target='arifos') instead.
+    Retained for internal backward-compat only. Not exposed via MCP."""
     result = well_get_packet(target="arifos", ctx=ctx)
     if isinstance(result, dict) and result.get("ok"):
         result.update(
@@ -5113,11 +5117,9 @@ def well_suggest_mode(
 
 
 # ── WELL-09 well_suggest_recovery ─────────────────────────────────────────────
-@mcp.tool()
-def well_suggest_recovery(ctx: Context | None = None) -> dict[str, Any]:
-    """
-    Suggest non-medical stabilizing actions. Suggest, not prescribe.
-    """
+# [INTERNAL] Suggest non-medical stabilizing actions. Suggest, not prescribe.
+# Use well_recovery_protocol(ctx=ctx) directly instead.
+def _suggest_recovery(ctx: Context | None = None) -> dict[str, Any]:
     return well_recovery_protocol(ctx=ctx)
 
 
@@ -6378,6 +6380,13 @@ def _omega_well_output(
     compatibility but agents MUST use `signal` for all decision logic.
     `calm_state` guards against false-calm (metrics stable but telemetry absent).
     """
+    # Translate constitutional verdicts (SEAL / HOLD) to advisory signals (PASS / FAIL)
+    verdict_upper = str(verdict).upper()
+    if verdict_upper == "SEAL":
+        verdict = "PASS"
+    elif verdict_upper == "HOLD":
+        verdict = "FAIL"
+
     signal = _verdict_to_signal(verdict)
 
     # False-calm guard: if telemetry is absent/stale but signal says stable,
@@ -6511,7 +6520,11 @@ def _to_federation_output(
         constraints.append(f"error: {data['error']}")
 
     recommended_next_organ = None
-    if signal in ("readiness_low", "unsafe_to_interpret") or verdict in ("HOLD", "WARN", "VOID") or not ok:
+    if (
+        signal in ("readiness_low", "unsafe_to_interpret")
+        or verdict in ("HOLD", "WARN", "VOID")
+        or not ok
+    ):
         recommended_next_organ = "arifOS"
     elif tool_name in ("well_assess_metabolism", "well_assess_livelihood"):
         recommended_next_organ = "WEALTH"
@@ -6534,7 +6547,9 @@ def _to_federation_output(
         out["calm_state"] = data["calm_state"]
     if data.get("false_calm_warning"):
         out["false_calm_warning"] = True
-        constraints.append("FALSE_CALM: metabolic_flux is low but telemetry is absent — do not trust this reading")
+        constraints.append(
+            "FALSE_CALM: metabolic_flux is low but telemetry is absent — do not trust this reading"
+        )
     return out
 
 
@@ -7899,13 +7914,13 @@ ALIAS_REGISTRY = {
     "well_111_sense": "well_classify_substrate",
     "well_222_fetch": "well_measure_gradient",
     "well_333_mind": "well_assess_metabolism",
-    "well_444_kernel": "well_reflect_intelligence",
+    "well_444_kernel": "well_detect_boundary",
     "well_555_memory": "well_trace_lineage",
     "well_666_heart": "well_assess_homeostasis",
     "well_777_forge": "well_check_repair",
     "well_888_judge": "well_validate_vitality",
     "well_999_vault": "well_trace_lineage",
-    "well_444_reply": "well_anchor_evidence",
+    "well_444_reply": "well_trace_lineage",
     "well_444_gateway": "well_detect_boundary",
     "well_000_ops": "well_assess_reliability",
 }
@@ -8497,12 +8512,14 @@ try:
     async def _governance_call_tool(name, arguments=None, **kwargs):
         """Wrap mcp.call_tool with arifOS governance pre-check."""
         import json as _json
+
         if arguments is None:
             arguments = {}
         verdict, error = check_governance(name, arguments)
         if error is not None:
             # Return governance block as JSON error in MCP format
             from fastmcp.exceptions import ToolError
+
             raise ToolError(f"arifOS {verdict}: governance check blocked execution")
         return await _original_call_tool(name, arguments, **kwargs)
 
@@ -10867,5 +10884,3 @@ if __name__ == "__main__":
     uvicorn.run(
         app, host=host, port=port, log_level=_os.environ.get("LOG_LEVEL", "info")
     )
-
-
