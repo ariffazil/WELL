@@ -8,6 +8,12 @@ WELL informs. arifOS judges. A-FORGE executes. Hierarchy is invariant.
 
 from __future__ import annotations
 
+try:
+    import uvloop
+    uvloop.install()
+except ImportError:
+    pass  # Windows / dev fallback
+
 import hashlib
 import json
 import datetime
