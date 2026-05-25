@@ -16,3 +16,7 @@ vault_ledger.jsonl
 state.json
 __pycache__/
 quarantine/
+
+# Backup files (any pattern)
+*.bak*
+*.backup*
