@@ -27,7 +27,7 @@
 - G-WELL Registry Truth Gate: all 11 public tools emit federation-standard output.
 - Schema gate active: Pydantic validation catches invalid inputs.
 - Known gap: No sensor integration (H-WELL runs on self-reported inputs). Phase 5 is wearable/biomarker.
-- Container running `ghcr.io/ariffazil/well:512310e` — 2 commits behind HEAD. Rebuild pending.
+- WELL is **NOT DEPLOYED** on the VPS. `compose/docker-compose.yml` defines the service but no container is running.
 - Tests: All audit tests pass. All Ω-WELL aliases present.
 
 
@@ -71,7 +71,7 @@
 
 ## 5. INTERRUPTS & FAULTS (BLOCKERS)
 
-- SOFT_FRICTION: Container image 2 commits behind HEAD. Rebuild needed.
+- SOFT_FRICTION: WELL is not deployed. No container is running. `STATUS.md` confirms ⛔ NOT DEPLOYED.
 - SOFT_FRICTION: 15 deprecated tools still exposed. Removal window: 2 epochs. Intentionally retained for backward compat.
 - HARD_BLOCK: None. All tests pass. 75-tool surface verified.
 - KNOWN_GAP: No biometric sensor integration. H-WELL runs on self-reported data. Phase 5 (wearable/HRV/glucose) not built.
@@ -90,7 +90,7 @@
 |---------|--------|---------|
 | `python server.py` | ✅ | Start WELL MCP server |
 | `python test_well.py` | ✅ | All audit tests pass |
-| `./deploy.sh` | ⚠️ PENDING | Rebuild + deploy with latest HEAD |
+| `./deploy.sh` | ⛔ NOT DEPLOYED | WELL defined in compose but not running |
 
 
 ## 8. PRIVILEGE ESCALATION (888 HOLD)
@@ -103,7 +103,7 @@
 
 ## 9. PIPELINE PREFETCH (NEXT MOVES)
 
-- [ ] Rebuild WELL container → push to GHCR → `docker compose up -d`
+- [ ] Deploy WELL to VPS (decision pending) → push to GHCR → `docker compose up -d` or systemd service
 - [ ] Freeze `substrate_evidence.schema.json` (P1)
 - [ ] Wire WELL clarity score into arifOS JUDGE gating (P1)
 - [ ] Multi-operator panel for when Arif offline (P2)
