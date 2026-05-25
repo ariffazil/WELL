@@ -1,7 +1,14 @@
 ﻿# WELL — Human Substrate & Metabolic State
 
+> ⚠️ **CANONICAL AUTHORITY NOTICE:**
+> WELL is the **vitality/substrate organ**, not a constitutional authority.
+> F1-F13 floors, 888_JUDGE verdicts, and VAULT999 are defined in `ariffazil/arifOS`.
+
 > **Status:** OPERATIONAL | **Organ:** SUBSTRATE (Ω-WELL) | **Authority:** arifOS
 > **Domain:** `well.arif-fazil.com`
+>
+> ⚠️ **For live/degraded/disabled status of ALL federation organs, see:**
+> **`ariffazil/arifOS/FEDERATION_STATUS.md`** — canonical source of truth.
 
 ## 🏛️ What this repo is
 
