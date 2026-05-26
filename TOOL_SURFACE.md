@@ -25,6 +25,7 @@
 | `well_guard_dignity` | `CANONICAL_PUBLIC` | ✅ Live — mode-bearing, fail-closed on consent/boundary/shadow (888_HOLD) |
 | `well_check_repair` | `CANONICAL_PUBLIC` | ✅ Live — forge cycle integrity |
 | `well_validate_vitality` | `CANONICAL_PUBLIC` | ✅ Live — vitality + NIAT validation |
+| `well_readiness_gate` | `CANONICAL_PUBLIC` | ✅ Live (2026-05-26) — pre-consequential-action readiness gate; PROCEED/DEFER/ADVISORY_BLOCKED for C1-C5 decisions; contrast scenario tested |
 | `well_contrast_report` | `DEPRECATED_ALIAS` | ✅ Live — delegates to `well_state(include="trend")` |
 | `well_fatigue_accumulator` | `DEPRECATED_ALIAS` | ✅ Live — `check` delegates to homeostasis(fatigue), log/rest/reset direct |
 | `mcp_health_check` | `DEPRECATED_ALIAS` | ✅ Live — delegates to `well_assess_reliability(mode="health")` |
@@ -73,8 +74,8 @@ well_symbolic_domain_check
 
 | Metric | Count | Note |
 |--------|-------|------|
-| Source `@mcp.tool` decorators | 51 | Git HEAD after Step 1A+1B+1C |
-| Live MCP tools (post-restart) | 45 | After `_enforce_somatic_boundary` filter |
+| Source `@mcp.tool` decorators | 52 | Git HEAD after Step 1A+1B+1C+1D |
+| Live MCP tools (post-restart) | 46 | After `_enforce_somatic_boundary` filter |
 | Internal helpers hidden (Step 1A) | 28 | Decorators removed |
 | Stage aliases pending hide (Step 2) | 13 | All well_NNN_* |
 | Target MCP surface | ~32 | After Step 2 |

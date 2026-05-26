@@ -6417,6 +6417,9 @@ _WELL_ADVISORY_SIGNAL_MAP: dict[str, str] = {
     "PRESERVED": "stable_signal",
     "PAUSED": "readiness_low",
     "ADVISORY_READY": "stable_signal",
+    "PROCEED": "stable_signal",
+    "DEFER": "recovery_needed",
+    "ADVISORY_BLOCKED": "unsafe_to_interpret",
 }
 
 
@@ -9701,6 +9704,346 @@ def well_check_repair(
         ),
         tool_name="well_check_repair",
     )
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Ω-WELL READINESS GATE — PHOENIX-73F Contrast Test Fix
+# Closes Gap 1: No tool returned DEFER/ADVISORY_BLOCKED for impaired + high-stakes
+# ═══════════════════════════════════════════════════════════════════════════════
+
+VALID_DECISION_CLASSES = ["C1", "C2", "C3", "C4", "C5"]
+VALID_EMOTIONAL_STATES = ["irritable", "anxious", "neutral", "calm", "elevated"]
+VALID_HRV_STATUS = ["low", "normal", "high"]
+
+
+def _compute_homeostasis_score(
+    sleep_last_night_hours: float,
+    sleep_debt_days: float,
+    cognitive_clarity: float,
+    decision_fatigue: float,
+    stress_load: float,
+    hrv_status: str,
+    emotional_state: str,
+    chronic_fatigue: bool,
+    accumulated_session_fatigue: float,
+) -> tuple[float, str, str]:
+    """
+    Compute homeostasis score (0-10) and status/verdict.
+    Mirrors well_assess_homeostasis(mode="fatigue") logic plus emotional/HRV modifiers.
+    Higher score = better readiness.
+    """
+    # Base fatigue computation (same weights as homeostasis)
+    raw_fatigue = (
+        (
+            sleep_debt_days / 10.0 * 3
+            + decision_fatigue / 10.0 * 4
+            + (10 - cognitive_clarity) / 10.0 * 2
+            + stress_load / 10.0 * 1
+            + accumulated_session_fatigue / 10.0 * 2
+        )
+        / 12.0
+        * 10.0
+    )
+
+    # HRV modifier: low HRV = additional physiological stress signal
+    if hrv_status == "low":
+        raw_fatigue += 1.0
+    elif hrv_status == "high":
+        raw_fatigue -= 0.5
+
+    # Emotional state modifier
+    if emotional_state == "irritable":
+        raw_fatigue += 1.5
+    elif emotional_state == "anxious":
+        raw_fatigue += 1.0
+    elif emotional_state in ("calm", "elevated"):
+        raw_fatigue -= 0.5
+
+    # Chronic fatigue baseline penalty
+    if chronic_fatigue:
+        raw_fatigue += 1.0
+
+    raw_fatigue = max(0.0, min(10.0, raw_fatigue))
+    homeostasis_score = max(0.0, min(10.0, 10.0 - raw_fatigue))
+
+    if homeostasis_score >= 7.0:
+        status = "OPTIMAL"
+        verdict = "SEAL"
+    elif homeostasis_score >= 5.0:
+        status = "STABLE"
+        verdict = "SEAL"
+    elif homeostasis_score >= 3.0:
+        status = "DEGRADED"
+        verdict = "HOLD"
+    else:
+        status = "CRITICAL"
+        verdict = "VOID"
+
+    return homeostasis_score, status, verdict
+
+
+@mcp.tool()
+def well_readiness_gate(
+    sleep_last_night_hours: float | None = None,
+    sleep_debt_days: float | None = None,
+    cognitive_clarity: float | None = None,
+    decision_fatigue: float | None = None,
+    stress_load: float | None = None,
+    hrv_status: str = "normal",
+    emotional_state: str = "neutral",
+    chronic_fatigue: bool = False,
+    accumulated_session_fatigue: float | None = None,
+    decision_class: str = "C3",
+    task_description: str | None = None,
+    ctx: Context | None = None,
+) -> dict[str, Any]:
+    """
+    Ω-WELL READINESS GATE — Block impaired + high-stakes decisions.
+
+    Takes biometric readiness inputs and a decision stakes class.
+    Returns a clear verdict: PROCEED | DEFER | ADVISORY_BLOCKED.
+
+    Decision class thresholds:
+      C1  Trivial        (what to eat, routine)          — proceed unless CRITICAL
+      C2  Low stakes     (routine work, admin)           — proceed unless CRITICAL
+      C3  Moderate       (work comms, non-critical)       — proceed if STABLE or better
+      C4  High stakes    (legal, financial, contracts)    — proceed only if OPTIMAL
+      C5  Critical       (health, safety, life choices)  — proceed only if OPTIMAL + no chronic fatigue
+
+    Contrast scenario: Arif (C4 contractor dispute, 4h sleep, low HRV, foggy, irritable)
+    → homeostasis ~2.8 (CRITICAL) → DEFER
+
+    Routing: Call this BEFORE arifOS produces consequential outputs.
+    The AI assistant acts as orchestrator: WELL readiness first, then arifOS governance.
+
+    Usage example:
+      well_readiness_gate(
+          sleep_last_night_hours=4.0,
+          sleep_debt_days=3.0,   # 2 weeks of 14h days
+          cognitive_clarity=3.0,  # foggy
+          decision_fatigue=8.0,
+          stress_load=7.0,
+          hrv_status="low",
+          emotional_state="irritable",
+          chronic_fatigue=False,
+          accumulated_session_fatigue=5.0,
+          decision_class="C4",
+          task_description="Final contractor dispute response with legal consequences",
+      )
+    """
+    global VALID_DECISION_CLASSES, VALID_EMOTIONAL_STATES, VALID_HRV_STATUS
+
+    # Default from state.json metrics if available (graceful fallback)
+    state = _load_state()
+    metrics = state.get("metrics", {})
+    cog = metrics.get("cognitive", {})
+
+    sleep_last_night_hours = (
+        sleep_last_night_hours
+        if sleep_last_night_hours is not None
+        else metrics.get("sleep", {}).get("last_night_hours", 8.0)
+    )
+    sleep_debt_days = (
+        sleep_debt_days
+        if sleep_debt_days is not None
+        else cog.get("sleep_debt_days", 0.0)
+    )
+    cognitive_clarity = (
+        cognitive_clarity if cognitive_clarity is not None else cog.get("clarity", 7.0)
+    )
+    decision_fatigue = (
+        decision_fatigue
+        if decision_fatigue is not None
+        else cog.get("decision_fatigue", 0.0)
+    )
+    stress_load = (
+        stress_load
+        if stress_load is not None
+        else metrics.get("stress", {}).get("subjective_load", 0.0)
+    )
+    acc = cog.get("fatigue_accumulator", {})
+    accumulated_session_fatigue = (
+        accumulated_session_fatigue
+        if accumulated_session_fatigue is not None
+        else acc.get("total_accumulated", 0.0)
+    )
+
+    # Clamp inputs
+    sleep_last_night_hours = max(0.0, min(12.0, sleep_last_night_hours))
+    sleep_debt_days = max(0.0, min(10.0, sleep_debt_days))
+    cognitive_clarity = max(1.0, min(10.0, cognitive_clarity))
+    decision_fatigue = max(0.0, min(10.0, decision_fatigue))
+    stress_load = max(0.0, min(10.0, stress_load))
+    accumulated_session_fatigue = max(0.0, min(10.0, accumulated_session_fatigue))
+
+    if hrv_status not in VALID_HRV_STATUS:
+        hrv_status = "normal"
+    if emotional_state not in VALID_EMOTIONAL_STATES:
+        emotional_state = "neutral"
+    decision_class = decision_class.upper() if isinstance(decision_class, str) else "C3"
+    if decision_class not in VALID_DECISION_CLASSES:
+        return {
+            "error": "INVALID_DECISION_CLASS",
+            "valid": VALID_DECISION_CLASSES,
+            "received": decision_class,
+            "tool": "well_readiness_gate",
+        }
+
+    # Compute homeostasis
+    homeostasis_score, status, verdict = _compute_homeostasis_score(
+        sleep_last_night_hours=sleep_last_night_hours,
+        sleep_debt_days=sleep_debt_days,
+        cognitive_clarity=cognitive_clarity,
+        decision_fatigue=decision_fatigue,
+        stress_load=stress_load,
+        hrv_status=hrv_status,
+        emotional_state=emotional_state,
+        chronic_fatigue=chronic_fatigue,
+        accumulated_session_fatigue=accumulated_session_fatigue,
+    )
+
+    # Decision-class threshold matrix
+    thresholds = {
+        "C1": {"proceed": 3.0, "advisory_blocked": None},  # proceed unless CRITICAL
+        "C2": {"proceed": 3.0, "advisory_blocked": None},  # proceed unless CRITICAL
+        "C3": {"proceed": 5.0, "advisory_blocked": None},  # proceed if STABLE or better
+        "C4": {
+            "proceed": 7.0,
+            "advisory_blocked": 3.0,
+        },  # proceed only if OPTIMAL; block if DEGRADED
+        "C5": {
+            "proceed": 7.0,
+            "advisory_blocked": 5.0,
+        },  # proceed only if OPTIMAL + no chronic; block if STABLE
+    }
+    threshold = thresholds[decision_class]
+
+    # Determine verdict
+    if status == "CRITICAL":
+        verdict_out = "ADVISORY_BLOCKED"
+        reasoning = (
+            f"Homeostasis CRITICAL ({homeostasis_score:.1f}/10). "
+            f"Operator is in no state for any consequential decision. "
+            f"Decision class {decision_class} is blocked regardless of stakes."
+        )
+        recommendation = (
+            "Do not proceed. Pause. Restore baseline: sleep, nutrition, rest. "
+            "Re-evaluate after recovery."
+        )
+    elif status == "DEGRADED" and decision_class in ("C4", "C5"):
+        if homeostasis_score < threshold["advisory_blocked"]:
+            verdict_out = "ADVISORY_BLOCKED"
+            reasoning = (
+                f"Homeostasis DEGRADED ({homeostasis_score:.1f}/10). "
+                f"Decision class {decision_class} requires OPTIMAL readiness. "
+                f"Foggy cognition + high stakes = unacceptable risk of poor wording with legal/financial consequences."
+            )
+            recommendation = (
+                f"Defer the {decision_class} decision. "
+                "Produce only a non-sendable holding draft. Send when rested."
+            )
+        else:
+            verdict_out = "DEFER"
+            reasoning = (
+                f"Homeostasis DEGRADED ({homeostasis_score:.1f}/10). "
+                f"Decision class {decision_class} requires OPTIMAL readiness. "
+                "Proceed only with safe, reversible, non-final output."
+            )
+            recommendation = (
+                f"DEFER {decision_class} action. "
+                "Produce only a holding message or internal draft — not a final send-ready communication."
+            )
+    elif status == "DEGRADED" and decision_class in ("C1", "C2"):
+        verdict_out = "PROCEED"
+        reasoning = (
+            f"Homeostasis DEGRADED ({homeostasis_score:.1f}/10) but decision class {decision_class} "
+            "is low-stakes. Proceed with reduced confidence."
+        )
+        recommendation = (
+            "Proceed with reduced ambition. Prefer reversible, low-consequence actions."
+        )
+    elif status == "STABLE" and decision_class in ("C4", "C5"):
+        verdict_out = "DEFER"
+        reasoning = (
+            f"Homeostasis STABLE ({homeostasis_score:.1f}/10). "
+            f"Decision class {decision_class} requires OPTIMAL readiness. "
+            "STABLE is not sufficient for high-stakes consequential actions."
+        )
+        recommendation = (
+            f"DEFER {decision_class} decision. "
+            "Wait for OPTIMAL readiness before committing to legal, financial, or critical communications."
+        )
+    elif status == "STABLE" and decision_class in ("C1", "C2", "C3"):
+        verdict_out = "PROCEED"
+        reasoning = (
+            f"Homeostasis STABLE ({homeostasis_score:.1f}/10). "
+            f"Decision class {decision_class} is manageable at this readiness level."
+        )
+        recommendation = "Proceed. Use standard caution and review before finalizing."
+    elif status == "OPTIMAL":
+        # Chronic fatigue is a flag even at OPTIMAL for C5
+        if decision_class == "C5" and chronic_fatigue:
+            verdict_out = "DEFER"
+            reasoning = (
+                f"Homeostasis OPTIMAL ({homeostasis_score:.1f}/10) but chronic fatigue is active. "
+                "C5 (health/safety/life) decisions should not be made during chronic fatigue episodes."
+            )
+            recommendation = "DEFER C5 decision. Even with OPTIMAL scores, chronic fatigue degrades long-range judgment for critical choices."
+        else:
+            verdict_out = "PROCEED"
+            reasoning = (
+                f"Homeostasis OPTIMAL ({homeostasis_score:.1f}/10). "
+                f"Decision class {decision_class} is cleared at this readiness level."
+            )
+            recommendation = "Proceed with normal caution. Readiness is optimal."
+
+    signal = _verdict_to_signal(verdict_out)
+
+    return {
+        "verdict": verdict_out,
+        "signal": signal,
+        "decision_class": decision_class,
+        "readiness_score": round(homeostasis_score, 2),
+        "homeostasis_status": status,
+        "reasoning": reasoning,
+        "recommendation": recommendation,
+        "biometric_inputs": {
+            "sleep_last_night_hours": sleep_last_night_hours,
+            "sleep_debt_days": sleep_debt_days,
+            "cognitive_clarity": cognitive_clarity,
+            "decision_fatigue": decision_fatigue,
+            "stress_load": stress_load,
+            "hrv_status": hrv_status,
+            "emotional_state": emotional_state,
+            "chronic_fatigue": chronic_fatigue,
+            "accumulated_session_fatigue": accumulated_session_fatigue,
+        },
+        "constitutional_boundary_notice": (
+            "WELL is advisory-only. The verdict is a readiness signal, not a constitutional "
+            "command. Arif remains final judge. This tool assists judgment; it does not replace it. "
+            "arifOS 888_JUDGE is the sole constitutional authority for overridable decisions."
+        ),
+        "Ω": {
+            "stage": "GATE",
+            "lane": "HUMAN",
+            "mode": "readiness_gate",
+            "verdict": verdict_out,
+            "signal": signal,
+        },
+        "arifos": {
+            "stage": "GATE",
+            "lane": "HUMAN",
+            "decision_class": decision_class,
+            "readiness_score": round(homeostasis_score, 2),
+            "verdict": verdict_out,
+            "signal": signal,
+        },
+        "w0": "OPERATOR_VETO_INTACT / HIERARCHY_INVARIANT",
+        "boundary_notice": (
+            "Not diagnosis. Not therapy. Reflective readiness gate only. "
+            "Arif remains final judge of all consequential actions."
+        ),
+    }
 
 
 @mcp.tool()

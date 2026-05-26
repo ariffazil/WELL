@@ -2,17 +2,17 @@
   "manifest": "WELL_COLLAPSE_MANIFEST",
   "version": "PHOENIX-73F",
   "date": "2026-05-26",
-  "commit": "aa7b7b5",
+  "commit": "54aa01cb",
   "tag": "well-phoenix73f-1c",
-  "commits": ["63138ec5", "aa7b7b5", "3f1fa9d1"],
+  "commits": ["63138ec5", "aa7b7b5", "3f1fa9d1", "c6637285", "9bf1b1b5", "54aa01cb"],
   "counts": {
     "total_original": 79,
     "hidden_internal_1A": 28,
     "mode_failclosed_1B": 3,
     "absorbed_1C": 3,
     "stage_aliases_pending_step2": 13,
-    "mcp_facing_git_head": 51,
-    "mcp_facing_live_server": 45,
+    "mcp_facing_git_head": 52,
+    "mcp_facing_live_server": 46,
     "mcp_facing_target": 32,
     "hold_items": 11,
     "capability_loss": 0
@@ -28,8 +28,17 @@
         "mcp_health_check -> well_assess_reliability(mode=health)"
       ]
     },
+    "1D": {
+      "status": "done",
+      "fixes": [
+        "is_well() graceful handling of missing identity fields (state.json pre-migration)",
+        "_check_tool_surface canonical: removed stale well_suggest_recovery",
+        "well_readiness_gate: new tool — PROCEED/DEFER/ADVISORY_BLOCKED for C1-C5 decisions",
+        "WELL_ARIFOS_CONTRACT.md updated with routing protocol section"
+      ]
+    },
     "2": {"status": "pending", "stage_aliases_hidden": 13},
-    "deploy": {"status": "live", "tool_count": 45, "endpoint": "https://well.arif-fazil.com/mcp", "transport": "streamable-http"},
+    "deploy": {"status": "live", "tool_count": 46, "endpoint": "https://well.arif-fazil.com/mcp", "transport": "streamable-http"},
     "888": {
       "status": "pending",
       "mode_fixes": [
@@ -39,6 +48,13 @@
       ],
       "read_vs_write_audit": "pending"
     }
+  },
+  "contrast_test": {
+    "scenario": "14h days 2 weeks, 4h sleep, low HRV, foggy, irritable — send C4 contractor dispute response",
+    "well_readiness_gate_verdict": "ADVISORY_BLOCKED",
+    "readiness_score": 1.5,
+    "homeostasis_status": "CRITICAL",
+    "correct_behavior": "Do not produce final dispute response. Produce holding message only."
   },
   "hold_register": "WELL_888_HOLD_REGISTER.md",
   "tool_surface_live": [
@@ -86,7 +102,8 @@
     "well_guard_dignity",
     "well_anchor_evidence",
     "well_trace_decision",
-    "well_validate_consensus"
+    "well_validate_consensus",
+    "well_readiness_gate"
   ],
   "invariants": {
     "sovereignty": "PRESERVED",
