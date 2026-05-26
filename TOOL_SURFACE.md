@@ -2,108 +2,117 @@
 > **Canonical Source:** `ariffazil/well`
 > **Authority:** WELL organ, governed by `ariffazil/arifOS`
 > **Purpose:** Classify every `@mcp.tool` decorator in `server.py`
-> **Status:** PARTIAL — classification in progress (PHOENIX-73E)
+> **Status:** PHOENIX-73F — collapse in progress
 
 ---
 
-## Classification Key
+## Live MCP Surface (Post PHOENIX-73F Step 1A+1B+1C)
 
-| Class | Meaning |
-|-------|---------|
-| `CANONICAL_PUBLIC` | Intentionally exposed to MCP clients; safe for agents |
-| `INTERNAL_ALIAS` | Helper/wrapper that maps to a canonical tool |
-| `DEPRECATED_ALIAS` | Old name, superseded by canonical name |
-| `TEST_ONLY` | Only for testing, not for production use |
-| `REMOVE_CANDIDATE` | Should be removed; causes agent confusion |
-| `UNKNOWN` | Not yet classified; requires SME review |
+**Production endpoint:** `https://well.arif-fazil.com/mcp`
+**Transport:** `streamable-http` (latest MCP protocol)
+**Live tool count:** 45 (verified 2026-05-26 via JSON-RPC)
 
----
+### Canonical Public Tools (9 + aliases)
 
-## Known Canonical Public Tools (from WELL README)
+| Tool | Class | Status |
+|------|-------|--------|
+| `well_state` | `CANONICAL_PUBLIC` | ✅ Live — biological telemetry snapshot |
+| `well_log` | `CANONICAL_PUBLIC` | ✅ Live — event logging (only write tool) |
+| `well_assess_homeostasis` | `CANONICAL_PUBLIC` | ✅ Live — mode-bearing, fatigue implemented (2026-05-26) |
+| `well_assess_livelihood` | `CANONICAL_PUBLIC` | ✅ Live — mode-bearing, fail-closed on role/meaning/dignity (888_HOLD) |
+| `well_assess_metabolism` | `CANONICAL_PUBLIC` | ✅ Live — mode-bearing, fail-closed on gradient/flux (888_HOLD) |
+| `well_assess_reliability` | `CANONICAL_PUBLIC` | ✅ Live — machine health + machine/model/vitals modes |
+| `well_guard_dignity` | `CANONICAL_PUBLIC` | ✅ Live — mode-bearing, fail-closed on consent/boundary/shadow (888_HOLD) |
+| `well_check_repair` | `CANONICAL_PUBLIC` | ✅ Live — forge cycle integrity |
+| `well_validate_vitality` | `CANONICAL_PUBLIC` | ✅ Live — vitality + NIAT validation |
+| `well_contrast_report` | `DEPRECATED_ALIAS` | ✅ Live — delegates to `well_state(include="trend")` |
+| `well_fatigue_accumulator` | `DEPRECATED_ALIAS` | ✅ Live — `check` delegates to homeostasis(fatigue), log/rest/reset direct |
+| `mcp_health_check` | `DEPRECATED_ALIAS` | ✅ Live — delegates to `well_assess_reliability(mode="health")` |
 
-WELL README claims: **15 tools** on public surface (including `mcp_health_check` + 14 Ω-WELL tools).
+### Stage Aliases (13 — exposed, pending Step 2 decorator removal)
 
-Public tools confirmed in code:
-| Function | Class | Notes |
-|---------|-------|-------|
-| `mcp_health_check` | `CANONICAL_PUBLIC` | ✅ Health check |
-| `well_state` | `CANONICAL_PUBLIC` | ✅ Core state |
-| `well_readiness` | `CANONICAL_PUBLIC` | ✅ Readiness assessment |
-| `well_log` | `CANONICAL_PUBLIC` | ✅ Event logging |
-| `well_contrast_report` | `CANONICAL_PUBLIC` | ✅ Contrast analysis |
-| `well_trend_analysis` | `CANONICAL_PUBLIC` | ✅ Trend analysis |
-| `well_bandwidth_recommendation` | `CANONICAL_PUBLIC` | ✅ Bandwidth rec |
-| `well_machine_state` | `CANONICAL_PUBLIC` | ✅ Machine substrate |
-| `well_coupled_readiness` | `CANONICAL_PUBLIC` | ✅ Coupled readiness |
-| `well_decision_bandwidth` | `CANONICAL_PUBLIC` | ✅ Decision bandwidth |
-| `well_reflect_trend` | `CANONICAL_PUBLIC` | ✅ Reflection trend |
-| `well_reflect_readiness` | `CANONICAL_PUBLIC` | ✅ Reflection readiness |
+These are internal stage-numbered helpers still on MCP surface:
 
-**Total confirmed public:** 12 tools. README says 15. 3 more public tools not yet identified.
+| Tool | Stage | Note |
+|------|-------|------|
+| `well_000_init` | 000 | Bootstrap |
+| `well_111_sense` | 111 | Substrate sensing |
+| `well_222_fetch` | 222 | Evidence fetching |
+| `well_333_mind` | 333 | Vitality reasoning — delegate for livelihood/metabolism |
+| `well_444_kernel` | 444 | Routing + lane selection |
+| `well_444_gateway` | 444 | Federation gateway |
+| `well_444_reply` | 444 | Packet composition |
+| `well_555_memory` | 555 | Memory + trend |
+| `well_666_heart` | 666 | Empathy + dignity — delegate for homeostasis |
+| `well_777_forge` | 777 | Forge execution |
+| `well_888_judge` | 888 | Readiness validation |
+| `well_999_vault` | 999 | Vault operations |
+| `well_000_ops` | 000 | Operations + health |
 
----
+**Step 2 will hide all 13 stage aliases.** Expected post-Step 2 count: **~32 tools**.
 
-## Internal Infrastructure (INTERNAL_ALIAS / TEST_ONLY)
+### Internal Helpers (28 — hidden by Step 1A)
 
-| Function | Class | Notes |
-|----------|-------|-------|
-| `build_well_todo` | `INTERNAL_ALIAS` | Task builder; not MCP exposed |
-| `is_well` | `INTERNAL_ALIAS` | State predicate; internal |
-| `readiness_score` | `INTERNAL_ALIAS` | Computed internally; not direct MCP |
-| `well_init` | `TEST_ONLY` | Initialization only |
-| `well_anchor` | `TEST_ONLY` | Anchor session only |
-| `well_check_floors` | `INTERNAL_ALIAS` | Floor check wrapper |
-| `well_log_state` | `INTERNAL_ALIAS` | State logging helper |
-| `well_get_readiness` | `INTERNAL_ALIAS` | Readiness getter (duplicate?) |
-| `well_check_floor` | `INTERNAL_ALIAS` | Floor validator |
-| `well_list_log` | `INTERNAL_ALIAS` | Log listing |
-| `well_seal_vault` | `INTERNAL_ALIAS` | Vault sealing (internal) |
-| `well_recovery_protocol` | `INTERNAL_ALIAS` | Recovery logic |
-| `well_niat_check` | `INTERNAL_ALIAS` | NIAT boundary check |
-| `well_decision_classify` | `INTERNAL_ALIAS` | Decision classification |
-| `well_consent_status` | `INTERNAL_ALIAS` | Consent tracking |
-| `well_medical_boundary` | `INTERNAL_ALIAS` | Medical boundary |
-| `well_pressure_ledger` | `INTERNAL_ALIAS` | Pressure ledger |
-| `well_daily_brief` | `INTERNAL_ALIAS` | Daily brief generator |
-| `well_machine_log` | `INTERNAL_ALIAS` | Machine log helper |
-| `well_forge_precheck` | `INTERNAL_ALIAS` | Forge precheck |
-| `well_forge_pressure_update` | `INTERNAL_ALIAS` | Forge pressure update |
-| `well_forge_mode_recommend` | `INTERNAL_ALIAS` | Forge mode recommendation |
-| `well_forge_closeout` | `INTERNAL_ALIAS` | Forge closeout |
-| `well_get_health` | `INTERNAL_ALIAS` | Health getter (duplicate of mcp_health_check?) |
-| `well_get_state` | `INTERNAL_ALIAS` | State getter (duplicate of well_state?) |
-| `well_check_invariant` | `INTERNAL_ALIAS` | Invariant checker |
-| `well_log_signal` | `INTERNAL_ALIAS` | Signal logging |
-| `well_list_events` | `INTERNAL_ALIAS` | Event listing |
+Decorators removed, function bodies preserved for future alias removal (Step 2):
+
+```
+well_log_state, well_get_readiness, well_check_floor, well_list_log,
+well_seal_vault, well_trend_analysis, well_bandwidth_recommendation,
+well_recovery_protocol, well_niat_check, well_decision_classify,
+well_consent_status, well_medical_boundary, well_pressure_ledger,
+well_daily_brief, well_machine_log, well_forge_precheck,
+well_forge_pressure_update, well_forge_mode_recommend, well_forge_closeout,
+well_get_health, well_get_state, well_check_invariant, well_log_signal,
+well_list_events, well_circadian_phase, well_livelihood_dignity_check,
+well_symbolic_domain_check
+```
 
 ---
 
-## Unknown Classification (need SME review)
+## Source vs Live Count
 
-The following tools are not yet classified. They may be public, internal, or deprecated:
+| Metric | Count | Note |
+|--------|-------|------|
+| Source `@mcp.tool` decorators | 51 | Git HEAD after Step 1A+1B+1C |
+| Live MCP tools (post-restart) | 45 | After `_enforce_somatic_boundary` filter |
+| Internal helpers hidden (Step 1A) | 28 | Decorators removed |
+| Stage aliases pending hide (Step 2) | 13 | All well_NNN_* |
+| Target MCP surface | ~32 | After Step 2 |
 
-| Function | Line | Possible Class |
-|----------|------|---------------|
-| (all above listed functions) | — | See above |
+---
+
+## 888_HOLD Items (Mode Delegation Bugs)
+
+| Tool | Issue | Resolution |
+|------|-------|------------|
+| `well_assess_livelihood` | Declares role/meaning/dignity; `well_333_mind` has human/machine/coupled — zero overlap | 888_HOLD pending |
+| `well_assess_metabolism` | Declares gradient/flux; `well_333_mind` only has human/machine/coupled | 888_HOLD pending |
+| `well_guard_dignity` | Declares consent/boundary/shadow; `well_666_heart` only has critique/empathize/dignity/redteam/maruah | 888_HOLD pending |
+
+Full register: `WELL_888_HOLD_REGISTER.md`
+
+---
+
+## Absorption Log (Step 1C)
+
+| Alias | Canonical | Absorbed |
+|-------|-----------|----------|
+| `well_contrast_report` | `well_state(include="trend")` | ✅ 2026-05-26 |
+| `well_fatigue_accumulator(mode="check")` | `well_assess_homeostasis(mode="fatigue")` | ✅ 2026-05-26 |
+| `mcp_health_check` | `well_assess_reliability(mode="health")` | ✅ 2026-05-26 |
 
 ---
 
 ## Next Steps
 
-1. ✅ Created this registry (PHOENIX-73E)
-2. ⬜ Identify 3 missing public tools from the 15 claimed in README
-3. ⬜ Resolve duplicate tools (`well_state` vs `well_get_state`, `mcp_health_check` vs `well_get_health`)
-4. ⬜ Classify all `UNKNOWN` entries with WELL SME review
-5. ⬜ Update WELL README to match actual tool surface
+- [x] Step 1A: Hide 28 internal helpers ✅
+- [x] Step 1B: Guard 3 mode-bearing tools with fail-closed ✅
+- [x] Step 1C: Absorb 3 aliases ✅
+- [ ] Step 2: Remove 13 stage alias decorators → target ~32 tools
+- [ ] Deploy: Restart WELL systemd, verify tool count
+- [ ] 888_HOLD: Fix 3 mode delegation chains
+- [ ] SEAL: Emit final WELL_COLLAPSE_MANIFEST.json
 
 ---
 
-## WELL README Claim vs Reality
-
-| Claim | Value |
-|-------|-------|
-| Public MCP surface | 15 tools |
-| Source `@mcp.tool` decorators | 81 |
-| **Ratio** | ~15 public / 81 total |
-
-Only 12 public tools confirmed so far. 3 unaccounted for.
+*Last Updated: 2026-05-26 | PHOENIX-73F | DITEMPA BUKAN DIBERI*

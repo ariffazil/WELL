@@ -5,18 +5,20 @@
 > F1-F13 floors, 888_JUDGE verdicts, and VAULT999 are defined in `ariffazil/arifOS`.
 
 > **Status:** OPERATIONAL | **Organ:** SUBSTRATE (Ω-WELL) | **Authority:** arifOS
-> **Domain:** `well.arif-fazil.com`
+> **MCP Endpoint:** `https://well.arif-fazil.com/mcp` | **Transport:** `streamable-http`
 >
 > ⚠️ **For live/degraded/disabled status of ALL federation organs, see:**
 > **`ariffazil/arifOS/FEDERATION_STATUS.md`** — canonical source of truth.
 
 ## 🏛️ What this repo is
 
-The human bio-telemetry and metabolic state organ within the arifOS federation. WELL monitors the coupled human-machine system state through a FastMCP surface of ~60 tools spanning biometric readiness, machine substrate telemetry, and coupled vitality metrics. All WELL data passes through the F5 PEACE and F6 EMPATHY floors before being used in any governance decision.
+The human bio-telemetry and metabolic state organ within the arifOS federation. WELL monitors the coupled human-machine system state through a FastMCP surface of **45 MCP tools** (post PHOENIX-73F collapse) spanning biometric readiness, machine substrate telemetry, and coupled vitality metrics. All WELL data passes through the F5 PEACE and F6 EMPATHY floors before being used in any governance decision.
 
 **WELL owns the SUBSTRATE — the living layer that keeps the human in the loop.**
 
-> **MCP Surface (live test 2026-05-17):** 15 tools — `mcp_health_check` + 14 Ω-WELL tools. Source has 81 `@mcp.tool` decorators; only 15 exposed on public surface. Internal aliases (well_state, well_log, well_readiness, etc.) are hidden from MCP surface.
+> **MCP Surface (live 2026-05-26):** `https://well.arif-fazil.com/mcp` — 45 tools (transport: `streamable-http`).
+> Source has 51 `@mcp.tool` decorators. Internal helpers (28) hidden from MCP surface.
+> Stage aliases (13) pending Step 2 decorator removal → target ~32 tools.
 
 ## 📦 Ownership
 
@@ -47,14 +49,14 @@ WELL/
 # Install
 pip install -e .
 
-# Start server
+# Start server (bare-metal systemd — unit: well.service)
 python server.py
 
 # Run tests (plain Python, NOT pytest)
 python test_well.py
 
-# Docker build & deploy
-./deploy.sh [TAG]
+# Restart systemd service after code changes
+systemctl restart well
 ```
 
 ## 🔗 Federation Loop
@@ -64,7 +66,7 @@ python test_well.py
 
 ---
 
-*Last Verified: 2026.05.16 | 999 SEAL ALIVE*
+*Last Verified: 2026.05.26 | PHOENIX-73F | DITEMPA BUKAN DIBERI*
 
 
 ---

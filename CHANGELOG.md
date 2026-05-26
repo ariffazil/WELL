@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v2026.05.26] - 2026-05-26
+### Changed
+- **PHOENIX-73F**: MCP surface collapse (1A+1B+1C) — 79 tools → 51 decorators → 45 live
+  - Step 1A: 28 internal helpers hidden (decorator removed, functions intact)
+  - Step 1B: 3 mode-bearing tools fail-closed (well_assess_livelihood, well_assess_metabolism, well_guard_dignity) — delegation chain bugs
+  - Step 1C: 3 absorptions (well_contrast_report→well_state, well_fatigue_accumulator→homeostasis, mcp_health_check→reliability)
+- **MCP Endpoint**: `https://well.arif-fazil.com/mcp` — Caddy route fixed (was 8083, now 18083)
+- **Transport**: `streamable-http` (latest MCP protocol) — not SSE
+
+### Known Issues
+- 3 mode delegation chains blocked (888_HOLD): livelihood, metabolism, guard_dignity — require human approval to fix
+- 13 stage aliases still exposed pending Step 2
+
 ## [v2026.05.17] - 2026-05-16
 ### Added
 - **`well_contrast_report` tool**: W→P→C→M→G→J metabolic loop for anomalous biological contrast detection.

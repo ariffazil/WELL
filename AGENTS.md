@@ -1,8 +1,8 @@
 <!-- SOT-MANIFEST
 owner: Arif
-last_verified: 2026-05-19
-valid_from: 2026-05-19
-valid_until: 2026-06-19
+last_verified: 2026-05-26
+valid_from: 2026-05-26
+valid_until: 2026-06-26
 confidence: high
 scope: /root/WELL
 -->
@@ -19,7 +19,8 @@ Arif. This is the **WELL** organ of the arifOS federation — Substrate Vitality
 
 The human-system readiness mirror. WELL assesses biological metabolism, homeostasis, repair cycles, vitality, livelihood, and dignity across human, machine, and coupled substrates.
 
-**~60 MCP tools**: 13 Omega-WELL primitives + aliases. FastMCP server (~10,698 lines).
+**45 MCP tools** (post PHOENIX-73F collapse). FastMCP server (~10,972 lines).
+Running at `https://well.arif-fazil.com/mcp` via bare-metal systemd.
 
 | Substrate | Tools | Purpose |
 |-----------|-------|---------|
@@ -48,27 +49,29 @@ cd /root/WELL
 # Install
 pip install -e .
 
-# Start server
+# Start server (bare-metal systemd)
 python server.py
 
 # Tests (plain Python — NOT pytest)
 python test_well.py
 
-# Docker build & deploy
-./deploy.sh [TAG]
+# Restart after code changes
+systemctl restart well
 ```
 
 ## Key Files
 
 | File | Purpose |
 |------|---------|
-| `server.py` | FastMCP server (~10,698 lines, ~60 tools) |
+| `server.py` | FastMCP server (~10,972 lines, 51 @mcp.tool decorators) |
 | `vault_bridge.py` | VAULT999 append-only ledger client |
 | `gate/well_gate.py` | Pre-JUDGE biological readiness mirror |
 | `gate/dignity_shadow.py` | Dignity shadow scoring |
-| `test_well.py` | Audit / adversarial test suite (17+ tests) |
+| `test_well.py` | Audit / adversarial test suite |
 | `state.json` | Live operator state snapshot |
 | `events.jsonl` | Event stream |
+| `WELL_COLLAPSE_MANIFEST.json` | PHOENIX-73F collapse manifest |
+| `WELL_888_HOLD_REGISTER.md` | 888_HOLD items register |
 
 ## Federation Position
 
