@@ -6,11 +6,13 @@
 
 ---
 
-## Live MCP Surface (Post PHOENIX-73F Step 1A+1B+1C)
+## Live MCP Surface (Post PHOENIX-73F Step 1A+1B+1C + SOMATIC_BOUNDARY)
 
 **Production endpoint:** `https://well.arif-fazil.com/mcp`
 **Transport:** `streamable-http` (latest MCP protocol)
-**Live tool count:** 45 (verified 2026-05-26 via JSON-RPC)
+**Live tool count:** 13 (verified 2026-05-26 via JSON-RPC)
+**SOMATIC_TOOLS set:** 15 (health endpoint dynamic count)
+**Note:** `well_system_registry_status` and `well_registry_status` in SOMATIC_TOOLS but not auto-registered in MCP — 2-tool gap is a known registration issue, not a contradiction.
 
 ### Canonical Public Tools (9 + aliases)
 
@@ -72,12 +74,13 @@ well_symbolic_domain_check
 ## Source vs Live Count
 
 | Metric | Count | Note |
-|--------|-------|------|
-| Source `@mcp.tool` decorators | 51 | Git HEAD after Step 1A+1B+1C+1D |
-| Live MCP tools (post-restart) | 45 | After `_enforce_somatic_boundary` filter |
+|--------|-------|-------|
+| Source `@mcp.tool` decorators | 51 | Git HEAD after all changes |
+| SOMATIC_TOOLS set | 15 | Canonical public tools (set) |
+| Live MCP tools (boundary enforced) | 13 | After `WELL_SOMATIC_BOUNDARY=1` filter |
 | Internal helpers hidden (Step 1A) | 28 | Decorators removed |
-| Stage aliases pending hide (Step 2) | 13 | All well_NNN_* |
-| Target MCP surface | ~32 | After Step 2 |
+| Stage aliases now hidden | 13 | All well_NNN_* — removed by boundary |
+| MCP surface gap | 2 | `well_*_registry_status` in SOMATIC_TOOLS but not registered |
 
 ---
 
@@ -108,8 +111,8 @@ Full register: `WELL_888_HOLD_REGISTER.md`
 - [x] Step 1A: Hide 28 internal helpers ✅
 - [x] Step 1B: Guard 3 mode-bearing tools with fail-closed ✅
 - [x] Step 1C: Absorb 3 aliases ✅
-- [ ] Step 2: Remove 13 stage alias decorators → target ~32 tools
-- [ ] Deploy: Restart WELL systemd, verify tool count
+- [x] SOMATIC_BOUNDARY: Enable via `WELL_SOMATIC_BOUNDARY=1` env var ✅ (2026-05-26)
+- [ ] Fix: 2 registry tools not auto-registering (well_system_registry_status, well_registry_status)
 - [ ] 888_HOLD: Fix 3 mode delegation chains
 - [ ] SEAL: Emit final WELL_COLLAPSE_MANIFEST.json
 

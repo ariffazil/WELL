@@ -11207,7 +11207,9 @@ if __name__ == "__main__":
                 "verdict": verdict,
                 "service": "well-mcp",
                 "version": "2026.05.15-ΩWELL+GWELL+FEDERATION",
-                "tool_count": 79,  # canonical tool surface — kept in sync by governance
+                "tool_count": len(
+                    SOMATIC_TOOLS
+                ),  # dynamic — counts SOMATIC_TOOLS set (was hardcoded 79)
                 # substrate advisory fields — consumed by arifOS _read_well_substrate() HTTP fallback
                 "well_score": float(state.get("well_score", 50.0)),
                 "floors_violated": state.get("floors_violated") or [],
