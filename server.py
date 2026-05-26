@@ -9370,7 +9370,7 @@ def _compute_decision_ceiling(state: dict[str, Any]) -> dict[str, str]:
 
 @mcp.tool()
 async def well_classify_substrate(
-    mode: str = "classify",
+    mode: str = "classification",  # CHAOS FIX: "classify" not in VALID_MODES ["classification","analysis","synthesis"]; first implemented
     subject: str = "",
     description: str | None = None,
     evaluation_intent: str | None = None,
@@ -9517,7 +9517,7 @@ def well_measure_gradient(
 
 @mcp.tool()
 def well_assess_metabolism(
-    mode: str = "human",
+    mode: str = "coupled",  # CHAOS FIX: "human" not in VALID_MODES; coupled is implemented
     subject: str | None = None,
     substrate_class: str | None = None,
     energy_level: float | None = None,
@@ -9579,7 +9579,7 @@ def well_assess_metabolism(
 
 @mcp.tool()
 def well_assess_homeostasis(
-    mode: str = "empathize",
+    mode: str = "sleep",  # CHAOS FIX: "empathize" not in VALID_MODES ["sleep","cognitive","stress","vitality","circadian","fatigue"]; sleep is implemented
     subject: str | None = None,
     dignity_preservation: float | None = None,
     coercion_signals: list[str] | None = None,
@@ -9864,7 +9864,7 @@ def well_validate_vitality(
 
 @mcp.tool()
 def well_assess_livelihood(
-    mode: str = "human",
+    mode: str = "role",  # CHAOS FIX: "human" not in VALID_MODES ["role","meaning","dignity"]; first implemented
     subject: str | None = None,
     substrate_class: str | None = None,
     energy_level: float | None = None,
@@ -10173,7 +10173,7 @@ def well_reflect_intelligence(
 
 @mcp.tool()
 def well_guard_dignity(
-    mode: str = "dignity",
+    mode: str = "consent",  # CHAOS FIX (Eureka 2026-05-26): "dignity" not in VALID_MODES; use first implemented
     subject: str | None = None,
     dignity_preservation: float | None = None,
     coercion_signals: list[str] | None = None,
