@@ -8741,6 +8741,12 @@ if __name__ == "__main__":
         )
 
     async def health_handler(request):
+        try:
+            with open(".identity_hash", "r") as f:
+                identity_hash = f.read().strip()
+        except Exception:
+            identity_hash = "UNAVAILABLE"
+
         state = _load_state()
         well_ok = is_well(state)
         has_telemetry = _has_verified_telemetry(state)
@@ -8761,6 +8767,7 @@ if __name__ == "__main__":
                 "has_telemetry": has_telemetry,
                 "service": "well-mcp",
                 "version": "2026.05.15-ΩWELL+GWELL",
+                "identity_hash": identity_hash,
                 # W-1 substrate advisory fields — consumed by judge.py HTTP fallback
                 "well_score": float(state.get("well_score", 50.0)),
                 "floors_violated": state.get("floors_violated") or [],
@@ -11150,6 +11157,12 @@ if __name__ == "__main__":
     # Register health handlers if not already present
     async def _well_health_handler(request):
         try:
+            with open(".identity_hash", "r") as f:
+                identity_hash = f.read().strip()
+        except Exception:
+            identity_hash = "UNAVAILABLE"
+
+        try:
             state = __import__("json").loads(open("/app/state.json").read())
         except Exception:
             state = {}
@@ -11203,6 +11216,7 @@ if __name__ == "__main__":
                 "identity": "WELL",
                 "role": "Body / Human Intelligence",
                 "authority": "REFLECT_ONLY",
+                "identity_hash": identity_hash,
                 "verdict": verdict,
                 "service": "well-mcp",
                 "version": "2026.05.15-ΩWELL+GWELL+FEDERATION",
@@ -11234,6 +11248,45 @@ if __name__ == "__main__":
                 if state_age_hours is not None
                 else None,
                 "environment": environment,
+                # Phase 2 hardening: standardized freshness + owner summary
+                "freshness": {
+                    "status": (
+                        "fresh"
+                        if freshness_band in ("FRESH", "CURRENT")
+                        else "stale"
+                        if freshness_band == "AGED"
+                        else "expired"
+                    ),
+                    "checked_at_utc": datetime.datetime.now(
+                        datetime.timezone.utc
+                    ).isoformat(),
+                    "source_timestamp_utc": state.get("timestamp", "") or None,
+                    "age_seconds": round(state_age_hours * 3600, 1)
+                    if state_age_hours is not None
+                    else None,
+                    "max_fresh_age_seconds": 3600,  # 1 hour for human biometric data
+                    "stale_after_seconds": 14400,  # 4 hours
+                    "expired_after_seconds": 86400,  # 24 hours
+                },
+                "owner_summary": {
+                    "color": (
+                        "GREEN"
+                        if freshness_band in ("FRESH", "CURRENT")
+                        else "YELLOW"
+                        if freshness_band == "AGED"
+                        else "RED"
+                    ),
+                    "reasons": (
+                        ["biometric_state_fresh", "truth_status_verified"]
+                        if freshness_band in ("FRESH", "CURRENT")
+                        else ["biometric_state_aged_contact_arif"]
+                        if freshness_band == "AGED"
+                        else [
+                            "biometric_state_stale_or_expired",
+                            "human_injection_required",
+                        ]
+                    ),
+                },
                 # Boundary disclaimer
                 "boundary_notice": "Not diagnosis. Not therapy. Reflective readiness only. Arif remains final judge.",
             }
