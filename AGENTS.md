@@ -7,7 +7,12 @@ confidence: high
 scope: /root/WELL
 -->
 
-# AGENTS.md — WELL | Vitality Intelligence
+# AGENTS.md — WELL | arifOS Federation
+
+> **MANDATORY BOOT SEQUENCE**
+> 1. Read `/root/AGENTS.md` (Global Federation Rules & Identity)
+> 2. Read `/root/CONTEXT.md` (Live Machine State & Ports)
+> 3. Read this file (Repo-Specific Build/Test/Run rules)
 
 > **DITEMPA BUKAN DIBERI** — Human readiness is forged, not given.
 
