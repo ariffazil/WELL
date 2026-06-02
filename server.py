@@ -8571,6 +8571,80 @@ StreamableHTTPServerTransport._check_accept_headers = _patched_check
 # ORGAN_GOVERNANCE: arifOS F1-F13 Wrapper
 # Patch mcp.call_tool to intercept all tool execution.
 # ============================================================
+# ── Supabase L4 Domain Receipts ─────────────────────────────────────────────
+# Fire-and-forget async writes to Supabase well_states table.
+_WELL_SUPABASE_URL = _os.getenv(
+    "WELL_SUPABASE_URL", "https://utbmmjmbolmuahwixjqc.supabase.co"
+)
+_WELL_SUPABASE_ANON_KEY = _os.getenv(
+    "WELL_SUPABASE_ANON_KEY",
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV0Ym1tam1ib2xtdWFod2l4anFjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk1MjQwMTYsImV4cCI6MjAwNTA5OTk5Nn0.Nxg2Rkf-PyqnemVGz-_H1VW22jhNbmq67hH6EZ2EzEs",
+)
+
+
+async def _well_write_domain_receipt(
+    tool_name: str, result: Any, arguments: dict
+) -> None:
+    """Write WELL domain data to Supabase. Fails silently if Supabase is down."""
+    try:
+        import datetime as _dt
+        import httpx
+
+        mode = _os.getenv("WELL_SUPABASE_WRITE_MODE", "off").lower()
+        if mode == "off":
+            return
+        epoch = _dt.datetime.now(_dt.timezone.utc).isoformat()
+        headers = {
+            "apikey": _WELL_SUPABASE_ANON_KEY,
+            "Authorization": f"Bearer {_WELL_SUPABASE_ANON_KEY}",
+            "Content-Type": "application/json",
+            "Prefer": "return=minimal",
+        }
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            if tool_name == "well_log_state" and mode in ("domain", "dual"):
+                payload = {
+                    "well_type": arguments.get("well_type", "human"),
+                    "sovereign_score": (
+                        result.get("well_score", 0) if isinstance(result, dict) else 0
+                    ),
+                    "truth_status": (
+                        result.get("truth_status", "unknown")
+                        if isinstance(result, dict)
+                        else "unknown"
+                    ),
+                    "state_age_hours": 0,
+                    "kappa_r": (
+                        result.get("kappa_r", 0) if isinstance(result, dict) else 0
+                    ),
+                    "delta_s": (
+                        result.get("delta_s", 0) if isinstance(result, dict) else 0
+                    ),
+                    "peace2": (
+                        result.get("peace2", 0) if isinstance(result, dict) else 0
+                    ),
+                    "rasa": (
+                        result.get("rasa", "unknown")
+                        if isinstance(result, dict)
+                        else "unknown"
+                    ),
+                    "amanah": (
+                        result.get("amanah", 0) if isinstance(result, dict) else 0
+                    ),
+                    "metadata": {
+                        "tool": tool_name,
+                        "args": {k: v for k, v in arguments.items() if k != "state"},
+                    },
+                    "epoch": epoch,
+                }
+                await client.post(
+                    f"{_WELL_SUPABASE_URL}/rest/v1/arifosmcp_well_states",
+                    headers=headers,
+                    json=payload,
+                )
+    except Exception:
+        pass  # fire-and-forget — never propagate
+
+
 try:
     _original_call_tool = mcp.call_tool
 
@@ -8586,7 +8660,18 @@ try:
             from fastmcp.exceptions import ToolError
 
             raise ToolError(f"arifOS {verdict}: governance check blocked execution")
-        return await _original_call_tool(name, arguments, **kwargs)
+        result = await _original_call_tool(name, arguments, **kwargs)
+
+        # ── Supabase L4: fire-and-forget domain receipt ───────────────────
+        try:
+            import asyncio
+
+            loop = asyncio.get_running_loop()
+            loop.create_task(_well_write_domain_receipt(name, result, arguments))
+        except Exception:
+            pass  # fire-and-forget
+
+        return result
 
     mcp.call_tool = _governance_call_tool
     print("[GOVERNANCE] WELL governance wrapper active — arifOS F1-F13")
