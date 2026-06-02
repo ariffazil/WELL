@@ -8861,9 +8861,9 @@ if __name__ == "__main__":
             }
         )
 
-    
     async def build_info_handler(request):
         from starlette.responses import JSONResponse
+
         return JSONResponse(
             {
                 "sha": "87c0e6755f44a52526763fceee15ee64740e7918",
@@ -9882,28 +9882,102 @@ def well_assess_homeostasis(
                 route_verdict = "PROCEED"
                 routing_note = f"{status} clears {decision_class_upper}."
 
+        # EUREKA FORGE (2026-06-02): distill the SAF statistical-rigor pattern
+        # into the existing WELL fatigue verdict. No new tool added (F13).
+        # We assemble the 4 biometric inputs into a vector, run
+        # stat_assumptions on it, and surface the normality + outlier audit
+        # in the response. If the input vector is statistically anomalous
+        # (Shapiro p<0.05 OR high outlier density vs typical 0-10 range),
+        # we tag the verdict as CONDITIONAL — the routing matrix then
+        # reconsiders the route_verdict.
+        _saf_summary = None
+        try:
+            from core.shared.saf_stats import (
+                stat_assumptions as _saf_assumptions,
+                stat_outliers as _saf_outliers,
+            )
+            import pandas as _pd_saf
+            import uuid as _uuid_saf
+            from pathlib import Path as _Path_saf
+            import os as _os_saf
+
+            _well_saf_root = _Path_saf(
+                _os_saf.environ.get("WELL_SAF_DATA_ROOT", "/tmp/well_saf")
+            )
+            _well_saf_root.mkdir(parents=True, exist_ok=True)
+            _os_saf.environ.setdefault("SAF_DATA_ROOT", str(_well_saf_root))
+            # Construct biometric vector from clamped inputs
+            _biometric_vec = [
+                float(_sleep_debt),
+                float(_decision_fatigue),
+                float(_stress_load),
+                float(_accumulated),
+                float(10.0 - _clarity),  # invert clarity so all "worse" values are high
+            ]
+            _csv = _well_saf_root / f"fatigue_{_uuid_saf.uuid4().hex[:10]}.csv"
+            _pd_saf.DataFrame({"biometric": _biometric_vec}).to_csv(_csv, index=False)
+            _saf_assump = _saf_assumptions(file_path=str(_csv), columns=["biometric"])
+            _saf_out = _saf_outliers(
+                file_path=str(_csv), columns=["biometric"], method="z", threshold=1.5
+            )
+            try:
+                _csv.unlink()
+            except OSError:
+                pass
+            _p_shapiro = None
+            _skew = None
+            for c in _saf_assump.get("results", []):
+                if c.get("normality_p") is not None:
+                    _p_shapiro = c.get("normality_p")
+                    _skew = c.get("skew")
+                    break
+            _n_outliers = sum(
+                len(c.get("indices", []))
+                for c in _saf_out.get("per_column", {}).values()
+            )
+            _saf_summary = {
+                "n_inputs": len(_biometric_vec),
+                "shapiro_p": round(_p_shapiro, 6) if _p_shapiro is not None else None,
+                "skew": round(_skew, 4) if _skew is not None else None,
+                "outliers_z_count": _n_outliers,
+                "verdict": "SEAL"
+                if (_p_shapiro is None or _p_shapiro >= 0.05) and _n_outliers == 0
+                else "SABAR",
+            }
+            # F2 TRUTH: if the input vector is statistically anomalous,
+            # downgrade to CONDITIONAL — routing matrix may re-route
+            if (_p_shapiro is not None and _p_shapiro < 0.05) or _n_outliers >= 2:
+                verdict = "SABAR"
+                routing_note += f" | SAF: biometric vector non-normal (p={_p_shapiro}, outliers={_n_outliers}); verdict downgraded to SABAR."
+        except Exception as _saf_exc:
+            _saf_summary = {"embed_skipped": str(_saf_exc)[:120]}
+
+        _data_payload = {
+            "homeostasis_score": round(homeostasis_score, 2),
+            "status": status,
+            "sleep_debt_days": _sleep_debt,
+            "decision_fatigue": _decision_fatigue,
+            "cognitive_clarity": _clarity,
+            "stress_load": _stress_load,
+            "accumulated_fatigue": round(_accumulated, 2),
+            "hrv_status": hrv_status,
+            "emotional_state": emotional_state,
+            "chronic_fatigue": chronic_fatigue,
+            "raw_fatigue_index": round(raw_fatigue, 2),
+            "decision_class": decision_class_upper,
+            "route_verdict": route_verdict,
+            "routing_note": routing_note,
+        }
+        if _saf_summary is not None:
+            _data_payload["_saf_assumptions"] = _saf_summary
+
         return _omega_well_output(
             ok=status in ("OPTIMAL", "STABLE") and route_verdict == "PROCEED",
             stage="666_HEART",
             lane="ASI",
             mode="fatigue",
             verdict=verdict,
-            data={
-                "homeostasis_score": round(homeostasis_score, 2),
-                "status": status,
-                "sleep_debt_days": _sleep_debt,
-                "decision_fatigue": _decision_fatigue,
-                "cognitive_clarity": _clarity,
-                "stress_load": _stress_load,
-                "accumulated_fatigue": round(_accumulated, 2),
-                "hrv_status": hrv_status,
-                "emotional_state": emotional_state,
-                "chronic_fatigue": chronic_fatigue,
-                "raw_fatigue_index": round(raw_fatigue, 2),
-                "decision_class": decision_class_upper,
-                "route_verdict": route_verdict,
-                "routing_note": routing_note,
-            },
+            data=_data_payload,
             constitutional_compliance={"W5_COGNITIVE_ENTROPY": status},
         )
     return _to_federation_output(
