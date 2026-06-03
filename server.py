@@ -35,6 +35,16 @@ except ImportError:
     _sys.path.insert(0, str(WELL_DIR))
     from organ_governance import check_governance
 
+# PR 6 — reflect-only boundary import. Lazy-tolerant: if the engines
+# module is not on sys.path, the import is deferred until the wrap
+# call below (which is also tolerant).
+try:
+    from engines.reflect import wrap_canonical_tools as _wrap_canonical_tools
+    _REFLECT_LOADED = True
+except ImportError:
+    _REFLECT_LOADED = False
+    _wrap_canonical_tools = None  # type: ignore[assignment]
+
 # ── Paths (re-export for external use) ────────────────────────────────────────
 import os as _os
 
@@ -11450,6 +11460,39 @@ if (
     or _os.environ.get("WELL_SOMATIC_BOUNDARY", "0") == "1"
 ):
     _enforce_somatic_boundary(mcp)
+
+# PR 6 — apply reflect-only boundary to the 13 canonical SOMATIC_TOOLS.
+# This injects 4 reflect-only labels (telemetry, context, authority,
+# medical_status) on every canonical tool output, plus the F7 readiness
+# guard. F13: this labels authority; it does not grant it.
+if _REFLECT_LOADED and _wrap_canonical_tools is not None:
+    try:
+        _canonical_tool_fns = {
+            "mcp_health_check": mcp_health_check,
+            "well_classify_substrate": _well_classify_substrate_impl,
+            "well_trace_lineage": well_trace_lineage,
+            "well_detect_boundary": well_detect_boundary,
+            "well_measure_gradient": well_measure_gradient,
+            "well_assess_metabolism": well_assess_metabolism,
+            "well_assess_homeostasis": well_assess_homeostasis,
+            "well_check_repair": well_check_repair,
+            "well_validate_vitality": well_validate_vitality,
+            "well_assess_livelihood": well_assess_livelihood,
+            "well_assess_reliability": well_assess_reliability,
+            "well_compute_metabolic_flux": well_compute_metabolic_flux,
+            "well_guard_dignity": well_guard_dignity,
+        }
+        _wrapped_count = _wrap_canonical_tools(
+            _canonical_tool_fns, canonical_names=SOMATIC_TOOLS
+        )
+    except Exception as _e:  # pragma: no cover — defensive
+        _wrapped_count = 0
+        import logging as _logging
+        _logging.getLogger("well.reflect").warning(
+            "PR 6 reflect-only wrap failed: %s", _e
+        )
+else:  # pragma: no cover
+    _wrapped_count = 0
 
 if __name__ == "__main__":
     # This is a fallback in case the first __main__ block (at ~line 5911)
