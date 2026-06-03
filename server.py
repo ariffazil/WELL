@@ -9952,6 +9952,140 @@ def well_assess_homeostasis(
         except Exception as _saf_exc:
             _saf_summary = {"embed_skipped": str(_saf_exc)[:120]}
 
+        # EUREKA FORGE (2026-06-03): biometric strain profile + cross-metric
+        # coherence. Lives OUTSIDE the 2026-06-02 forge so the original
+        # try/except structure is preserved exactly. The 5 biometric inputs
+        # form a strain profile for this moment; stat_descriptives gives
+        # the spread, and a rank-coherence check flags impossible metric
+        # combinations (e.g. very high stress with very high clarity).
+        _saf_descriptives = None
+        _saf_cross_metric = None
+        try:
+            import sys as _sys_bc
+
+            _arifos_kernel_bc = "/root/arifOS"
+            if _arifos_kernel_bc not in _sys_bc.path:
+                _sys_bc.path.insert(0, _arifos_kernel_bc)
+            import pandas as _pd_bc
+            import uuid as _uuid_bc
+            from pathlib import Path as _Path_bc
+            import os as _os_bc
+            from core.shared.saf_stats import (
+                stat_descriptives as _saf_descriptives_fn,
+            )
+
+            _well_saf_root_bc = _Path_bc(
+                _os_bc.environ.get("WELL_SAF_DATA_ROOT", "/tmp/well_saf_test")
+            )
+            _well_saf_root_bc.mkdir(parents=True, exist_ok=True)
+            _os_bc.environ["SAF_DATA_ROOT"] = str(_well_saf_root_bc)
+
+            _metric_names = [
+                "sleep_debt",
+                "decision_fatigue",
+                "stress_load",
+                "accumulated_fatigue",
+                "clarity_inverted",
+            ]
+            _biometric_vec = [
+                float(_sleep_debt),
+                float(_decision_fatigue),
+                float(_stress_load),
+                float(_accumulated),
+                float(10.0 - _clarity),
+            ]
+            _bcsv = _well_saf_root_bc / (f"biometric_{_uuid_bc.uuid4().hex[:10]}.csv")
+            _pd_bc.DataFrame(
+                {
+                    "metric": _metric_names,
+                    "value": _biometric_vec,
+                }
+            ).to_csv(_bcsv, index=False)
+
+            # Strain profile: stat_descriptives of the 5 metric values.
+            # Federated saf_stats returns F1-F13 envelope at the top level
+            # (no "ok" key). Treat a populated "results" list as success.
+            _desc = _saf_descriptives_fn(file_path=str(_bcsv), columns=["value"])
+            _desc_ok = (
+                isinstance(_desc, dict)
+                and _desc.get("ok") is True
+                or (
+                    "results" in _desc
+                    and isinstance(_desc.get("results"), list)
+                    and _desc.get("results")
+                )
+            )
+            if _desc_ok:
+                _row = (_desc.get("results") or [{}])[0]
+                _max = _row.get("max")
+                _min = _row.get("min")
+                _range = (
+                    round(_max - _min, 4)
+                    if _max is not None and _min is not None
+                    else None
+                )
+                _saf_descriptives = {
+                    "n_metrics": len(_biometric_vec),
+                    "mean_strain": _row.get("mean"),
+                    "stdev_strain": _row.get("sd"),
+                    "median_strain": _row.get("median"),
+                    "min_metric": _min,
+                    "max_metric": _max,
+                    "strain_range": _range,
+                    "skew": _row.get("skew"),
+                    "kurtosis": _row.get("kurtosis"),
+                }
+                # F2 TRUTH: very wide strain range (>= 5.0 on a 0-10
+                # scale) means some metrics are extremely high while others
+                # are low — incoherent substrate state, often compensatory
+                # behaviour (one good metric masking several bad ones).
+                if _range is not None and _range >= 5.0:
+                    verdict = "SABAR"
+                    routing_note += (
+                        f" | SAF: wide strain range ({_range:.2f}) — "
+                        "incoherent biometric profile; verdict downgraded to SABAR."
+                    )
+
+            # Cross-metric coherence: rank-ordering check. Stress should
+            # rank high when sleep debt and fatigue rank high. Federated
+            # saf_stats.correlate needs >= 3 paired obs, so we use ranks
+            # as a coarse coherence check (not a real inferential test).
+            _ranked = sorted(enumerate(_biometric_vec), key=lambda kv: kv[1])
+            _ranks = [0] * len(_biometric_vec)
+            for _rk, (_orig_idx, _) in enumerate(_ranked):
+                _ranks[_orig_idx] = _rk + 1
+            _saf_cross_metric = {
+                "metric_names": _metric_names,
+                "ranks_0_to_4": _ranks,
+                "note": (
+                    "rank ordering of biometric strain; used as a coarse "
+                    "coherence check, not a Pearson correlation."
+                ),
+            }
+            _stress_rank = _ranks[_metric_names.index("stress_load")]
+            _sleep_rank = _ranks[_metric_names.index("sleep_debt")]
+            _fatigue_rank = _ranks[_metric_names.index("decision_fatigue")]
+            _coherence_ok = _stress_rank >= 2 or (
+                _sleep_rank >= 3 and _fatigue_rank >= 2
+            )
+            _saf_cross_metric["coherence_pass"] = bool(_coherence_ok)
+            if not _coherence_ok:
+                verdict = "SABAR"
+                routing_note += (
+                    f" | SAF: biometric incoherence "
+                    f"(stress_rank={_stress_rank}, sleep_rank={_sleep_rank}, "
+                    f"fatigue_rank={_fatigue_rank}); "
+                    "verdict downgraded to SABAR."
+                )
+
+            try:
+                _bcsv.unlink()
+            except OSError:
+                pass
+        except Exception as _saf_bc_exc:
+            _saf_descriptives = {"embed_skipped": str(_saf_bc_exc)[:120]}
+            _saf_cross_metric = None
+
         _data_payload = {
             "homeostasis_score": round(homeostasis_score, 2),
             "status": status,
@@ -9970,6 +10104,10 @@ def well_assess_homeostasis(
         }
         if _saf_summary is not None:
             _data_payload["_saf_assumptions"] = _saf_summary
+        if _saf_descriptives is not None:
+            _data_payload["_saf_biometric_strain"] = _saf_descriptives
+        if _saf_cross_metric is not None:
+            _data_payload["_saf_cross_metric"] = _saf_cross_metric
 
         return _omega_well_output(
             ok=status in ("OPTIMAL", "STABLE") and route_verdict == "PROCEED",
