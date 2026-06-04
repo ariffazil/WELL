@@ -30,7 +30,7 @@ WELL does **not** own constitutional judgment, economic logic, federation routin
 The public MCP surface is intentionally narrow.
 
 **Live public actions:** 13  
-**Canonical WELL tools:** 12  
+**Canonical WELL tools:** 45  
 **Deprecated compatibility aliases:** 1
 
 ### Canonical public tools
@@ -149,7 +149,7 @@ curl -s https://well.arif-fazil.com/health
 Then confirm:
 
 ```text
-1. /health reports tool_count: 13
+1. /health reports tool_count: 45
 2. ChatGPT connector shows 13 actions
 3. SOMATIC_TOOLS contains only public MCP tools
 4. _WELL_SOMATIC_MANIFEST exposes the same public MCP tools
