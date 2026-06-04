@@ -1,5 +1,19 @@
 # WELL — Human Substrate & Metabolic State
 
+<!-- SOT-MANIFEST
+owner: Arif
+last_verified: 2026-06-04
+valid_from: 2026-06-04
+valid_until: 2026-09-04
+confidence: high
+scope: /root/WELL
+-->
+
+[![FastMCP](https://img.shields.io/badge/FastMCP-3.3.1-8b5cf6?logo=python&logoColor=white)](server.py)
+[![Python](https://img.shields.io/badge/python-3.12-3776AB?logo=python&logoColor=white)](server.py)
+[![Tools](https://img.shields.io/badge/tools-45-10b981?logo=anthropic&logoColor=white)](server.py)
+[![Port](https://img.shields.io/badge/port-18083-64748b)](server.py)
+
 > **Canonical authority notice**
 >
 > WELL is the **vitality/substrate organ** of the arifOS federation. It observes and reports substrate state; it does **not** own constitutional judgment.
@@ -69,6 +83,17 @@ Current expected value: **13**.
 Internal diagnostic helpers such as `well_system_registry_status` and `well_registry_status` are not public MCP tools unless they have real `@mcp.tool` registration and are intentionally listed in the public manifest.
 
 ---
+
+## Quick Start
+
+```bash
+cd /root/WELL
+pip install -e .
+python server.py               # Start on port 18083
+# or
+systemctl start well           # systemd service
+curl http://localhost:18083/health | python3 -m json.tool
+```
 
 ## Ownership boundaries
 
@@ -212,3 +237,7 @@ When WELL docs or agents reference AAA, qualify the surface:
 WELL observes substrate state and computes vitality signals only. WELL does not judge. WELL does not define doctrine.
 
 > "AAA is polymorphic by design. When precision matters, qualify the surface."
+
+## License
+
+AGPL-3.0. See [LICENSE](LICENSE).
