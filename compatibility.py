@@ -7,8 +7,6 @@ All tools here are [DEPRECATED] and emit telemetry to nudge migration to canonic
 
 from typing import Any
 from fastmcp import FastMCP, Context
-import json
-import datetime
 
 def _legacy_advisory(legacy_name: str, canonical_name: str, canonical_params: dict[str, Any] | None = None) -> dict[str, Any]:
     """Deprecation advisory for legacy tools. Additive only — never breaks existing clients."""

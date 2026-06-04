@@ -420,9 +420,6 @@ async def _test_well_init_error_no_leak():
 
 
 async def _test_health_endpoint_identity():
-    from starlette.testclient import TestClient
-    import uvicorn
-    from fastmcp import FastMCP
 
     # We can't easily mount the HTTP app here, but we can test the handler directly
     _write_canonical_state()
@@ -1361,7 +1358,7 @@ def test_well_registry_declared_surface_matches_callable():
                 f"Somatic boundary breached. {len(extra)} autonomic tools exposed: {sorted(extra)}"
             )
             print(f"  ✅ Somatic boundary active: {len(callable_names)} public tools")
-            print(f"  ✅ Constitutional overlaps removed from public surface")
+            print("  ✅ Constitutional overlaps removed from public surface")
         else:
             # Full surface mode (boundary off): all tools should be registered
             # Legacy full registry check — skip exact count, just verify no crashes
@@ -1440,7 +1437,7 @@ def test_well_todo_payload_requires_priority():
     except ValueError as e:
         assert "content" in str(e)
 
-    print(f"  ✅ Schema gate catches: invalid status, invalid priority, empty content")
+    print("  ✅ Schema gate catches: invalid status, invalid priority, empty content")
 
 
 def test_well_output_federation_format():
@@ -1489,8 +1486,8 @@ def test_well_output_federation_format():
         return failures
 
     failures = asyncio.run(_check_outputs())
-    assert len(failures) == 0, f"Output compliance failures:\n" + "\n".join(failures)
-    print(f"  ✅ All 11 public tools emit federation-standard output")
+    assert len(failures) == 0, "Output compliance failures:\n" + "\n".join(failures)
+    print("  ✅ All 11 public tools emit federation-standard output")
 
 
 # ═════════════════════════════════════════════════════════════════════════════════
@@ -1610,7 +1607,7 @@ def test_well_no_telemetry_invariant():
     assert human_val == domain_verdict, (
         f"Inner readiness.human({human_val!r}) must match domain_verdict({domain_verdict!r})"
     )
-    print(f"  ✅ human_readiness matches domain_verdict when telemetry present")
+    print("  ✅ human_readiness matches domain_verdict when telemetry present")
 
     print("✅ W-INV-T1 no-telemetry invariant tests passed")
 
@@ -1629,7 +1626,7 @@ def test_well_registry_status_tool():
     assert "registered_tools" in data, "Missing registered_tools field"
     assert "phantom_tools" in data, "Missing phantom_tools field"
     assert "verdict" in data, "Missing verdict field"
-    print(f"  ✅ Blueprint output format: all required fields present")
+    print("  ✅ Blueprint output format: all required fields present")
     print(
         f"  ✅ verdict={data.get('verdict')}, intended={data.get('intended_tools')}, "
         f"registered={data.get('registered_tools')}"
@@ -1638,9 +1635,9 @@ def test_well_registry_status_tool():
     # well_registry_status itself must be listed in canonical_callable
     canonical = data.get("canonical_callable", [])
     if "well_registry_status" in canonical:
-        print(f"  ✅ well_registry_status listed in canonical_callable")
+        print("  ✅ well_registry_status listed in canonical_callable")
     else:
-        print(f"  📝 well_registry_status not in somatic (autonomic-only is OK)")
+        print("  📝 well_registry_status not in somatic (autonomic-only is OK)")
 
     print("✅ well_registry_status tool tests passed")
 
@@ -1790,7 +1787,7 @@ def test_contrast_critical_systemic():
     assert data["coupled_verdict"] == "HOLD"
     assert data["human_confirmation_required"] is True
     assert data["w_floor_flags"]  # Should have W-floor flags
-    print(f"  ✅ CRITICAL: systemic degradation detected, hold required")
+    print("  ✅ CRITICAL: systemic degradation detected, hold required")
 
 
 def test_contrast_insufficient_baseline():

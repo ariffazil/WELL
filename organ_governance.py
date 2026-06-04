@@ -7,7 +7,7 @@ WELL tools are primarily C1 (advisory) — no SEAL required, but arifOS pre-noti
 
 import os
 import httpx
-from typing import Any, Optional, Tuple
+from typing import Optional, Tuple
 
 ARIFOS_KERNEL_URL = os.environ.get(
     "ARIFOS_KERNEL_URL", "http://arifosmcp:8080"

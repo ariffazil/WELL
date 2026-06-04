@@ -18,9 +18,7 @@ from contracts.schemas.metabolic import (
     ClaimState,
     ConfidenceLevel,
     MetabolicOutput,
-    ModelTarget,
     OrganType,
-    WitnessStatus,
     WitnessType,
 )
 from contracts.enrich_well import (

@@ -32,7 +32,6 @@ CONTRACT_HASH = ""  # Empty until computed at first import
 def _compute_contract_hash() -> str:
     """Compute SHA256 of the source metabolic schema for audit trail."""
     try:
-        import inspect
         from pathlib import Path
 
         schema_path = Path(__file__).parent / "schemas" / "metabolic.py"

@@ -26,7 +26,6 @@ from reflect import (
     CONTEXT_VALUES,
     MEDICAL_NOT_DIAGNOSIS,
     MEDICAL_VALUES,
-    REFLECT_DISCLAIMER,
     TELEMETRY_VALUES,
     compute_reflect_boundary,
     detect_authority_status,

@@ -2283,7 +2283,6 @@ async def well_anchor(
     New code should call well_anchor_evidence.
     """
     import sys
-    from pathlib import Path
 
     # Ensure arifOS is in path for bridge
     ARIFOS_PATH = "/root/arifOS"
@@ -8682,7 +8681,6 @@ try:
 
     async def _governance_call_tool(name, arguments=None, **kwargs):
         """Wrap mcp.call_tool with arifOS governance pre-check."""
-        import json as _json
 
         if arguments is None:
             arguments = {}
@@ -11014,7 +11012,6 @@ def well_registry_status() -> dict[str, Any]:
         "well_000_init": "well_init",
     }
 
-    import asyncio
 
     async def _safe_call(name: str, args: dict) -> tuple[str, str]:
         try:
@@ -11431,7 +11428,6 @@ try:
         FEDERATION_TOOLS,
         ToolManifest,
         CognitiveAxis as _CA,
-        is_tool_somatic,
     )
 
     # Only register SOMATIC tools in the federation manifest.
