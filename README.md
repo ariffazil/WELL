@@ -184,10 +184,6 @@ Then confirm:
 
 ---
 
-## Federation loop
-
-- [`ariffazil/arifOS`](https://github.com/ariffazil/arifOS) — constitutional kernel, F1-F13 enforcement, federation status, JUDGE authority
-- [`ariffazil/wealth`](https://github.com/ariffazil/wealth) — capital and economic constraints on human flourishing
 
 ---
 
@@ -238,6 +234,29 @@ WELL observes substrate state and computes vitality signals only. WELL does not 
 
 > "AAA is polymorphic by design. When precision matters, qualify the surface."
 
-## License
+## 🏛️ Federation
+
+| Organ | Repository | Role | Port |
+|-------|-----------|------|------|
+| **arifOS** | [ariffazil/arifOS](https://github.com/ariffazil/arifOS) | Constitutional Kernel · F1-F13 | 8088 |
+| **AAA** | [ariffazil/AAA](https://github.com/ariffazil/AAA) | Reality Console · A2A Gateway | 3001 |
+| **A-FORGE** | [ariffazil/A-FORGE](https://github.com/ariffazil/A-FORGE) | Execution Shell | 7071 |
+| **GEOX** | [ariffazil/geox](https://github.com/ariffazil/geox) | Earth Intelligence | 8081 |
+| **WEALTH** | [ariffazil/wealth](https://github.com/ariffazil/wealth) | Capital Intelligence | 18082 |
+| **WELL** | [ariffazil/well](https://github.com/ariffazil/well) | Human Readiness | 18083 |
+| **arif-sites** | [ariffazil/arif-sites](https://github.com/ariffazil/arif-sites) | Public Surfaces | 443 |
+
+> **Constitutional authority:** F1-F13 floors, 888_JUDGE, and VAULT999 live in `ariffazil/arifOS`.  
+> **Live federation status:** See `ariffazil/arifOS/FEDERATION_STATUS.md`.
+## 📄 Contributing
+
+This repository operates under the arifOS Federation constitution (F1–F13).  
+See [AGENTS.md](AGENTS.md) for the canonical boot sequence and agent operating rules.
+
+## 📜 License
 
 AGPL-3.0. See [LICENSE](LICENSE).
+
+---
+
+**DITEMPA BUKAN DIBERI** — Forged, Not Given.
