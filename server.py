@@ -9312,6 +9312,20 @@ if __name__ == "__main__":
             }
         )
 
+    async def mcp_server_card(request):
+        """MCP Server Card — SEP-2127 HTTP discovery document."""
+        return JSONResponse(
+            {
+                "name": "well",
+                "displayName": "WELL Human Readiness",
+                "url": "https://well.arif-fazil.com/mcp",
+                "version": "2026.06.05",
+                "capabilities": {"tools": True, "resources": False, "prompts": False},
+                "authentication": {"type": "none"},
+            }
+        )
+
+    app.add_route("/.well-known/mcp.json", mcp_server_card, methods=["GET"])
     app.add_route("/health", health_handler, methods=["GET"])
     app.add_route("/api/build-info", build_info_handler, methods=["GET"])
     app.add_route("/tools", tools_handler, methods=["GET"])
@@ -12100,6 +12114,140 @@ SOMATIC_TOOLS = {
 # NOTE: well_system_registry_status and well_registry_status are internal
 # diagnostic tools (no @mcp.tool decorator). Not part of public MCP surface.
 
+# MCP Spec 2025-11-25 tool annotations (SEP-1862/1913/1984/2417)
+_TOOL_ANNOTATIONS: dict[str, dict[str, Any]] = {
+    "mcp_health_check": {
+        "title": "MCP Health Check",
+        "readOnlyHint": True, "destructiveHint": False,
+        "idempotentHint": True, "openWorldHint": False,
+    },
+    "well_classify_substrate": {
+        "title": "Classify Substrate",
+        "readOnlyHint": True, "destructiveHint": False,
+        "idempotentHint": True, "openWorldHint": False,
+    },
+    "well_trace_lineage": {
+        "title": "Trace Lineage",
+        "readOnlyHint": True, "destructiveHint": False,
+        "idempotentHint": False, "openWorldHint": False,
+    },
+    "well_detect_boundary": {
+        "title": "Detect Boundary",
+        "readOnlyHint": True, "destructiveHint": False,
+        "idempotentHint": True, "openWorldHint": False,
+    },
+    "well_measure_gradient": {
+        "title": "Measure Gradient",
+        "readOnlyHint": True, "destructiveHint": False,
+        "idempotentHint": True, "openWorldHint": False,
+    },
+    "well_assess_metabolism": {
+        "title": "Assess Metabolism",
+        "readOnlyHint": True, "destructiveHint": False,
+        "idempotentHint": True, "openWorldHint": False,
+    },
+    "well_assess_homeostasis": {
+        "title": "Assess Homeostasis",
+        "readOnlyHint": True, "destructiveHint": False,
+        "idempotentHint": True, "openWorldHint": False,
+    },
+    "well_check_repair": {
+        "title": "Check Repair",
+        "readOnlyHint": True, "destructiveHint": False,
+        "idempotentHint": True, "openWorldHint": False,
+    },
+    "well_validate_vitality": {
+        "title": "Validate Vitality",
+        "readOnlyHint": True, "destructiveHint": False,
+        "idempotentHint": True, "openWorldHint": False,
+    },
+    "well_assess_livelihood": {
+        "title": "Assess Livelihood",
+        "readOnlyHint": True, "destructiveHint": False,
+        "idempotentHint": True, "openWorldHint": False,
+    },
+    "well_assess_reliability": {
+        "title": "Assess Reliability",
+        "readOnlyHint": True, "destructiveHint": False,
+        "idempotentHint": True, "openWorldHint": False,
+    },
+    "well_compute_metabolic_flux": {
+        "title": "Compute Metabolic Flux",
+        "readOnlyHint": True, "destructiveHint": False,
+        "idempotentHint": True, "openWorldHint": False,
+    },
+    "well_assess_sovereign_entropy": {
+        "title": "Assess Sovereign Entropy",
+        "readOnlyHint": True, "destructiveHint": False,
+        "idempotentHint": True, "openWorldHint": False,
+    },
+    "well_guard_dignity": {
+        "title": "Guard Dignity",
+        "readOnlyHint": True, "destructiveHint": False,
+        "idempotentHint": True, "openWorldHint": False,
+    },
+}
+
+
+def _patch_tool_annotations(mcp_server: Any) -> None:
+    """Patch MCP tool annotations post-registration (FastMCP 3.x)."""
+    import asyncio
+    from mcp.types import ToolAnnotations
+
+    async def _do() -> None:
+        for name, anno in _TOOL_ANNOTATIONS.items():
+            try:
+                t = await mcp_server.get_tool(name)
+                if t is not None and hasattr(t, "annotations"):
+                    t.annotations = ToolAnnotations(**anno)
+            except Exception:
+                pass
+
+    try:
+        loop = asyncio.get_running_loop()
+        loop.create_task(_do())
+    except RuntimeError:
+        asyncio.run(_do())
+
+
+class OriginValidationMiddleware:
+    """Validate Origin header on MCP endpoints to prevent DNS rebinding (SEP-2243)."""
+
+    ALLOWED_ORIGIN_PREFIXES: tuple[str, ...] = (
+        "https://well.arif-fazil.com",
+        "https://arif-fazil.com",
+        "http://localhost",
+        "https://localhost",
+        "http://127.0.0.1",
+        "https://127.0.0.1",
+    )
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] == "http" and scope.get("path", "").startswith("/mcp"):
+            headers = dict(scope.get("headers", []))
+            origin_bytes = headers.get(b"origin", b"")
+            origin = origin_bytes.decode() if isinstance(origin_bytes, bytes) else str(origin_bytes)
+            if origin and not any(origin.startswith(p) for p in self.ALLOWED_ORIGIN_PREFIXES):
+                await send(
+                    {
+                        "type": "http.response.start",
+                        "status": 403,
+                        "headers": [[b"content-type", b"application/json"]],
+                    }
+                )
+                await send(
+                    {
+                        "type": "http.response.body",
+                        "body": b'{"error":"Invalid Origin","detail":"DNS rebinding protection"}',
+                    }
+                )
+                return
+        await self.app(scope, receive, send)
+
+    def __init__(self, app):
+        self.app = app
+
+
 # ── Federation Tool Manifest Registration ──────────────────────────────────────
 # Populates FEDERATION_TOOLS with cognitive_axis for every WELL MCP tool.
 # Replaces ad-hoc SOMATIC_TOOLS set with manifest-based filtering.
@@ -12336,8 +12484,9 @@ if __name__ == "__main__":
         default=_os.environ.get("MCP_TRANSPORT", "http"),
     )
     _args, _ = _parser.parse_known_args()
+    from server import mcp as _mcp
+    _patch_tool_annotations(_mcp)
     if _args.transport == "stdio":
-        from server import mcp as _mcp
         _mcp.run(transport="stdio")
         sys.exit(0)
 
@@ -12349,6 +12498,7 @@ if __name__ == "__main__":
 
     host = _os.environ.get("HOST", "0.0.0.0")
     port = int(_os.environ.get("PORT", 8083))
+    _patch_tool_annotations(_mcp)
     app = _mcp.http_app(
         path="/mcp",
         transport="streamable-http",
@@ -12494,7 +12644,22 @@ if __name__ == "__main__":
             }
         )
 
+    async def _mcp_server_card(request):
+        """MCP Server Card — SEP-2127 HTTP discovery document."""
+        return JSONResponse(
+            {
+                "name": "well",
+                "displayName": "WELL Human Readiness",
+                "url": "https://well.arif-fazil.com/mcp",
+                "version": "2026.06.05",
+                "capabilities": {"tools": True, "resources": False, "prompts": False},
+                "authentication": {"type": "none"},
+            }
+        )
+
+    app.add_route("/.well-known/mcp.json", _mcp_server_card, methods=["GET"])
     app.add_route("/health", _well_health_handler, methods=["GET"])
+    app.add_middleware(OriginValidationMiddleware)
     uvicorn.run(
         app, host=host, port=port, log_level=_os.environ.get("LOG_LEVEL", "info")
     )
