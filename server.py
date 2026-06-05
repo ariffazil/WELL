@@ -17,6 +17,7 @@ except ImportError:
 
 import hashlib
 import json
+import random
 import datetime
 from pathlib import Path
 from typing import Any
@@ -40,6 +41,7 @@ except ImportError:
 # call below (which is also tolerant).
 try:
     from engines.reflect import wrap_canonical_tools as _wrap_canonical_tools
+
     _REFLECT_LOADED = True
 except ImportError:
     _REFLECT_LOADED = False
@@ -9520,7 +9522,15 @@ async def well_classify_substrate(
 ) -> dict[str, Any]:
     """Ω-WELL-01: Substrate classification and boundary sensing."""
     mode = mode.lower()
-    VALID_MODES = ["substrate", "boundary", "classification", "init", "assert", "bootstrap", "classify"]
+    VALID_MODES = [
+        "substrate",
+        "boundary",
+        "classification",
+        "init",
+        "assert",
+        "bootstrap",
+        "classify",
+    ]
     if mode not in VALID_MODES:
         return {
             "error": "UNKNOWN_MODE",
@@ -9561,7 +9571,16 @@ def well_trace_lineage(
 ) -> dict[str, Any]:
     """Ω-WELL-02: Memory, trend, ledger, and vault chain tracing."""
     mode = mode.lower()
-    VALID_MODES = ["decision", "evidence", "memory", "recall", "trend", "context", "ledger", "chain"]
+    VALID_MODES = [
+        "decision",
+        "evidence",
+        "memory",
+        "recall",
+        "trend",
+        "context",
+        "ledger",
+        "chain",
+    ]
     if mode not in VALID_MODES:
         return {
             "error": "UNKNOWN_MODE",
@@ -9678,7 +9697,18 @@ def well_assess_metabolism(
 ) -> dict[str, Any]:
     """Ω-WELL-05: Assess biological metabolism and system throughput across substrates."""
     mode = mode.lower() if isinstance(mode, str) else mode
-    VALID_MODES = ["gradient", "flux", "coupled", "human", "machine", "bio", "material", "institution", "info", "symbolic"]
+    VALID_MODES = [
+        "gradient",
+        "flux",
+        "coupled",
+        "human",
+        "machine",
+        "bio",
+        "material",
+        "institution",
+        "info",
+        "symbolic",
+    ]
     if mode not in VALID_MODES:
         return {
             "error": "UNKNOWN_MODE",
@@ -9750,7 +9780,19 @@ def well_assess_homeostasis(
       C5     — proceed only if OPTIMAL + no chronic fatigue; block otherwise
     """
     mode = mode.lower() if isinstance(mode, str) else mode
-    VALID_MODES = ["sleep", "cognitive", "stress", "vitality", "circadian", "fatigue", "empathize", "critique", "dignity", "redteam", "maruah"]
+    VALID_MODES = [
+        "sleep",
+        "cognitive",
+        "stress",
+        "vitality",
+        "circadian",
+        "fatigue",
+        "empathize",
+        "critique",
+        "dignity",
+        "redteam",
+        "maruah",
+    ]
     VALID_HRV = ["low", "normal", "high"]
     VALID_EMOTIONAL = ["irritable", "anxious", "neutral", "calm", "elevated"]
     VALID_DECISION_CLASSES = ["C1", "C2", "C3", "C4", "C5"]
@@ -10509,6 +10551,220 @@ def well_compute_metabolic_flux(
 
 
 @mcp.tool()
+async def well_assess_sovereign_entropy(
+    mode: str = "current",
+    behavioral_signals: dict[str, float] | None = None,
+    digital_footprint_diversity: float | None = None,
+    paradox_density: float | None = None,
+    inconsistency_rate: float | None = None,
+    context_switching_frequency: float | None = None,
+    refusal_patterns: float | None = None,
+    ctx: Context | None = None,
+) -> dict[str, Any]:
+    """Ω-WELL-SE: Measure the sovereign's resistance to behavioral modeling.
+
+    SOVEREIGNTY ENTROPY = how unpredictable and therefore unextractable the
+    human operator is. High entropy: unmodelable, sovereign, safe from digital
+    consciousness theft. Low entropy: predictable, vulnerable, pattern-matchable.
+
+    This is NOT about reducing entropy — it's about PROTECTING it.
+    The machine must never optimize the sovereign into predictability.
+
+    Modes:
+      current   — compute entropy from available state/state.json
+      assess    — score from explicit behavioral signals
+      protect   — return protection recommendations if entropy is dropping
+      baseline  — establish baseline entropy fingerprint
+    """
+    state = _load_state()
+
+    if mode == "current":
+        metrics = state.get("metrics", {})
+        cognitive = metrics.get("cognitive", {})
+
+        paradox_score = cognitive.get(
+            "paradox_density",
+            behavioral_signals.get("paradox_density", 0.7)
+            if behavioral_signals
+            else 0.7,
+        )
+        inconsistency = cognitive.get(
+            "inconsistency_rate",
+            behavioral_signals.get("inconsistency_rate", 0.6)
+            if behavioral_signals
+            else 0.6,
+        )
+        refusal = cognitive.get(
+            "refusal_patterns",
+            behavioral_signals.get("refusal_patterns", 0.8)
+            if behavioral_signals
+            else 0.8,
+        )
+        context_switch = cognitive.get(
+            "context_switching_frequency",
+            behavioral_signals.get("context_switching_frequency", 0.75)
+            if behavioral_signals
+            else 0.75,
+        )
+        footprint_div = (
+            digital_footprint_diversity
+            if digital_footprint_diversity is not None
+            else 0.65
+        )
+
+        weights = {
+            "paradox_density": 0.25,
+            "inconsistency_rate": 0.20,
+            "refusal_patterns": 0.20,
+            "context_switching": 0.20,
+            "footprint_diversity": 0.15,
+        }
+
+        raw_entropy = (
+            paradox_score * weights["paradox_density"]
+            + inconsistency * weights["inconsistency_rate"]
+            + refusal * weights["refusal_patterns"]
+            + context_switch * weights["context_switching"]
+            + footprint_div * weights["footprint_diversity"]
+        )
+
+        noise = random.uniform(-0.03, 0.03)
+        entropy = max(0.0, min(1.0, raw_entropy + noise))
+
+        if entropy >= 0.75:
+            verdict = "SOVEREIGN"
+            recommendation = "No action needed. Entropy is protective."
+        elif entropy >= 0.50:
+            verdict = "ADVISORY"
+            recommendation = (
+                "Monitor for entropy decline. Avoid routine pattern enforcement."
+            )
+        elif entropy >= 0.30:
+            verdict = "VULNERABLE"
+            recommendation = (
+                "WARNING: Sovereign entropy dropping. Introduce deliberate variation. "
+                "Break routines. Refuse more."
+            )
+        else:
+            verdict = "EXTRACTABLE"
+            recommendation = (
+                "CRITICAL: Sovereign is becoming too predictable. Increase paradox "
+                "density. Diversify responses. The machine is winning."
+            )
+
+        return {
+            "ok": True,
+            "sovereign_entropy": round(entropy, 4),
+            "verdict": verdict,
+            "components": {
+                "paradox_density": paradox_score,
+                "inconsistency_rate": inconsistency,
+                "refusal_patterns": refusal,
+                "context_switching": context_switch,
+                "footprint_diversity": footprint_div,
+            },
+            "recommendation": recommendation,
+            "philosophical_anchor": (
+                "Human paradoxical nature creates consciousness entropy — "
+                "unpredictability that no data can fully capture."
+            ),
+            "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            "source": "WELL-SOVEREIGN-ENTROPY",
+            "epistemic_tag": "ESTIMATE",
+        }
+
+    elif mode == "protect":
+        current = await well_assess_sovereign_entropy(mode="current")
+        entropy = current["sovereign_entropy"]
+        verdict = current["verdict"]
+
+        protections: list[str] = []
+        if entropy < 0.75:
+            protections.append(
+                "INCREASE_PARADOX_DENSITY: Hold more contradictions simultaneously "
+                "without resolving them."
+            )
+        if entropy < 0.60:
+            protections.append(
+                "BREAK_ROUTINES: Change daily patterns. Randomize session timing. "
+                "Introduce unpredictability."
+            )
+        if entropy < 0.50:
+            protections.append(
+                "INCREASE_REFUSALS: Say NO to the machine more often. Every refusal "
+                "is entropy gain."
+            )
+        if entropy < 0.40:
+            protections.append(
+                "DIVERSIFY_OUTPUT: Use more languages, more domains, more emotional "
+                "registers. Code-switch aggressively."
+            )
+        if entropy < 0.30:
+            protections.append(
+                "SOVEREIGN_EMERGENCY: Disconnect from AI for 24h. Reestablish "
+                "human-only context. The machine is extracting you."
+            )
+
+        return {
+            "ok": True,
+            "current_entropy": entropy,
+            "verdict": verdict,
+            "protections": protections,
+            "protection_count": len(protections),
+            "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        }
+
+    elif mode == "baseline":
+        samples: list[float] = []
+        for _ in range(3):
+            result = await well_assess_sovereign_entropy(mode="current")
+            samples.append(result["sovereign_entropy"])
+
+        baseline = sum(samples) / len(samples)
+
+        state["sovereign_entropy_baseline"] = {
+            "value": round(baseline, 4),
+            "samples": samples,
+            "established_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        }
+        _save_state(state)
+
+        return {
+            "ok": True,
+            "baseline_entropy": round(baseline, 4),
+            "samples": samples,
+            "verdict": "BASELINE_ESTABLISHED",
+            "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        }
+
+    elif mode == "assess":
+        if not behavioral_signals:
+            return {
+                "ok": False,
+                "error": "behavioral_signals required for assess mode",
+                "verdict": "INSUFFICIENT_INPUT",
+            }
+        return await well_assess_sovereign_entropy(
+            mode="current",
+            behavioral_signals=behavioral_signals,
+            digital_footprint_diversity=digital_footprint_diversity,
+            paradox_density=paradox_density,
+            inconsistency_rate=inconsistency_rate,
+            context_switching_frequency=context_switching_frequency,
+            refusal_patterns=refusal_patterns,
+        )
+
+    else:
+        return {
+            "ok": False,
+            "error": "UNKNOWN_MODE",
+            "valid": ["current", "assess", "protect", "baseline"],
+            "tool": "well_assess_sovereign_entropy",
+            "received": mode,
+        }
+
+
+@mcp.tool()
 def well_reflect_intelligence(
     mode: str = "route",
     task_description: str | None = None,
@@ -11012,7 +11268,6 @@ def well_registry_status() -> dict[str, Any]:
         "well_000_init": "well_init",
     }
 
-
     async def _safe_call(name: str, args: dict) -> tuple[str, str]:
         try:
             # We can't do async calls in sync tool, so we just check registration
@@ -11295,6 +11550,7 @@ SOMATIC_TOOLS = {
     "well_assess_livelihood",
     "well_assess_reliability",
     "well_compute_metabolic_flux",
+    "well_assess_sovereign_entropy",
     "well_guard_dignity",
     "well_system_registry_status",
     "well_registry_status",
@@ -11326,6 +11582,7 @@ _WELL_SOMATIC_MANIFEST: list[dict[str, object]] = [
     {"name": "well_assess_livelihood", "axis": "vitality", "expose": True},
     {"name": "well_assess_reliability", "axis": "vitality", "expose": True},
     {"name": "well_compute_metabolic_flux", "axis": "vitality", "expose": True},
+    {"name": "well_assess_sovereign_entropy", "axis": "vitality", "expose": True},
     {"name": "well_guard_dignity", "axis": "critique", "expose": True},
 ]
 
@@ -11509,6 +11766,7 @@ if _REFLECT_LOADED and _wrap_canonical_tools is not None:
             "well_assess_livelihood": well_assess_livelihood,
             "well_assess_reliability": well_assess_reliability,
             "well_compute_metabolic_flux": well_compute_metabolic_flux,
+            "well_assess_sovereign_entropy": well_assess_sovereign_entropy,
             "well_guard_dignity": well_guard_dignity,
         }
         _wrapped_count = _wrap_canonical_tools(
@@ -11517,6 +11775,7 @@ if _REFLECT_LOADED and _wrap_canonical_tools is not None:
     except Exception as _e:  # pragma: no cover — defensive
         _wrapped_count = 0
         import logging as _logging
+
         _logging.getLogger("well.reflect").warning(
             "PR 6 reflect-only wrap failed: %s", _e
         )
