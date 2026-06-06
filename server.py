@@ -7761,7 +7761,9 @@ def well_888_judge(
 # AAA: VAULT999 Client + Audit Chain
 
 
-@mcp.tool(task=True)  # Alias — deprecated; use well_trace_lineage / well_anchor_evidence
+@mcp.tool(
+    task=True
+)  # Alias — deprecated; use well_trace_lineage / well_anchor_evidence
 async def well_999_vault(
     mode: str = "seal",
     dry_run: bool = False,
@@ -9067,8 +9069,120 @@ async def _well_write_domain_receipt(
 try:
     _original_call_tool = mcp.call_tool
 
+    # ── Evidence Contract envelope (Appendix B of 000_CONSTITUTION.md) ─────────
+    # WELL emits readiness signals, never constitutional verdicts. The organ
+    # classifies its own evidence strength. arifOS reads the envelope; it
+    # does not negotiate field names. WELL does NOT name the Laws (L01-L13).
+
+    _WELL_SIGNAL_TAG_MAP = {
+        "safe": "CLAIM",
+        "ok": "CLAIM",
+        "ready": "CLAIM",
+        "stable": "PLAUSIBLE",
+        "watch": "PLAUSIBLE",
+        "caution": "HYPOTHESIS",
+        "degraded": "HYPOTHESIS",
+        "unsafe": "ESTIMATE",
+        "unsafe_to_interpret": "ESTIMATE",
+        "critical": "UNKNOWN",
+        "void": "UNKNOWN",
+    }
+
+    def _well_classify_epistemic(result: dict) -> tuple:
+        """Derive (epistemic_tag, evidence_quality) from WELL result fields.
+
+        WELL is REFLECT_ONLY. It observes; it does not judge. Its epistemic
+        strength comes from data freshness + boundary adherence.
+        """
+        # Tag: prefer signal → ok → verdict
+        signal = str(result.get("signal") or "").lower()
+        ok = result.get("ok")
+        if ok is True:
+            tag = "CLAIM"
+        elif ok is False:
+            tag = "ESTIMATE"
+        else:
+            tag = _WELL_SIGNAL_TAG_MAP.get(signal, "UNKNOWN")
+        # Quality: inversely from uncertainty
+        uncertainty = float(result.get("uncertainty", 0.5))
+        quality = max(0.05, 1.0 - uncertainty)
+        # State freshness affects quality
+        state_age = result.get("state_age_hours")
+        if isinstance(state_age, (int, float)):
+            if state_age > 72:
+                quality = max(quality - 0.40, 0.10)
+            elif state_age > 24:
+                quality = max(quality - 0.20, 0.20)
+        # Error / constraint reduces quality
+        if result.get("error"):
+            quality = max(quality - 0.30, 0.05)
+        return (tag, round(quality, 4))
+
+    def _well_wrap_envelope(tool_name: str, result: Any) -> Any:
+        """Wrap a WELL tool result in the canonical Evidence Contract envelope."""
+        # FastMCP returns ToolResult (Pydantic). Extract structured_content.
+        if (
+            hasattr(result, "structured_content")
+            and result.structured_content is not None
+        ):
+            domain = result.structured_content
+            if hasattr(domain, "model_dump"):
+                domain = domain.model_dump()
+        elif hasattr(result, "model_dump"):
+            domain = (
+                result.model_dump().get("structured_content") or result.model_dump()
+            )
+        elif isinstance(result, dict):
+            domain = result
+        else:
+            return result
+        if not isinstance(domain, dict):
+            return result
+        # Idempotent
+        if (
+            "epistemic_tag" in domain
+            and "evidence_quality" in domain
+            and "result" in domain
+        ):
+            return result
+        tag, quality = _well_classify_epistemic(domain)
+        # Uncertainty band: from existing uncertainty field
+        uncertainty = float(domain.get("uncertainty", 0.5) or 0.5)
+        low = round(max(0.03, uncertainty * 0.5), 4)
+        high = round(max(0.05, uncertainty), 4)
+        # delta_S: heuristic
+        has_error = bool(domain.get("error"))
+        state_age = domain.get("state_age_hours", 0) or 0
+        delta_s = round(
+            0.05 * float(has_error) + 0.01 * (float(state_age) / 24.0) - 0.05, 4
+        )
+        # source_attribution
+        source_attribution = [
+            "WELL:server.py",
+            f"WELL:tool/{tool_name}",
+        ]
+        if domain.get("authority") or domain.get("role"):
+            source_attribution.append("WELL:authority/REFLECT_ONLY")
+        # Build envelope. Per Appendix B, original payload goes under "result".
+        envelope = {
+            "result": domain,
+            "epistemic_tag": tag,
+            "evidence_quality": quality,
+            "source_attribution": source_attribution,
+            "uncertainty_band": [low, high],
+            "delta_S": delta_s,
+        }
+        # Set structured_content on the ToolResult (preserve content)
+        try:
+            if hasattr(result, "structured_content"):
+                result.structured_content = envelope
+                return result
+        except Exception:
+            pass
+        return envelope
+
     async def _governance_call_tool(name, arguments=None, **kwargs):
-        """Wrap mcp.call_tool with arifOS governance pre-check."""
+        """Wrap mcp.call_tool with arifOS governance pre-check + Evidence Contract envelope."""
 
         if arguments is None:
             arguments = {}
@@ -9089,6 +9203,8 @@ try:
         except Exception:
             pass  # fire-and-forget
 
+        # Emit Evidence Contract envelope (Appendix B)
+        result = _well_wrap_envelope(name, result)
         return result
 
     mcp.call_tool = _governance_call_tool
@@ -11478,9 +11594,7 @@ def well_assess_governance(
         }
     elif mode == "floors":
         data = {
-            "law_compliance": g["pillars"].get("law_compliance", ("", "unknown"))[
-                1
-            ],
+            "law_compliance": g["pillars"].get("law_compliance", ("", "unknown"))[1],
             "governance_flags": [
                 f for f in g["governance_flags"] if "authority" in f or "amanah" in f
             ],
@@ -12107,73 +12221,101 @@ SOMATIC_TOOLS = {
 _TOOL_ANNOTATIONS: dict[str, dict[str, Any]] = {
     "mcp_health_check": {
         "title": "MCP Health Check",
-        "readOnlyHint": True, "destructiveHint": False,
-        "idempotentHint": True, "openWorldHint": False,
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": False,
     },
     "well_classify_substrate": {
         "title": "Classify Substrate",
-        "readOnlyHint": True, "destructiveHint": False,
-        "idempotentHint": True, "openWorldHint": False,
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": False,
     },
     "well_trace_lineage": {
         "title": "Trace Lineage",
-        "readOnlyHint": True, "destructiveHint": False,
-        "idempotentHint": False, "openWorldHint": False,
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": False,
+        "openWorldHint": False,
     },
     "well_detect_boundary": {
         "title": "Detect Boundary",
-        "readOnlyHint": True, "destructiveHint": False,
-        "idempotentHint": True, "openWorldHint": False,
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": False,
     },
     "well_measure_gradient": {
         "title": "Measure Gradient",
-        "readOnlyHint": True, "destructiveHint": False,
-        "idempotentHint": True, "openWorldHint": False,
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": False,
     },
     "well_assess_metabolism": {
         "title": "Assess Metabolism",
-        "readOnlyHint": True, "destructiveHint": False,
-        "idempotentHint": True, "openWorldHint": False,
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": False,
     },
     "well_assess_homeostasis": {
         "title": "Assess Homeostasis",
-        "readOnlyHint": True, "destructiveHint": False,
-        "idempotentHint": True, "openWorldHint": False,
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": False,
     },
     "well_check_repair": {
         "title": "Check Repair",
-        "readOnlyHint": True, "destructiveHint": False,
-        "idempotentHint": True, "openWorldHint": False,
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": False,
     },
     "well_validate_vitality": {
         "title": "Validate Vitality",
-        "readOnlyHint": True, "destructiveHint": False,
-        "idempotentHint": True, "openWorldHint": False,
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": False,
     },
     "well_assess_livelihood": {
         "title": "Assess Livelihood",
-        "readOnlyHint": True, "destructiveHint": False,
-        "idempotentHint": True, "openWorldHint": False,
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": False,
     },
     "well_assess_reliability": {
         "title": "Assess Reliability",
-        "readOnlyHint": True, "destructiveHint": False,
-        "idempotentHint": True, "openWorldHint": False,
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": False,
     },
     "well_compute_metabolic_flux": {
         "title": "Compute Metabolic Flux",
-        "readOnlyHint": True, "destructiveHint": False,
-        "idempotentHint": True, "openWorldHint": False,
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": False,
     },
     "well_assess_sovereign_entropy": {
         "title": "Assess Sovereign Entropy",
-        "readOnlyHint": True, "destructiveHint": False,
-        "idempotentHint": True, "openWorldHint": False,
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": False,
     },
     "well_guard_dignity": {
         "title": "Guard Dignity",
-        "readOnlyHint": True, "destructiveHint": False,
-        "idempotentHint": True, "openWorldHint": False,
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": False,
     },
 }
 
@@ -12183,12 +12325,19 @@ _WELL_OUTPUT_SCHEMA: dict[str, Any] = {
     "type": "object",
     "properties": {
         "status": {"type": "string", "description": "Execution status"},
-        "verdict": {"type": "string", "description": "WELL verdict: OPTIMAL, STABLE, DEGRADED, CRITICAL, etc."},
+        "verdict": {
+            "type": "string",
+            "description": "WELL verdict: OPTIMAL, STABLE, DEGRADED, CRITICAL, etc.",
+        },
         "mode": {"type": "string", "description": "Assessment mode"},
         "content": {"type": "string", "description": "Textual content / advisory"},
         "result": {"type": "object", "description": "Tool-specific payload"},
         "error": {"type": "string", "description": "Error message if status != OK"},
-        "reasons": {"type": "array", "items": {"type": "string"}, "description": "Human-readable justification"},
+        "reasons": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "Human-readable justification",
+        },
     },
 }
 
@@ -12250,8 +12399,14 @@ class OriginValidationMiddleware:
         if scope["type"] == "http" and scope.get("path", "").startswith("/mcp"):
             headers = dict(scope.get("headers", []))
             origin_bytes = headers.get(b"origin", b"")
-            origin = origin_bytes.decode() if isinstance(origin_bytes, bytes) else str(origin_bytes)
-            if origin and not any(origin.startswith(p) for p in self.ALLOWED_ORIGIN_PREFIXES):
+            origin = (
+                origin_bytes.decode()
+                if isinstance(origin_bytes, bytes)
+                else str(origin_bytes)
+            )
+            if origin and not any(
+                origin.startswith(p) for p in self.ALLOWED_ORIGIN_PREFIXES
+            ):
                 await send(
                     {
                         "type": "http.response.start",
@@ -12509,6 +12664,7 @@ if __name__ == "__main__":
     )
     _args, _ = _parser.parse_known_args()
     from server import mcp as _mcp
+
     _patch_tool_annotations(_mcp)
     _patch_output_schemas(_mcp)
     if _args.transport == "stdio":
