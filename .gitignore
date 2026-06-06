@@ -24,3 +24,4 @@ quarantine/
 # Runtime data
 data/
 telemetry/
+state.json.test_backup
