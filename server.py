@@ -12747,6 +12747,11 @@ if __name__ == "__main__":
             verdict = "WELL_PASS"
         return JSONResponse(
             {
+                # ── Canonical 7-field health schema (federation convention) ───
+                # WELL is REFLECT_ONLY; it never judges. status + final_authority
+                # close the gap to 7/7 canonical. Additive only.
+                "status": "healthy",
+                "final_authority": "ARIF",
                 "identity": "WELL",
                 "role": "Body / Human Intelligence",
                 "authority": "REFLECT_ONLY",
