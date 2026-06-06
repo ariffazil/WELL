@@ -19,6 +19,8 @@ import hashlib
 import json
 import random
 import datetime
+import urllib.request
+import urllib.error
 from pathlib import Path
 from typing import Any
 
@@ -1435,6 +1437,87 @@ def mcp_health_check() -> dict:
         13  # actual MCP tools/list count post-boundary
     )
     reliability["canonical_tools"] = len(SOMATIC_TOOLS)  # SOMATIC_TOOLS set size
+    # ── FEDERATION GEOMETRY 1a: home-call to arifOS ─────────────────────
+    # Non-blocking. arifOS geometry is auth-bypass (absorbed diagnostic).
+    # arifOS MCP requires session-init before tools/call, so we do a
+    # 2-call sequence (initialize + tools/call). 2s timeout per step.
+    fed_geometry: dict | None = None
+    fed_geometry_source: str | None = None
+    fed_geometry_note: str | None = None
+    try:
+        # Step 1: initialize to get session id
+        _init_body = json.dumps(
+            {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "initialize",
+                "params": {
+                    "protocolVersion": "2024-11-25",
+                    "capabilities": {},
+                    "clientInfo": {
+                        "name": "well-federation-bridge",
+                        "version": "1.0",
+                    },
+                },
+            }
+        ).encode("utf-8")
+        _init_req = urllib.request.Request(
+            "http://127.0.0.1:8088/mcp",
+            data=_init_body,
+            headers={
+                "Content-Type": "application/json",
+                "Accept": "application/json, text/event-stream",
+            },
+        )
+        with urllib.request.urlopen(_init_req, timeout=2.0) as _init_resp:
+            _session_id = _init_resp.headers.get("mcp-session-id")
+        if _session_id:
+            # Step 2: tools/call with session id
+            _call_body = json.dumps(
+                {
+                    "jsonrpc": "2.0",
+                    "id": 2,
+                    "method": "tools/call",
+                    "params": {
+                        "name": "arif_ops_measure",
+                        "arguments": {"mode": "geometry"},
+                    },
+                }
+            ).encode("utf-8")
+            _call_req = urllib.request.Request(
+                "http://127.0.0.1:8088/mcp",
+                data=_call_body,
+                headers={
+                    "Content-Type": "application/json",
+                    "Accept": "application/json, text/event-stream",
+                    "mcp-session-id": _session_id,
+                },
+            )
+            with urllib.request.urlopen(_call_req, timeout=2.0) as _resp:
+                _arif_json = json.loads(_resp.read().decode("utf-8"))
+            for _c in _arif_json.get("result", {}).get("content", []):
+                if _c.get("type") != "text":
+                    continue
+                try:
+                    _inner = json.loads(_c.get("text", ""))
+                except Exception:
+                    continue
+                _payload = _inner.get("result", _inner)
+                if (
+                    isinstance(_payload, dict)
+                    and _payload.get("telemetry_source") == "geometry_hygiene_v1"
+                ):
+                    fed_geometry = _payload
+                    fed_geometry_source = "arifOS:8088/mcp"
+                    break
+        else:
+            fed_geometry_note = "arifOS did not return mcp-session-id"
+    except Exception as _exc:
+        fed_geometry_note = f"arifOS unreachable: {type(_exc).__name__}"
+    reliability["federation_geometry"] = fed_geometry
+    reliability["federation_geometry_source"] = fed_geometry_source
+    reliability["federation_geometry_note"] = fed_geometry_note
+    # ── END FEDERATION GEOMETRY 1a ───────────────────────────────────
     return reliability
 
 
@@ -4973,6 +5056,88 @@ def well_get_health(ctx: Context | None = None) -> dict[str, Any]:
         "verdict_reason": verdict_reason,
         "w0": "OPERATOR_VETO_INTACT / HIERARCHY_INVARIANT",
     }
+    # ── FEDERATION GEOMETRY 1a: home-call to arifOS ─────────────────────
+    # Non-blocking. arifOS geometry is auth-bypass (absorbed diagnostic).
+    # arifOS MCP requires session-init before tools/call, so we do a
+    # 2-call sequence (initialize + tools/call). 2s timeout per step.
+    # urllib (stdlib, sync) — this function is sync.
+    fed_geometry: dict | None = None
+    fed_geometry_source: str | None = None
+    fed_geometry_note: str | None = None
+    try:
+        # Step 1: initialize to get session id
+        _init_body = json.dumps(
+            {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "initialize",
+                "params": {
+                    "protocolVersion": "2024-11-25",
+                    "capabilities": {},
+                    "clientInfo": {
+                        "name": "well-federation-bridge",
+                        "version": "1.0",
+                    },
+                },
+            }
+        ).encode("utf-8")
+        _init_req = urllib.request.Request(
+            "http://127.0.0.1:8088/mcp",
+            data=_init_body,
+            headers={
+                "Content-Type": "application/json",
+                "Accept": "application/json, text/event-stream",
+            },
+        )
+        with urllib.request.urlopen(_init_req, timeout=2.0) as _init_resp:
+            _session_id = _init_resp.headers.get("mcp-session-id")
+        if _session_id:
+            # Step 2: tools/call with session id
+            _call_body = json.dumps(
+                {
+                    "jsonrpc": "2.0",
+                    "id": 2,
+                    "method": "tools/call",
+                    "params": {
+                        "name": "arif_ops_measure",
+                        "arguments": {"mode": "geometry"},
+                    },
+                }
+            ).encode("utf-8")
+            _call_req = urllib.request.Request(
+                "http://127.0.0.1:8088/mcp",
+                data=_call_body,
+                headers={
+                    "Content-Type": "application/json",
+                    "Accept": "application/json, text/event-stream",
+                    "mcp-session-id": _session_id,
+                },
+            )
+            with urllib.request.urlopen(_call_req, timeout=2.0) as _resp:
+                _arif_json = json.loads(_resp.read().decode("utf-8"))
+            for _c in _arif_json.get("result", {}).get("content", []):
+                if _c.get("type") != "text":
+                    continue
+                try:
+                    _inner = json.loads(_c.get("text", ""))
+                except Exception:
+                    continue
+                _payload = _inner.get("result", _inner)
+                if (
+                    isinstance(_payload, dict)
+                    and _payload.get("telemetry_source") == "geometry_hygiene_v1"
+                ):
+                    fed_geometry = _payload
+                    fed_geometry_source = "arifOS:8088/mcp"
+                    break
+        else:
+            fed_geometry_note = "arifOS did not return mcp-session-id"
+    except Exception as _exc:
+        fed_geometry_note = f"arifOS unreachable: {type(_exc).__name__}"
+    ret["federation_geometry"] = fed_geometry
+    ret["federation_geometry_source"] = fed_geometry_source
+    ret["federation_geometry_note"] = fed_geometry_note
+    # ── END FEDERATION GEOMETRY 1a ───────────────────────────────────
     ret.update(
         _legacy_advisory(
             "well_get_health", "well_classify_substrate", {"mode": "health"}
