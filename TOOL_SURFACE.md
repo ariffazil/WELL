@@ -10,13 +10,13 @@
 
 **Production endpoint:** `https://well.arif-fazil.com/mcp`
 **Transport:** `streamable-http` (MCP protocol)
-**Live tool count:** 13
+**Live tool count:** 17
 **Health endpoint:** `https://well.arif-fazil.com/health`
 
 ### Invariant
 
 ```
-/health tool_count (13) = SOMATIC_TOOLS (13) = ChatGPT MCP registration (13)
+/health tool_count (17) = SOMATIC_TOOLS (17)
 ```
 
 This invariant is enforced at startup by `_enforce_somatic_boundary()` in `server.py`. Any `@mcp.tool` not in `SOMATIC_TOOLS` is stripped before the server begins accepting connections.

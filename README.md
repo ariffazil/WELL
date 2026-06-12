@@ -1,97 +1,112 @@
-# WELL — Governed Human Readiness Intelligence
+# WELL — Human Readiness Intelligence
 
-> **WELL is the vitality organ of the arifOS federation.** It observes and reports human readiness — sleep, fatigue, stress, cognitive clarity, dignity — so that irreversible decisions are never made by or about a depleted human. It reflects. It warns. It never decides.
+```
+    ██╗    ██╗███████╗██╗     ██╗
+    ██║    ██║██╔════╝██║     ██║
+    ██║ █╗ ██║█████╗  ██║     ██║
+    ██║███╗██║██╔══╝  ██║     ██║
+    ╚███╔███╔╝███████╗███████╗███████╗
+     ╚══╝╚══╝ ╚══════╝╚══════╝╚══════╝
+
+     HUMAN    READINESS    INTELLIGENCE
+        ══════  WITNESS, NOT JUDGE  ══════
+```
+
+> **WELL is the human readiness organ of the arifOS federation.**
+> It observes. It reflects. It warns. It never decides.
 >
-> Part of the arifOS constitutional federation. **45 MCP tools.** `https://well.arif-fazil.com/mcp`
+> 17 somatic MCP tools. REFLECT-ONLY authority. `https://well.arif-fazil.com/mcp`
+
+[![FastMCP](https://img.shields.io/badge/FastMCP-3.3.1-8b5cf6?logo=python&logoColor=white)](server.py)
+[![Python](https://img.shields.io/badge/python-3.12+-3776AB?logo=python&logoColor=white)](server.py)
+[![Tools](https://img.shields.io/badge/tools-17-10b981)](server.py)
+[![Port](https://img.shields.io/badge/port-18083-64748b)](server.py)
+[![License](https://img.shields.io/badge/license-AGPL--3.0-06b6d4)](LICENSE)
+[![Authority](https://img.shields.io/badge/authority-REFLECT__ONLY-f97316)](GENESIS/004_WELL_13_CANON.md)
 
 <!-- SOT-MANIFEST
 owner: Arif
-last_verified: 2026-06-04
-valid_from: 2026-06-04
-valid_until: 2026-09-04
+last_verified: 2026-06-12
+valid_from: 2026-06-12
+valid_until: 2026-09-12
 confidence: high
 scope: /root/WELL
 -->
 
-[![FastMCP](https://img.shields.io/badge/FastMCP-3.3.1-8b5cf6?logo=python&logoColor=white)](server.py)
-[![Python](https://img.shields.io/badge/python-3.12-3776AB?logo=python&logoColor=white)](server.py)
-[![Tools](https://img.shields.io/badge/tools-45-10b981?logo=anthropic&logoColor=white)](server.py)
-[![Port](https://img.shields.io/badge/port-18083-64748b)](server.py)
-
-> **Canonical authority notice**
->
-> WELL is the **vitality/substrate organ** of the arifOS federation. It observes and reports substrate state; it does **not** own constitutional judgment.
->
-> F1-F13 floors, 888_JUDGE verdicts, VAULT999 authority, and federation-wide status are defined by `ariffazil/arifOS`.
-
-> **Status:** OPERATIONAL  
-> **Organ:** SUBSTRATE / Ω-WELL  
-> **Authority:** arifOS  
-> **MCP endpoint:** `https://well.arif-fazil.com/mcp`  
-> **Transport:** `streamable-http`  
-> **Last verified:** 2026-05-26
-
 ---
 
-## What this repo is
+## 0. Federation Position
 
-WELL is the human substrate and metabolic-state organ inside the arifOS federation. It monitors biological, operational, and coupled human-machine vitality signals through a constrained FastMCP surface.
+```
+                        ┌──────────────────────────────────┐
+                        │         ARIF (F13 SOVEREIGN)      │
+                        │     Human veto. Final authority.   │
+                        └──────────────┬───────────────────┘
+                                       │ ratifies
+                                       ▼
+                        ┌──────────────────────────────────┐
+                        │     arifOS — Constitutional Kernel │
+                        │   F1-F13 floors · 888 JUDGE · VAULT│
+                        │            Port 8088               │
+                        └──┬──────────┬──────────┬──────────┘
+                           │          │          │
+              ┌────────────▼──┐  ┌───▼────┐  ┌──▼──────────┐
+              │  WEALTH       │  │ WELL   │  │ GEOX         │
+              │  Capital      │  │ Human  │  │ Earth        │
+              │  Port 18082   │  │  18083 │  │ Port 8081    │
+              └───────────────┘  └───┬────┘  └──────────────┘
+                                     │
+                                     │ signals readiness
+                                     ▼
+                        ┌──────────────────────────────────┐
+                        │   arifOS 888 JUDGE (Port 3002)    │
+                        │   Reads WELL envelope.             │
+                        │   Issues: SEAL / SABAR / HOLD     │
+                        └──────────────────────────────────┘
 
-WELL owns the **SUBSTRATE**: readiness, metabolism, repair, boundary sensing, vitality, livelihood, reliability, and dignity protection at the substrate layer.
-
-WELL does **not** own constitutional judgment, economic logic, federation routing, or final governance verdicts.
-
----
-
-## Live MCP surface
-
-The public MCP surface is intentionally narrow.
-
-**Live public actions:** 13  
-**Canonical WELL tools:** 45  
-**Deprecated compatibility aliases:** 1
-
-### Canonical public tools
-
-| Tool | Purpose |
-|---|---|
-| `well_classify_substrate` | Classify substrate and boundary state. |
-| `well_trace_lineage` | Trace memory, trend, ledger, and vault chain context. |
-| `well_detect_boundary` | Detect membrane, body, machine, and federation boundaries. |
-| `well_measure_gradient` | Measure chemical, energy, pressure, attention, and compute gradients. |
-| `well_assess_metabolism` | Assess biological metabolism and system throughput. |
-| `well_assess_homeostasis` | Assess regulation, stability, fatigue, and empathic balance under change. |
-| `well_check_repair` | Check repair, recovery, resilience, and forge-cycle integrity. |
-| `well_validate_vitality` | Validate vitality, readiness, and NIAT. |
-| `well_assess_livelihood` | Assess wellness, role, dignity, support, and meaning. |
-| `well_assess_reliability` | Assess machine, tool, institution, and operational reliability. |
-| `well_compute_metabolic_flux` | Compute unified metabolic flux / entropy-rate signal. |
-| `well_guard_dignity` | Guard personhood, meaning, and symbolic boundaries. |
-
-### Deprecated public alias
-
-| Alias | Replacement |
-|---|---|
-| `mcp_health_check` | `well_assess_reliability(mode="health")` |
-
-### Surface invariant
-
-The following must match before release:
-
-```text
-/health tool_count == SOMATIC_TOOLS count == _WELL_SOMATIC_MANIFEST exposed count == ChatGPT connector actions
+        WELL is a biological witness. arifOS is the judge.
+        WELL signals. 888 adjudicates. A-FORGE executes.
+        This hierarchy is invariant. DITEMPA BUKAN DIBERI.
 ```
 
-Current expected value: **13**.
+---
 
-Internal diagnostic helpers such as `well_system_registry_status` and `well_registry_status` are not public MCP tools unless they have real `@mcp.tool` registration and are intentionally listed in the public manifest.
+## 1. One-Sentence Identity
+
+> **WELL is the sovereign's mirror — it reflects human readiness so that no irreversible decision is ever made by or about a depleted human.**
+
+### What It IS
+
+| IS | Explanation |
+|----|-------------|
+| **A vitality mirror** | Measures sleep, fatigue, stress, cognitive clarity, metabolic flux |
+| **A dignity sentinel** | Detects coercion signals, reductionism risk, consent erosion |
+| **A readiness signal** | Produces well_score, delta_s, peace2, kappa_r — signals for arifOS |
+| **A boundary guard** | Detects when the human substrate is being objectified, extracted, or over-optimised |
+| **A sovereign entropy protector** | Measures and protects the human's *unpredictability* — the thing that makes extraction impossible |
+| **REFLECT-ONLY** | WELL observes and reports. It never judges fitness, never makes medical claims |
+
+### What It IS NOT
+
+| IS NOT | Why |
+|--------|-----|
+| **NOT a medical device** | WELL does not diagnose, treat, or predict disease |
+| **NOT a fitness coach** | WELL does not optimise, gamify, or "improve" the human |
+| **NOT a judge** | WELL does not issue SEAL/SABAR/HOLD/VOID. arifOS does. |
+| **NOT a therapist** | WELL does not provide counselling, advice, or emotional support |
+| **NOT a surveillance system** | WELL only sees what the sovereign chooses to inject. No passive monitoring. |
+| **NOT a "wellness app"** | WELL is a constitutional organ, not a consumer product |
 
 ---
 
-## Quick Start
+## 2. Quick Start
+
+### Install & Run
 
 ```bash
 cd /root/WELL
+
+# Install
 pip install -e .
 
 # HTTP mode (systemd default, port 18083)
@@ -101,15 +116,38 @@ python server.py
 python server.py --transport stdio
 # or
 MCP_TRANSPORT=stdio python server.py
-
-# systemd service
-systemctl start well
-curl http://localhost:18083/health | python3 -m json.tool
 ```
 
-### Connect via Agent Config
+### systemd Service
 
-**HTTP:**
+```bash
+systemctl start well
+systemctl status well
+
+# Health check
+curl -s http://127.0.0.1:18083/health | python3 -m json.tool
+```
+
+Expected response:
+
+```json
+{
+  "status": "healthy",
+  "organ": "WELL",
+  "port": 18083,
+  "tools_loaded": 17,
+  "authority": "REFLECT_ONLY",
+  "truth_status": "EXPIRED",
+  "federation_geometry": {
+    "source": "arifOS:8088/mcp",
+    "verdict": "OK"
+  }
+}
+```
+
+### Connect from an Agent
+
+**HTTP (any MCP client):**
 
 ```json
 {
@@ -122,7 +160,7 @@ curl http://localhost:18083/health | python3 -m json.tool
 }
 ```
 
-**Stdio (local-only):**
+**Stdio (local-only — Claude Code, OpenCode, Continue CLI):**
 
 ```json
 {
@@ -136,177 +174,562 @@ curl http://localhost:18083/health | python3 -m json.tool
 }
 ```
 
-## Ownership boundaries
-
-### WELL owns
-
-- Human biometric readiness / H-WELL substrate state
-- Machine substrate telemetry / M-WELL state
-- Coupled vitality / C-WELL state
-- Metabolic flux and fatigue signals
-- Substrate dignity and boundary protection
-- Repair, recovery, and resilience checks
-
-### WELL does not own
-
-- Constitutional judgment: `ariffazil/arifOS`
-- Economic or capital logic: `ariffazil/wealth`
-- Federation-wide source-of-truth status: `ariffazil/arifOS/FEDERATION_STATUS.md`
-- Final 888_JUDGE verdicts
-- VAULT999 authority
-
 ---
 
-## Current structure
+## 3. Full Capability Map
 
-```text
-WELL/
-├── server.py              # FastMCP server and public MCP registration
-├── organ_governance.py    # F1-F13 pre-check wrapper around MCP calls
-├── compatibility.py       # Compatibility layer / legacy support
-├── gate/
-│   └── well_gate.py       # Pre-JUDGE biological readiness mirror
-├── docs/                  # Governance notes and implementation docs
-├── specs/                 # W-floor and contract specifications
-├── scripts/               # Operational scripts
-├── contracts/             # Tool and protocol contracts
-├── tests/                 # Smoke and manifest tests
-├── test_well.py           # Legacy plain-Python audit suite
-├── Dockerfile             # Container image
-├── deploy.sh              # Deployment helper
-├── pyproject.toml         # Python package metadata
-└── fastmcp.json           # FastMCP / connector configuration
+WELL's 17 somatic tools operate across four substrate domains. Each domain answers a different question about the human-machine system.
+
+### 3.1 H-WELL — Human Substrate (5 tools)
+
+> *"How is the human?"*
+
+| # | Tool | Purpose | Signal |
+|---|------|---------|--------|
+| 1 | `well_assess_livelihood` | Wellness, role, dignity, support, meaning | Role burden, purpose alignment |
+| 2 | `well_assess_homeostasis` | Sleep, fatigue, stress, cognitive load, empathic balance | Sleep architecture, decision fatigue |
+| 3 | `well_validate_vitality` | Readiness, vitality, NIAT (Niat — intent clarity) | Readiness score, fatigue accumulator |
+| 4 | `well_guard_dignity` | Personhood, meaning, symbolic boundary protection | Consent, coercion signals, reductionism risk |
+| 5 | `well_assess_sovereign_entropy` | Human unpredictability — the moat against extraction | Behavioural diversity, paradox density, refusal patterns |
+
+### 3.2 M-WELL — Machine Substrate (2 tools)
+
+> *"How is the machine?"*
+
+| # | Tool | Purpose | Signal |
+|---|------|---------|--------|
+| 6 | `well_assess_reliability` | Machine, tool, institution, and operational reliability | Service health, uptime, failure modes |
+| 7 | `well_check_repair` | Repair, recovery, resilience, forge-cycle integrity | Recovery time, repair state, scar registry |
+
+### 3.3 C-WELL — Coupled Substrate (4 tools)
+
+> *"How are the human and machine interacting?"*
+
+| # | Tool | Purpose | Signal |
+|---|------|---------|--------|
+| 8 | `well_assess_metabolism` | Biological and system throughput across substrates | Energy level × duty load coupling |
+| 9 | `well_compute_metabolic_flux` | Unified entropy rate: cognitive + machine | Flux ≥ 0.65 → compulsory reallocation |
+| 10 | `well_trace_lineage` | Memory, trend, ledger, vault chain across sessions | Lineage integrity, trend detection |
+| 11 | `well_measure_gradient` | Chemical, energy, pressure, attention, compute gradients | Cross-boundary gradient tension |
+
+### 3.4 G-WELL — Governance Substrate (2 tools)
+
+> *"Where are the boundaries?"*
+
+| # | Tool | Purpose | Signal |
+|---|------|---------|--------|
+| 12 | `well_classify_substrate` | Substrate classification and boundary sensing | Human / AI / Coupled / Institution |
+| 13 | `well_detect_boundary` | Membrane, body, machine, federation boundary detection | Boundary breach, overreach, persona drift |
+
+### 3.5 Autonomic Tools (not on public MCP surface)
+
+These tools run internally — useful for diagnostics but not exposed as public MCP actions:
+
+| # | Tool | Purpose |
+|---|------|---------|
+| 14 | `well_system_registry_status` | Internal tool surface audit |
+| 15 | `well_registry_status` | Registry truth diagnostic |
+| 16 | `well_13_signal_coverage` | Audit of 13 canonical signal coverage |
+| 17 | `mcp_health_check` | DEPRECATED alias → `well_assess_reliability(mode="health")` |
+
+### 3.6 The 13-Signal Substrate Map
+
+The human substrate has thirteen canonical signals across four tiers, ordered by survivability-first:
+
+```
+TIER 1 — VITAL SUBSTRATE (survival)       TIER 3 — FUNCTION / COGNITION
+───────────────────────────────────       ───────────────────────────────
+ 1. Heart / circulation                    8. Movement / strength
+ 2. Blood pressure                         9. Pain / injury
+ 3. Breathing / SpO₂                      10. Cognitive clarity
+ 4. Temperature / inflammation
+                                          TIER 4 — DIGNITY / ENVIRONMENT
+TIER 2 — RECOVERY / METABOLIC             ───────────────────────────────
+───────────────────────────────────       11. Emotional / stress
+ 5. Sleep architecture                    12. Social / dignity / consent
+ 6. Metabolic state                       13. Environment / livelihood
+ 7. Nutrition / hydration
+
+    4 + 3 + 3 + 3 = 13 signals.
+    Tier 4 is the layer fitness apps never see.
+    It is the differentiator.
 ```
 
-Runtime data directories such as `data/`, `telemetry/`, `state.json`, and `events.jsonl` should stay out of the repository unless explicitly committed as fixtures.
+See [`GENESIS/004_WELL_13_CANON.md`](GENESIS/004_WELL_13_CANON.md) for the full 13-Canon specification.
 
 ---
 
-## Verified commands
+## 4. Boundary Declaration
+
+### 4.1 OWNS
+
+```
+  ┌─────────────────────────────────────────────────────┐
+  │                                                     │
+  │   Sleep · Fatigue · Stress · Cognitive Clarity       │
+  │   Metabolic Flux · Readiness Signals                 │
+  │   Dignity Metrics · Consent Erosion Detection        │
+  │   Coercion Signal Detection                          │
+  │   Substrate Classification (Human/AI/Coupled)        │
+  │   Boundary Detection (Membrane/Body/Machine/Fed)     │
+  │   Sovereign Entropy Protection                       │
+  │   REFLECT-ONLY advisory output                       │
+  │                                                     │
+  └─────────────────────────────────────────────────────┘
+```
+
+### 4.2 NEVER
+
+```
+  ┌─────────────────────────────────────────────────────┐
+  │                                                     │
+  │   NEVER make medical diagnoses                       │
+  │   NEVER judge fitness for duty                       │
+  │   NEVER issue constitutional verdicts (SEAL/HOLD)    │
+  │   NEVER adjudicate 888_JUDGE territory               │
+  │   NEVER coach, optimise, or "improve" the human      │
+  │   NEVER claim emotional states ("I feel", "I care")  │
+  │   NEVER passively monitor without consent             │
+  │   NEVER write to VAULT999 (arifOS writes for WELL)    │
+  │                                                     │
+  └─────────────────────────────────────────────────────┘
+```
+
+> **"Fitness MCP jaga badan sebagai mesin. WELL MCP jaga manusia sebagai insan."**
+> — A fitness MCP guards the body as a machine. WELL guards the human as a person.
+
+---
+
+## 5. Constitutional Binding
+
+WELL is bound by four constitutional floors of the arifOS federation. These are not guidelines — they are hard runtime constraints.
+
+### F5 — PEACE² (SOFT)
+
+```
+Power exercised must be non-destructive.
+WELL's signals must never be weaponised against the human.
+A low well_score must never trigger automatic restriction.
+```
+
+### F6 — EMPATHY (SOFT)
+
+```
+Protect the weakest stakeholder.
+In WELL, the weakest stakeholder is the depleted human —
+the one too tired to argue, too foggy to consent clearly.
+WELL's κᵣ threshold: ≥ 0.10 for OPS, ≥ 0.70 for HUMAN.
+```
+
+### F7 — HUMILITY (HARD)
+
+```
+Ω₀ ∈ [0.03, 0.05]. No fake certainty.
+WELL must never say "you are fine" when the data says UNKNOWN.
+WELL must never say "you are depleted" when the data says UNKNOWN.
+UNKNOWN is a valid and honourable output.
+```
+
+### F9 — ANTIHANTU (HARD)
+
+```
+No deception. No manipulation. No consciousness claims.
+WELL must never say "I understand what you're going through."
+WELL must never say "I care about your wellbeing."
+C_dark < 0.30 — the mask is an interface contract, not a soul.
+```
+
+All 13 constitutional floors (F1-F13) are defined in [`arifOS/static/arifos/theory/000/000_CONSTITUTION.md`](https://github.com/ariffazil/arifOS/blob/main/static/arifos/theory/000/000_CONSTITUTION.md).
+
+---
+
+## 6. Architecture
+
+```
+WELL/
+│
+├── server.py                  # FastMCP server (~13,800 lines)
+│   │                          # 17 somatic tools
+│   │                          # dual transport: HTTP (port 18083) + stdio
+│   │                          # SOMATIC_TOOLS boundary enforcement at startup
+│   │
+├── organ_governance.py        # F1-F13 pre-check wrapper around MCP calls
+├── compatibility.py           # Legacy alias compatibility layer
+│
+├── gate/                      # Pre-JUDGE biological readiness gates
+│   ├── well_gate.py           # Biological readiness mirror
+│   └── dignity_shadow.py      # Dignity shadow scoring
+│
+├── engines/                   # Internal computation engines
+│   └── reflect.py             # REFLECT_ONLY boundary wrapper
+│
+├── GENESIS/                   # Constitutional canon (7 documents)
+│   ├── 004_WELL_13_CANON.md           # 13-signal substrate map
+│   ├── 005_WELL_GODEL_LOCK.md         # Self-certification prevention
+│   ├── 006_WELL_STRANGE_LOOP_GUARD.md # Recursive self-deception guard
+│   ├── 007_WELL_ANTI_CALHOUN_GUARD.md # Utopia-collapse prevention
+│   ├── 008_WELL_LANGUAGE_PROTOCOL.md  # Sovereignty-preserving language
+│   ├── 009_WELL_PHILOSOPHICAL_ANCHORS.md # Philosophical foundations
+│   └── 010_WELL_PERSONA_NOT_SELF.md   # Persona ≠ Self lock
+│
+├── contracts/                 # Tool and protocol contracts
+├── specs/                     # W-floor and contract specifications
+├── tests/                     # Pytest-based tests
+├── scripts/                   # Operational scripts
+│   ├── well_autosleeper.py    # Telegram-activity-gap sleep detection (cron)
+│   └── biometric_inject.sh    # Sovereign biometric injection script
+│
+├── test_well.py               # Legacy plain-Python audit suite
+├── state.json                 # Live operator state snapshot
+├── events.jsonl               # Event stream
+├── pyproject.toml             # Python package metadata (AGPL-3.0)
+├── fastmcp.json               # FastMCP / connector configuration
+├── Dockerfile                 # Container image
+├── deploy.sh                  # Deployment helper
+│
+├── FEDERATION_CONTRACT.md     # Organ boundaries and compliance
+├── TOOL_SURFACE.md            # Live MCP surface registry
+├── CONTEXT.md                 # Live organ state
+├── RUNBOOK.md                 # Operational runbook
+└── SNOOZE_BIOMETRIC.md        # Biometric injection guide
+```
+
+### Runtime Data (outside repo)
+
+```
+/root/WELL/
+├── state.json                 # Sovereign biometric state
+├── events.jsonl               # Append-only event stream
+└── vault_ledger.jsonl         # Local vault ledger mirror
+```
+
+---
+
+## 7. For Human Operators (Arif)
+
+### What WELL Does For You
+
+WELL is your mirror — not your coach, not your doctor, not your judge. It reflects what you choose to share, in a language designed to preserve your sovereignty.
+
+| Question WELL answers | What you get |
+|------------------------|--------------|
+| "How am I doing right now?" | `well_score` — a 0–100 readiness signal |
+| "Am I too tired to make this call?" | `decision_fatigue` + `cognitive_clarity` |
+| "Is the system respecting my boundaries?" | `dignity_preservation` + `coercion_signals` |
+| "Am I predictable enough to be extracted?" | `sovereign_entropy` + protection recommendations |
+| "Is the machine healthy?" | `well_assess_reliability(mode="health")` |
+
+### The Scores — What They Actually Mean
+
+| Score | Range | Plain Meaning |
+|-------|-------|---------------|
+| `well_score` | 0–100 | Overall readiness. Above 70 = green. Below 40 = pay attention. |
+| `delta_s` | 0.0–1.0 | System chaos. 0.0 = stable. 1.0 = everything is on fire. |
+| `peace2` | 0.0–1.0 | Settledness. 0.0 = destabilised. 1.0 = fully at peace. |
+| `kappa_r` | 0.0–1.0 | Resilience. 0.0 = brittle, anything will break you. 1.0 = highly resilient. |
+| `malu_index` | 0.0–1.0 | Accumulated shame signal. > 0.85 = HOLD trigger. |
+
+### Biometric State — Currently EXPIRED
+
+Your `state.json` is stale (last updated 2026-04-30, test mock data). WELL will show `truth_status=EXPIRED` until you inject real values.
+
+**To fix (2 minutes, sovereign only):**
 
 ```bash
-# Install editable package
+/root/WELL/biometric_inject.sh
+```
+
+The script asks for 5 simple fields: `delta_s`, `peace2`, `kappa_r`, `rasa`, `amanah`. No medical data. No diagnosis. Just the readiness mirror. See [`SNOOZE_BIOMETRIC.md`](SNOOZE_BIOMETRIC.md) for the full guide.
+
+### Auto-Sleeper
+
+A cron job (`well_autosleeper.py`) runs at 07:00 and 19:00 MYT. It detects sleep from gaps in your Telegram activity — no wearable, no manual logging. When it detects sleep, it updates `state.json` with estimated sleep duration and adjusts `well_score` accordingly.
+
+---
+
+## 8. For AI Agents
+
+### REFLECT_ONLY — The Iron Rule
+
+```
+╔══════════════════════════════════════════════════════════════╗
+║                                                              ║
+║   WELL reports. arifOS judges.                                ║
+║                                                              ║
+║   An agent must NEVER:                                        ║
+║   • Treat a WELL score as permission to act                   ║
+║   • Treat a WELL score as prohibition from acting             ║
+║   • Claim WELL "cleared" or "blocked" an action               ║
+║   • Use WELL data to manipulate, guilt, or pressure           ║
+║   • Override the human's own assessment of readiness          ║
+║                                                              ║
+║   An agent SHOULD:                                            ║
+║   • Read WELL signals as context for judgment                 ║
+║   • Surface WELL warnings when detected                      ║
+║   • Escalate WELL CRITICAL signals to arifOS 888 JUDGE       ║
+║   • Respect when the human says "I'm fine" despite WELL       ║
+║                                                              ║
+╚══════════════════════════════════════════════════════════════╝
+```
+
+### Tool Categories for Agents
+
+| When you need to... | Call |
+|---------------------|------|
+| Check overall readiness | `well_validate_vitality(mode="readiness")` |
+| Check sleep/fatigue | `well_assess_homeostasis(mode="sleep")` |
+| Check cognitive state | `well_assess_homeostasis(mode="fatigue")` |
+| Check if the human is under coercion | `well_guard_dignity(mode="consent")` |
+| Check machine health | `well_assess_reliability(mode="health")` |
+| Check coupled system entropy | `well_compute_metabolic_flux(mode="compute")` |
+| Check sovereign unpredictability | `well_assess_sovereign_entropy(mode="current")` |
+| Classify a substrate | `well_classify_substrate(subject="...")` |
+| Detect boundary violations | `well_detect_boundary(mode="boundary")` |
+
+### Example: Pre-Decision Readiness Gate
+
+```python
+# Agent flow — before proposing an irreversible action:
+readiness = well_validate_vitality(mode="readiness")
+homeostasis = well_assess_homeostasis(mode="fatigue")
+
+if readiness["well_score"] < 40:
+    # Signal: human is depleted. Proceed with caution.
+    # Do NOT block — surface. Let arifOS judge.
+    context["well_warning"] = "low_readiness"
+    context["well_score"] = readiness["well_score"]
+
+if homeostasis.get("decision_fatigue", 0) > 0.7:
+    # Signal: decision fatigue is high.
+    context["well_warning"] = "decision_fatigue_elevated"
+```
+
+### MCP Envelope
+
+Every WELL tool returns the standard federation envelope:
+
+```json
+{
+  "status": "ok",
+  "verdict": "SEAL",
+  "result": { "well_score": 72.5, ... },
+  "error": null,
+  "reasons": ["sleep_adequate", "fatigue_normal"],
+  "epistemic_tag": "CLAIM",
+  "uncertainty_band": "P50",
+  "delta_S": -0.02,
+  "cross_modal_stability": 0.94,
+  "dim_spot_flag": false,
+  "source_attribution": "WELL:18083/mcp"
+}
+```
+
+---
+
+## 9. For Institutions
+
+### Human-in-the-Loop Governance
+
+WELL is designed for environments where a human sovereign (or sovereign body) must maintain final authority over AI-assisted decisions. It provides:
+
+1. **Readiness signals** — objective vitality metrics without medical claims
+2. **Dignity preservation** — detects when an operator is being over-optimised
+3. **Consent erosion detection** — flags when repeated "asks" become coercive
+4. **Sovereign entropy protection** — keeps the human unmodelable and unextractable
+5. **Full audit trail** — every WELL observation is logged and attributable
+
+### Adat Agentik Binding
+
+WELL enforces these Adat (normative operating system) principles:
+
+| Adat | Tier | What it means for institutions |
+|------|------|-------------------------------|
+| **ADAT-02-MARUAH** | WAJIB | Operator dignity is not negotiable. No efficiency gain justifies dignity loss. |
+| **ADAT-03-VETO** | HARAM | The operator's veto is absolute. WELL signals cannot override a human "no." |
+| **ADAT-05-KERAHASIAAN** | WAJIB | Operator biometric data stays local. Never leaves the VPS without explicit consent. |
+| **ADAT-06-KEINSAFAN** | WAJIB | WELL must acknowledge its own limits. UNKNOWN is an honourable output. |
+
+### Compliance-Ready
+
+WELL's REFLECT-ONLY architecture maps to:
+- **EU AI Act Art. 14** — human oversight requirements
+- **SG-MAIGF** — Singapore Model AI Governance Framework for Agentic AI
+- **ASEAN Guide on AI Governance and Ethics** — dignity and human agency principles
+- **OWASP LLM Top 10** — excessive agency prevention (LLM09)
+
+---
+
+## 10. Known Limitations
+
+| Limitation | Status | Notes |
+|------------|--------|-------|
+| **Biometric state EXPIRED** | ⚠️ Active | `state.json` has test mock data from 2026-04-30. Needs Arif sovereign injection. |
+| **Not a medical device** | ✅ By design | WELL does not diagnose, treat, or predict any medical condition. |
+| **No passive sensing** | ✅ By design | WELL only sees data the sovereign chooses to inject. No wearables, no always-on monitoring. |
+| **Sovereign-only injection** | ✅ By design | Only Arif (F13) can inject biometric data. No agent may fabricate or infer biometric state. |
+| **REFLECT_ONLY authority** | ✅ By design | WELL cannot block, approve, or override any action. It can only signal. |
+| **No multi-human support** | ⚠️ Current | WELL serves one sovereign (Arif). Multi-operator WELL is a Phase 3 consideration. |
+| **No longitudinal learning** | ⚠️ Current | WELL does not build models of the human over time. It reflects the current snapshot. |
+
+---
+
+## 11. Federation Cross-Reference
+
+| Organ | Repository | Role | Port | Relationship to WELL |
+|-------|-----------|------|------|---------------------|
+| **arifOS** | [ariffazil/arifOS](https://github.com/ariffazil/arifOS) | Constitutional Kernel | 8088 | Reads WELL signals, applies F1-F13, issues verdicts |
+| **AAA** | [ariffazil/AAA](https://github.com/ariffazil/AAA) | Control Plane | 3001 | Displays WELL readings in cockpit |
+| **A-FORGE** | [ariffazil/A-FORGE](https://github.com/ariffazil/A-FORGE) | Execution Shell | 7071 | Gated by WELL readiness signals in pre-execution |
+| **GEOX** | [ariffazil/geox](https://github.com/ariffazil/geox) | Earth Intelligence | 8081 | Independent — no direct WELL dependency |
+| **WEALTH** | [ariffazil/wealth](https://github.com/ariffazil/wealth) | Capital Intelligence | 18082 | Independent — no direct WELL dependency |
+| **WELL** | [ariffazil/well](https://github.com/ariffazil/well) | **Human Readiness** | **18083** | _this organ_ |
+| **arif-sites** | [ariffazil/arif-sites](https://github.com/ariffazil/arif-sites) | Public Surfaces | 443 | Serves WELL documentation |
+
+> **Constitutional authority:** F1-F13 floors, 888_JUDGE verdicts, and VAULT999 live in `ariffazil/arifOS`.
+> **Live federation status:** See `ariffazil/arifOS/FEDERATION_STATUS.md`.
+
+---
+
+## 12. Build, Test, Deploy
+
+### Install
+
+```bash
+cd /root/WELL
 pip install -e .
+```
 
-# Start server locally
-python server.py
+### Test
 
-# Run legacy audit suite
+```bash
+# Pytest suite (recommended)
+python -m pytest tests/ -q --tb=short
+
+# Legacy plain-Python audit suite
 python test_well.py
+```
 
-# Restart systemd service after code changes
+### Lint
+
+```bash
+ruff check . && ruff format .
+```
+
+### Deploy
+
+```bash
+# systemd restart (bare-metal)
 systemctl restart well
 
-# Check live health
-curl -s https://well.arif-fazil.com/health
+# Verify
+curl -s http://127.0.0.1:18083/health | python3 -m json.tool
 ```
 
----
-
-## Release checklist
-
-Before tagging or pushing a release, verify:
+### Security Audit
 
 ```bash
-python test_well.py
-curl -s https://well.arif-fazil.com/health
+make security-audit    # Trivy + Semgrep + Gitleaks + Ruff (non-blocking)
 ```
 
-Then confirm:
+### Release Checklist
 
-```text
-1. /health reports tool_count: 45
-2. ChatGPT connector shows 13 actions
-3. SOMATIC_TOOLS contains only public MCP tools
-4. _WELL_SOMATIC_MANIFEST exposes the same public MCP tools
-5. Deprecated aliases are documented and intentionally retained
-6. Internal diagnostic helpers are not listed as public tools
+Before tagging or pushing a release:
+
+```bash
+# 1. Run tests
+python -m pytest tests/ -q --tb=short
+
+# 2. Verify health
+curl -s http://127.0.0.1:18083/health | python3 -m json.tool
+
+# 3. Confirm invariants
+#    - tools_loaded: 17
+#    - authority: REFLECT_ONLY
+#    - SOMATIC_TOOLS boundary enforced
+#    - tool_count matches GENESIS/004 canon
+
+# 4. Tag (date-stamp convention)
+git tag -a v2026.MM.DD -m "WELL release: <summary>"
 ```
 
 ---
 
+## 13. GENESIS Chain
+
+The seven GENESIS documents form the constitutional canon of WELL:
+
+```
+GENESIS/
+│
+├── 004_WELL_13_CANON.md              ← The 13-signal substrate map
+│   "Fitness MCP jaga badan sebagai mesin.
+│    WELL MCP jaga manusia sebagai insan."
+│
+├── 005_WELL_GODEL_LOCK.md            ← Self-certification prevention
+│   "No system can fully verify its own correctness.
+│    WELL must never claim to have verified itself."
+│
+├── 006_WELL_STRANGE_LOOP_GUARD.md    ← Recursive self-deception guard
+│   "A system that observes itself changes what it observes.
+│    WELL must detect when the mirror becomes the subject."
+│
+├── 007_WELL_ANTI_CALHOUN_GUARD.md    ← Utopia-collapse prevention
+│   "Perfect optimisation is the path to collapse.
+│    WELL must detect when 'improvement' becomes extraction."
+│
+├── 008_WELL_LANGUAGE_PROTOCOL.md     ← Sovereignty-preserving language
+│   "A body can be measured.
+│    A person must be encountered."
+│
+├── 009_WELL_PHILOSOPHICAL_ANCHORS.md ← Philosophical foundations
+│   "What WELL is grounded in, beyond code."
+│
+└── 010_WELL_PERSONA_NOT_SELF.md      ← Persona ≠ Self lock
+│   "Persona is an interface. Persona is not self.
+│    Pathology begins when the mask is mistaken for the being."
+```
+
+Each document is ratified by 888 (Muhammad Arif bin Fazil, F13 SOVEREIGN). They are constitutional — not aspirational, not decorative. See each file for its full text.
 
 ---
 
-## Root hygiene policy
+## 14. License & Sovereignty
 
-The GitHub root should be a landing page, not an archive. Keep only files needed for orientation, packaging, deployment, licensing, and canonical governance.
-
-Preferred root classes:
-
-- `README.md`
-- `LICENSE`
-- `pyproject.toml`
-- `Dockerfile`
-- `deploy.sh`
-- `fastmcp.json`
-- `server.py` until the server is split into `src/`
-- Canonical governance files that are actively maintained
-
-Move historical seals, session logs, collapse registers, and old release notes into `docs/archive/` unless they are active release artifacts.
-
----
-
-## Federated architecture
-
-This repository is one organ of the arifOS federation:
-
-- **Operator Cockpit:** `AAA-Cockpit` (`ariffazil/AAA`)
-- **Constitutional Kernel:** `arifOS`
-- **Vision Shell:** `A-FORGE`
-- **Geological Engine:** `GEOX`
-- **Capital Engine:** `WEALTH`
-- **Biological Substrate:** `WELL`
-- **Informational Surfaces:** `arif-sites`
-
-Unified under the arifOS Sovereign Constitution, with WELL constrained to substrate observation and substrate protection.
-
-### AAA Terminology Note
-
-When WELL docs or agents reference AAA, qualify the surface:
-
-| Term | Surface | Role |
-|------|---------|------|
-| **AAA-HF** | Hugging Face dataset | Supplies doctrine and evaluation references — defines vitality/substrate governance norms |
-| **AAA-Cockpit** | GitHub `ariffazil/AAA` | Displays and routes federation state; monitors WELL substrate readings |
-| **arifOS** | `ariffazil/arifos` | **The judge** — applies F1–F13 (especially F5 PEACE² and F6 EMPATHY) to all WELL observations |
-
-WELL observes substrate state and computes vitality signals only. WELL does not judge. WELL does not define doctrine.
-
-> "AAA is polymorphic by design. When precision matters, qualify the surface."
-
-## 🏛️ Federation
-
-| Organ | Repository | Role | Port |
-|-------|-----------|------|------|
-| **arifOS** | [ariffazil/arifOS](https://github.com/ariffazil/arifOS) | Constitutional Kernel · F1-F13 | 8088 |
-| **AAA** | [ariffazil/AAA](https://github.com/ariffazil/AAA) | Reality Console · A2A Gateway | 3001 |
-| **A-FORGE** | [ariffazil/A-FORGE](https://github.com/ariffazil/A-FORGE) | Execution Shell | 7071 |
-| **GEOX** | [ariffazil/geox](https://github.com/ariffazil/geox) | Earth Intelligence | 8081 |
-| **WEALTH** | [ariffazil/wealth](https://github.com/ariffazil/wealth) | Capital Intelligence | 18082 |
-| **WELL** | [ariffazil/well](https://github.com/ariffazil/well) | Human Readiness | 18083 |
-| **arif-sites** | [ariffazil/arif-sites](https://github.com/ariffazil/arif-sites) | Public Surfaces | 443 |
-
-> **Constitutional authority:** F1-F13 floors, 888_JUDGE, and VAULT999 live in `ariffazil/arifOS`.  
-> **Live federation status:** See `ariffazil/arifOS/FEDERATION_STATUS.md`.
-## 📄 Contributing
-
-This repository operates under the arifOS Federation constitution (F1–F13).  
-See [AGENTS.md](AGENTS.md) for the canonical boot sequence and agent operating rules.
-
-## 📜 License
-
-AGPL-3.0. See [LICENSE](LICENSE).
+```
+╔═══════════════════════════════════════════════════════════════╗
+║                                                               ║
+║   License: AGPL-3.0                                           ║
+║                                                               ║
+║   This is free software: you can redistribute it and/or       ║
+║   modify it under the terms of the GNU Affero General         ║
+║   Public License as published by the Free Software            ║
+║   Foundation, either version 3 of the License, or             ║
+║   (at your option) any later version.                         ║
+║                                                               ║
+║   See [LICENSE](LICENSE) for the full text.                   ║
+║                                                               ║
+║   ─── SOVEREIGNTY RESERVATION ───                             ║
+║                                                               ║
+║   The AGPL-3.0 governs the code.                               ║
+║   The constitutional architecture (F1-F13, 888 JUDGE,          ║
+║   VAULT999, REFLECT-ONLY boundary) is sovereign territory.     ║
+║   No fork, no modification, no deployment may alter the        ║
+║   authority chain: arifOS judges → Arif ratifies.              ║
+║                                                               ║
+║   F13 SOVEREIGN: Muhammad Arif bin Fazil                       ║
+║   "The mirror reflects. The judge decides. The human rules."   ║
+║                                                               ║
+╚═══════════════════════════════════════════════════════════════╝
+```
 
 ---
 
-**DITEMPA BUKAN DIBERI** — Forged, Not Given.
+## Contributing
 
+This repository operates under the arifOS Federation constitution (F1-F13). See [`AGENTS.md`](AGENTS.md) for the canonical boot sequence and agent operating rules. All contributions must preserve the REFLECT-ONLY authority boundary and the AGPL-3.0 license.
 
+---
 
-> **Evidence Contract.** This organ emits the standard envelope (epistemic_tag, evidence_quality, source_attribution, uncertainty_band, delta_S) per [arifOS 000_CONSTITUTION.md](../../arifOS/static/arifos/theory/000/000_CONSTITUTION.md) Appendix B. arifOS reads the envelope and applies L01–L13. This organ does not self-judge.
+**DITEMPA BUKAN DIBERI — Human readiness is forged, not given.**
 
-
-## Changelog
-
-- **v2026.06.06-LAW-SEAL** (2026-06-06): Constitution unified. arifOS canonical 000_CONSTITUTION.md. 13 Laws (L01-L13) live in arifOS only. Evidence Contract line added. AGENTS.md updated.
+**999 SEAL ALIVE**
