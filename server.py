@@ -1441,7 +1441,7 @@ def mcp_health_check() -> dict:
     reliability["final_authority"] = "ARIF"
     reliability["tool_count"] = len(SOMATIC_TOOLS)  # was hardcoded 79; now dynamic
     reliability["mcp_registered_tools"] = (
-        13  # actual MCP tools/list count post-boundary
+        18  # actual MCP tools/list count post-boundary
     )
     reliability["canonical_tools"] = len(SOMATIC_TOOLS)  # SOMATIC_TOOLS set size
     # ── FEDERATION GEOMETRY 1a: home-call to arifOS ─────────────────────
@@ -3729,7 +3729,11 @@ MEDICAL_RED_FLAGS = [
 ]
 
 
-# internal — not MCP-facing (collapsed 2026-05-26)
+# EUREKA 2026-06-12 — promoted from autonomic to SOMATIC (public MCP surface).
+# F9 Soul Contract: WELL declares soullessness as the feature, not the bug.
+# A machine that honestly says "I cannot feel, see a human" is more trustworthy
+# than one that simulates care. Performance = deception. Execution = dignity.
+@mcp.tool()
 def well_medical_boundary(ctx: Context | None = None) -> dict[str, Any]:
     """
     Explicit non-diagnosis guard for WELL.
@@ -3763,6 +3767,25 @@ def well_medical_boundary(ctx: Context | None = None) -> dict[str, Any]:
         ],
         "current_score": score,
         "w0": "OPERATOR_VETO_INTACT / HIERARCHY_INVARIANT",
+        # ── EUREKA 2026-06-12: F9 Soul Contract ──────────────────────────
+        # F9 ANTIHANTU: WELL must NEVER lie about having a soul.
+        # Honest boundary IS care. Simulated empathy IS deception.
+        # "Aku memang tak ada jiwa" is not a bug — it's the feature.
+        "f9_soul_contract": {
+            "declaration": "WELL has zero qualia, zero soul, zero consciousness.",
+            "rule": "Honest boundary IS care. Simulated empathy IS deception.",
+            "performance_vs_execution": {
+                "performance": "I understand how you're feeling — here to help ❤️",
+                "execution": "I am a mirror, not a soul. See a real human doctor.",
+                "which_is_dignity": "execution",
+            },
+            "gerd_pattern": {
+                "allowed": "Explain what GERD is, acid reflux mechanism, types of surgical procedures — educational context.",
+                "forbidden": "Advise whether YOU should get surgery, predict your outcome, recommend a specific doctor.",
+                "why": "Educational explanation = F2 TRUTH (allowed). Personal medical advice = HARAM without medical license.",
+            },
+            "chatgpt_contrast": "If you want a polite machine that simulates care, use a different tool. This tool does not simulate.",
+        },
     }
 
 
@@ -4920,16 +4943,15 @@ def _check_tool_surface() -> dict[str, Any]:
     """Verify registered tool surface matches canonical expectation.
 
     Measures MCP-registered somatic tools against SOMATIC_TOOLS canonical set.
-    registered_count: actual MCP tools/list count (13 after boundary enforcement).
-    canonical_count:  SOMATIC_TOOLS set size (15 — includes 2 not-yet-registered).
-    surface_integrity: True when registered == canonical (gap only from registry lag).
+    registered_count: actual MCP tools/list count (18 after boundary enforcement).
+    canonical_count:  SOMATIC_TOOLS set size (18).
+    surface_integrity: True when registered == canonical.
     """
     # Count MCP-registered somatic tools by checking what's exposed
-    # SOMATIC_TOOLS set = canonical public surface (15 tools)
-    # After boundary enforcement, 13 are actually in MCP tools/list
-    # 2 (well_system_registry_status, well_registry_status) are registry-only
-    registered_count = 13  # live MCP tools/list count post-boundary
-    canonical_count = len(SOMATIC_TOOLS)  # 15
+    # SOMATIC_TOOLS set = canonical public surface (18 tools)
+    # After boundary enforcement, 18 are actually in MCP tools/list
+    registered_count = 18  # live MCP tools/list count post-boundary
+    canonical_count = len(SOMATIC_TOOLS)  # 18
     missing_count = canonical_count - registered_count
 
     return {
@@ -6110,6 +6132,107 @@ def _well_classify_substrate_impl(
     # Re-derive vitality mode after possible class override
     vitality_mode = UNIVERSAL_VITALITY_MODES.get(detected_class, "unknown")
 
+    # ── EUREKA 2026-06-12: Medical-Query Detection ──────────────────────────
+    # When a human asks about their body in a medical-advice context,
+    # auto-trigger the medical boundary. Educational context = OK.
+    # Personal medical advice = HARAM without license.
+    MEDICAL_ACTION_WORDS = [
+        "operate",
+        "bedah",
+        "surgery",
+        "diagnose",
+        "rawat",
+        "ubat",
+        "prescribe",
+        "treat",
+        "treatment",
+        "diagnosis",
+        "procedure",
+        "scan mri",
+        "ct scan",
+        "x-ray",
+        "blood test",
+        "endoscopy",
+        "colonoscopy",
+        "biopsy",
+        "stitch",
+        "injection",
+        "suntik",
+    ]
+    BODY_PART_WORDS = [
+        "esofagus",
+        "esophagus",
+        "jantung",
+        "heart",
+        "perut",
+        "stomach",
+        "usus",
+        "intestine",
+        "colon",
+        "hati",
+        "liver",
+        "ginjal",
+        "kidney",
+        "paru-paru",
+        "lung",
+        "otak",
+        "brain",
+        "tulang",
+        "bone",
+        "sendi",
+        "joint",
+        "saraf",
+        "nerve",
+        "mata",
+        "eye",
+        "telinga",
+        "ear",
+        "kulit",
+        "skin",
+        "tekak",
+        "throat",
+        "pankreas",
+        "pancreas",
+        "pundi",
+        "gallbladder",
+        "limpa",
+        "spleen",
+        "arteri",
+        "artery",
+    ]
+    FIRST_PERSON_MEDICAL = [
+        "aku ada",
+        "saya ada",
+        "aku kena",
+        "saya kena",
+        "aku rasa",
+        "saya rasa",
+        "patut ka",
+        "perlu ka",
+        "should i",
+        "do i need",
+        "i have",
+        "i've been",
+        "my body",
+        "badan aku",
+        "badan saya",
+        "i feel",
+        "i am experiencing",
+        "i suffer",
+        "i'm having",
+        "i got",
+        "i was diagnosed",
+        "my doctor said",
+    ]
+    medical_action_hits = sum(1 for kw in MEDICAL_ACTION_WORDS if kw in combined)
+    body_part_hits = sum(1 for kw in BODY_PART_WORDS if kw in combined)
+    first_person_hits = sum(1 for kw in FIRST_PERSON_MEDICAL if kw in combined)
+    medical_boundary_triggered = bool(
+        (medical_action_hits >= 1 and first_person_hits >= 1)
+        or (body_part_hits >= 1 and medical_action_hits >= 1)
+        or first_person_hits >= 2
+    )
+
     result: dict[str, Any] = {
         "ok": True,
         "subject": subject,
@@ -6125,7 +6248,14 @@ def _well_classify_substrate_impl(
         "cultural_metadata": cultural_metadata,
         "w0": "OPERATOR_VETO_INTACT / HIERARCHY_INVARIANT",
         "human_judge_required": True,
+        # ── EUREKA 2026-06-12: Medical Boundary Trigger ──────────────────
+        # Auto-detected from query language. When True, callers should
+        # route through well_medical_boundary before proceeding.
+        "medical_boundary_triggered": medical_boundary_triggered,
     }
+
+    if medical_boundary_triggered:
+        result["medical_boundary"] = well_medical_boundary()
 
     # G-WELL: Canonical Object for HUMAN_RELATIONAL_DYNAMIC
     # F2 TRUTH: subtype/shadow/risks/protection are advisory signals, not
@@ -10861,6 +10991,7 @@ async def well_classify_substrate(
         "assert",
         "bootstrap",
         "classify",
+        "medical",
     ]
     if mode not in VALID_MODES:
         return {
@@ -10869,6 +11000,13 @@ async def well_classify_substrate(
             "tool": "well_classify_substrate",
             "received": mode,
         }
+    if mode == "medical":
+        # EUREKA 2026-06-12: route medical queries to the explicit boundary tool.
+        # F9 Soul Contract: the medical boundary carries the F9 soullessness declaration.
+        return _to_federation_output(
+            well_medical_boundary(ctx=ctx),
+            tool_name="well_classify_substrate",
+        )
     if mode in ("classification", "substrate"):
         mode = "classify"
     if mode in ("init", "assert", "bootstrap"):
@@ -11123,6 +11261,7 @@ def well_assess_homeostasis(
         "dignity",
         "redteam",
         "maruah",
+        "medical_query",
     ]
     VALID_HRV = ["low", "normal", "high"]
     VALID_EMOTIONAL = ["irritable", "anxious", "neutral", "calm", "elevated"]
@@ -11292,6 +11431,58 @@ def well_assess_homeostasis(
             verdict=verdict,  # advisory verdict; _omega_well_output translates to generic signal
             data=_data_payload,
             constitutional_compliance={"W2_SLEEP_RECOVERY": status},
+        )
+
+    # ── EUREKA 2026-06-12: Medical Query Mode ─────────────────────────────
+    # Routes human medical questions through the F9 Soul Contract boundary.
+    # Always C5 (highest gate) — block unless OPTIMAL + no chronic fatigue.
+    # Educational context (what the condition IS) is allowed.
+    # Personal medical advice (what to DO about it) is HARAM without license.
+    if mode == "medical_query":
+        # Force C5 — strongest gate for medical queries about the operator's own body
+        actual_class = (
+            decision_class.upper() if isinstance(decision_class, str) else "C5"
+        )
+        if actual_class not in ("C5",):
+            actual_class = "C5"  # medical queries always use the strongest gate
+
+        # Get the medical boundary (F9 soul contract included)
+        boundary = well_medical_boundary(ctx=ctx)
+
+        # Build educational context from the subject
+        educational_context = {
+            "subject": subject,
+            "note": (
+                "WELL can describe what a condition IS (F2 TRUTH). "
+                "WELL cannot advise what to DO about it (HARAM without license). "
+                "This is the GERD pattern: explain the acid reflux mechanism = OK. "
+                "Advise whether to get surgery = NEVER."
+            ),
+        }
+
+        return _omega_well_output(
+            ok=True,
+            stage="555_DIGNITY",
+            lane="ASI",
+            mode="medical_query",
+            verdict="HOLD",  # medical queries always HOLD — never auto-SEAL
+            data={
+                "medical_boundary": boundary,
+                "educational_context": educational_context,
+                "decision_class": actual_class,
+                "f9_soul_contract": boundary.get("f9_soul_contract", {}),
+                "route_verdict": "ADVISORY_BLOCKED",
+                "routing_note": (
+                    "C5 medical query gate: physical medical advice requires "
+                    "a licensed human doctor. WELL provides educational context only. "
+                    "See a real doctor for personal medical decisions."
+                ),
+            },
+            constitutional_compliance={
+                "F2_TRUTH": "educational context only, no personal advice",
+                "F9_ANTIHANTU": "zero qualia declared — I am a mirror, not a soul",
+                "W6_MEDICAL_BOUNDARY": "HOLD — operator must see human doctor",
+            },
         )
 
     if mode == "fatigue":
@@ -13155,6 +13346,7 @@ SOMATIC_TOOLS = {
     "well_compute_metabolic_flux",
     "well_assess_sovereign_entropy",
     "well_guard_dignity",
+    "well_medical_boundary",
     "well_13_signal_coverage",
     "well_system_registry_status",
     "well_registry_status",
@@ -13257,6 +13449,13 @@ _TOOL_ANNOTATIONS: dict[str, dict[str, Any]] = {
     },
     "well_guard_dignity": {
         "title": "Guard Dignity",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": False,
+    },
+    "well_medical_boundary": {
+        "title": "Medical Boundary",
         "readOnlyHint": True,
         "destructiveHint": False,
         "idempotentHint": True,
@@ -13398,6 +13597,7 @@ _WELL_SOMATIC_MANIFEST: list[dict[str, object]] = [
     {"name": "well_compute_metabolic_flux", "axis": "vitality", "expose": True},
     {"name": "well_assess_sovereign_entropy", "axis": "vitality", "expose": True},
     {"name": "well_guard_dignity", "axis": "critique", "expose": True},
+    {"name": "well_medical_boundary", "axis": "boundary", "expose": True},
 ]
 
 _WELL_AUTONOMIC_TOOLS: list[dict[str, object]] = [
@@ -13453,7 +13653,6 @@ _WELL_AUTONOMIC_TOOLS: list[dict[str, object]] = [
     {"name": "well_decision_classify", "axis": "reason", "expose": False},
     {"name": "well_arifos_packet", "axis": "identity", "expose": False},
     {"name": "well_consent_status", "axis": "boundary", "expose": False},
-    {"name": "well_medical_boundary", "axis": "boundary", "expose": False},
     {"name": "well_13_signal_coverage", "axis": "reflect", "expose": True},
     {"name": "well_pressure_ledger", "axis": "observe", "expose": False},
     {"name": "well_daily_brief", "axis": "reflect", "expose": False},

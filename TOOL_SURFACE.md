@@ -2,7 +2,7 @@
 > **Canonical Source:** `ariffazil/well`
 > **Authority:** WELL organ, governed by `ariffazil/arifOS`
 > **Purpose:** Document the live public MCP surface and its invariants
-> **Status:** OPERATIONAL | PHOENIX-73F | 13-tool somatic surface
+> **Status:** OPERATIONAL | PHOENIX-73F | 14-tool somatic surface
 
 ---
 
@@ -10,20 +10,20 @@
 
 **Production endpoint:** `https://well.arif-fazil.com/mcp`
 **Transport:** `streamable-http` (MCP protocol)
-**Live tool count:** 17
+**Live tool count:** 18
 **Health endpoint:** `https://well.arif-fazil.com/health`
 
 ### Invariant
 
 ```
-/health tool_count (17) = SOMATIC_TOOLS (17)
+/health tool_count (18) = SOMATIC_TOOLS (18)
 ```
 
 This invariant is enforced at startup by `_enforce_somatic_boundary()` in `server.py`. Any `@mcp.tool` not in `SOMATIC_TOOLS` is stripped before the server begins accepting connections.
 
 ---
 
-## Public MCP Tools (13)
+## Public MCP Tools (14)
 
 | Tool | Class | Omega Reference | Note |
 |------|-------|-----------------|------|
@@ -40,6 +40,7 @@ This invariant is enforced at startup by `_enforce_somatic_boundary()` in `serve
 | `well_assess_reliability` | `CANONICAL_PUBLIC` | Ω-WELL-10 | Assess machine, tool, institution, and operational reliability. |
 | `well_compute_metabolic_flux` | `CANONICAL_PUBLIC` | Ω-WELL-10b | Compute unified metabolic entropy rate (cognitive + machine). |
 | `well_guard_dignity` | `CANONICAL_PUBLIC` | Ω-WELL-12 | Guard soul, personhood, meaning, and symbolic boundaries. |
+| `well_medical_boundary` | `CANONICAL_PUBLIC` | Ω-WELL-13 | Explicit non-diagnosis guard with F9 Soul Contract. |
 
 ---
 
@@ -54,10 +55,10 @@ This invariant is enforced at startup by `_enforce_somatic_boundary()` in `serve
 
 | Metric | Count |
 |--------|-------|
-| Total `@mcp.tool` decorators in source | 53 |
-| SOMATIC_TOOLS boundary set | 13 |
-| Live MCP tools (boundary enforced) | 13 |
-| Internal helpers / autonomic tools | 40 |
+| Total `@mcp.tool` decorators in source | 52 |
+| SOMATIC_TOOLS boundary set | 18 |
+| Live MCP tools (boundary enforced) | 18 |
+| Internal helpers / autonomic tools | 39 |
 
 ---
 
@@ -82,4 +83,4 @@ The following are internal-only functions (no `@mcp.tool` decorator):
 
 ---
 
-*Last Updated: 2026-05-26 | PHOENIX-73F | DITEMPA BUKAN DIBERI*
+*Last Updated: 2026-06-12 | PHOENIX-73F | DITEMPA BUKAN DIBERI*
