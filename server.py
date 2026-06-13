@@ -10310,6 +10310,19 @@ if __name__ == "__main__":
         except Exception:
             identity_hash = "UNAVAILABLE"
 
+        # P6 — Substrate manifest hash (domain anchor, NOT constitution_hash)
+        # WELL answers to SUBSTRATE_LAW (vitality law), not constitutional law.
+        import hashlib as _hl
+        substrate_manifest_hash = "sha256:missing"
+        domain_law = "SUBSTRATE_LAW"
+        try:
+            _manifest_path = "/root/WELL/GENESIS/012_SUBSTRATE_MANIFEST.md"
+            if os.path.exists(_manifest_path):
+                with open(_manifest_path, "rb") as _f:
+                    substrate_manifest_hash = f"sha256:{_hl.sha256(_f.read()).hexdigest()}"
+        except Exception:
+            pass
+
         state = _load_state()
         well_ok = is_well(state)
         has_telemetry = _has_verified_telemetry(state)
@@ -10331,6 +10344,9 @@ if __name__ == "__main__":
                 "service": "well-mcp",
                 "version": "2026.05.15-ΩWELL+GWELL",
                 "identity_hash": identity_hash,
+                # P6 — WELL identity anchor (SUBSTRATE_LAW, not constitutional)
+                "domain_law": domain_law,
+                "substrate_manifest_hash": substrate_manifest_hash,
                 # W-1 substrate advisory fields — consumed by judge.py HTTP fallback
                 "well_score": float(state.get("well_score", 50.0)),
                 "floors_violated": state.get("floors_violated") or [],
@@ -13833,6 +13849,21 @@ if __name__ == "__main__":
         stateless_http=True,
     )
 
+    # ── P6 helpers — domain identity anchors ──────────────────────
+    def _compute_domain_law() -> str:
+        return "SUBSTRATE_LAW"
+
+    def _compute_substrate_manifest_hash() -> str:
+        try:
+            import hashlib as _hl
+            _manifest_path = "/root/WELL/GENESIS/012_SUBSTRATE_MANIFEST.md"
+            if __import__("os").path.exists(_manifest_path):
+                with open(_manifest_path, "rb") as _f:
+                    return f"sha256:{_hl.sha256(_f.read()).hexdigest()}"
+        except Exception:
+            pass
+        return "sha256:missing"
+
     # Register health handlers if not already present
     async def _well_health_handler(request):
         try:
@@ -13932,6 +13963,9 @@ if __name__ == "__main__":
                 if state_age_hours is not None
                 else None,
                 "environment": environment,
+                # ── P6 — WELL identity anchor (SUBSTRATE_LAW, not constitutional) ───
+                "domain_law": _compute_domain_law(),
+                "substrate_manifest_hash": _compute_substrate_manifest_hash(),
                 # Phase 2 hardening: standardized freshness + owner summary
                 "freshness": {
                     "status": (

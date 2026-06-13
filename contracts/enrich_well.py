@@ -130,7 +130,9 @@ def build_metabolic_output(
     tool_name: str,
     internal_result: dict[str, Any],
     session_id: str | None = None,
-    constitution_hash: str = "",
+    constitution_hash: str = "",  # DEPRECATED — kept for backward compat
+    domain_law: str = "SUBSTRATE_LAW",
+    substrate_manifest_hash: str = "",
 ) -> dict[str, Any]:
     """
     Wrap a WELL tool output with MetabolicOutput envelope.
@@ -141,7 +143,9 @@ def build_metabolic_output(
     internal_result: Raw result from the internal well_* function
                      (before _to_federation_output wrapping).
     session_id: Governed session ID for audit binding.
-    constitution_hash: Constitutional law version string.
+    constitution_hash: DEPRECATED — use substrate_manifest_hash instead.
+    domain_law: Domain law type (SUBSTRATE_LAW for WELL).
+    substrate_manifest_hash: SHA-256 of WELL Substrate Manifest (identity anchor).
 
     Returns
     -------
@@ -239,7 +243,9 @@ def build_metabolic_output(
         "requires_888_judge": requires_888,
         # Provenance
         "timestamp_utc": timestamp_utc,
-        "constitution_hash": constitution_hash,
+        "constitution_hash": constitution_hash,  # DEPRECATED — backward compat
+        "domain_law": domain_law,
+        "substrate_manifest_hash": substrate_manifest_hash,
         # Contract metadata
         "schema_name": SCHEMA_NAME,
         "schema_version": SCHEMA_VERSION,
