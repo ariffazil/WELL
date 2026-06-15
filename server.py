@@ -38,12 +38,12 @@ except ImportError:
 
 # ── Organ Governance (arifOS L1-L13) ─────────────────────────────────────────
 try:
-    from organ_governance import check_governance
+    from internal.organ_governance import check_governance
 except ImportError:
     import sys as _sys
 
     _sys.path.insert(0, str(WELL_DIR))
-    from organ_governance import check_governance
+    from internal.organ_governance import check_governance
 
 # PR 6 — reflect-only boundary import. Lazy-tolerant: if the engines
 # module is not on sys.path, the import is deferred until the wrap
@@ -14041,6 +14041,101 @@ if __name__ == "__main__":
             }
         )
 
+
+    async def _well_tools_handler(request):
+        """Federation tool discovery — flat tool registry with WELL danger metadata."""
+        all_tools = await mcp.list_tools()
+        _DANGER_MAP = {
+            "well_seal_vault": {"danger_level": "L3", "fail_posture": "fail-closed"},
+            "well_check_floor": {"danger_level": "L3", "fail_posture": "fail-closed"},
+            "well_anchor_evidence": {"danger_level": "L3", "fail_posture": "fail-closed"},
+            "well_request_anchor": {"danger_level": "L3", "fail_posture": "fail-closed"},
+            "well_validate_vitality": {"danger_level": "L2", "fail_posture": "fail-open"},
+            "well_check_repair": {"danger_level": "L2", "fail_posture": "fail-open"},
+            "well_guard_dignity": {"danger_level": "L2", "fail_posture": "fail-open"},
+            "well_assess_metabolism": {"danger_level": "L2", "fail_posture": "fail-open"},
+            "well_assess_homeostasis": {"danger_level": "L2", "fail_posture": "fail-open"},
+            "well_assess_livelihood": {"danger_level": "L2", "fail_posture": "fail-open"},
+            "well_assess_reliability": {"danger_level": "L2", "fail_posture": "fail-open"},
+            "well_reflect_intelligence": {"danger_level": "L2", "fail_posture": "fail-open"},
+            "well_classify_substrate": {"danger_level": "L1", "fail_posture": "fail-open"},
+            "well_trace_lineage": {"danger_level": "L1", "fail_posture": "fail-open"},
+            "well_detect_boundary": {"danger_level": "L1", "fail_posture": "fail-open"},
+            "well_measure_gradient": {"danger_level": "L1", "fail_posture": "fail-open"},
+            "mcp_health_check": {"danger_level": "L1", "fail_posture": "fail-open"},
+            "well_state": {"danger_level": "L1", "fail_posture": "fail-open"},
+            "well_get_packet": {"danger_level": "L1", "fail_posture": "fail-open"},
+            "well_arifos_packet": {"danger_level": "L1", "fail_posture": "fail-open"},
+            "well_readiness": {"danger_level": "L1", "fail_posture": "fail-open"},
+        }
+        _FAIL_OPEN_CONSTRAINT = "may degrade output, must not elevate authority"
+        _CANONICAL = {
+            "well_classify_substrate", "well_trace_lineage", "well_detect_boundary",
+            "well_measure_gradient", "well_assess_metabolism", "well_assess_homeostasis",
+            "well_check_repair", "well_validate_vitality", "well_assess_livelihood",
+            "well_assess_reliability", "well_reflect_intelligence", "well_guard_dignity",
+            "well_anchor_evidence",
+        }
+        _ALIASES = set(ALIAS_REGISTRY.keys())
+        tools = []
+        for t in all_tools:
+            name = t.name
+            meta = _DANGER_MAP.get(name, {"danger_level": "L1", "fail_posture": "fail-open"})
+            if name in _CANONICAL:
+                category = "canonical"
+            elif name in _ALIASES:
+                category = "alias"
+            elif name == "mcp_health_check":
+                category = "heartbeat"
+            else:
+                category = "legacy"
+            tools.append(
+                {
+                    "name": name,
+                    "description": getattr(t, "description", "") or "",
+                    "inputSchema": getattr(t, "inputSchema", {}),
+                    "outputSchema": getattr(t, "output_schema", {}),
+                    "danger_level": meta["danger_level"],
+                    "fail_posture": meta["fail_posture"],
+                    "fail_open_constraint": _FAIL_OPEN_CONSTRAINT
+                    if meta["fail_posture"] == "fail-open"
+                    else None,
+                    "tool_category": category,
+                }
+            )
+        return JSONResponse(
+            {
+                "organ": "WELL",
+                "role": "Body / Human Intelligence — Operator Cognitive Pressure Monitor",
+                "authority": "REFLECT_ONLY — WELL informs. arifOS judges. Arif decides.",
+                "schema": "well-federation-v2026.05.08",
+                "version": "2026.05.15-ΩWELL+GWELL",
+                "count": len(tools),
+                "w0_invariant": "WELL holds a mirror, not a veto. Operator sovereignty is invariant.",
+                "danger_taxonomy": {
+                    "L3": "vault seal / floor check — fail-closed mandatory",
+                    "L2": "session / log — fail-open with constraint",
+                    "L1": "observe / health / readiness — fail-open with constraint",
+                },
+                "fail_open_constraint": _FAIL_OPEN_CONSTRAINT,
+                "tools": tools,
+            }
+        )
+
+    async def _well_build_info_handler(request):
+        from starlette.responses import JSONResponse
+        return JSONResponse(
+            {
+                "sha": "87c0e6755f44a52526763fceee15ee64740e7918",
+                "short_sha": "87c0e67",
+                "branch": "main",
+                "version": "1.0",
+                "tool_count": 5,
+                "epoch": "2026",
+                "source_repo": "well",
+            }
+        )
+
     async def _mcp_server_card(request):
         """MCP Server Card — SEP-2127 HTTP discovery document.
 
@@ -14097,6 +14192,8 @@ if __name__ == "__main__":
     app.add_route("/.well-known/mcp.json", _mcp_server_card, methods=["GET"])
     app.add_route("/.well-known/mcp/server.json", _mcp_server_card, methods=["GET"])
     app.add_route("/health", _well_health_handler, methods=["GET"])
+    app.add_route("/tools", _well_tools_handler, methods=["GET"])
+    app.add_route("/api/build-info", _well_build_info_handler, methods=["GET"])
     app.add_middleware(OriginValidationMiddleware)
     uvicorn.run(
         app, host=host, port=port, log_level=_os.environ.get("LOG_LEVEL", "info")
