@@ -9,6 +9,15 @@
 #     --delta-s 0.2 --peace2 0.7 --kappa-r 0.6 \
 #     --rasa "clear" --amanah 0.9
 #
+#   # NEW 2026-06-17 — per-signal self-report (closes 13-signal coverage gaps):
+#   biometric_inject.sh --signals \
+#     --signal-s05-sleep '{"hours": 7.5, "quality": 8, "debt_days": 0}' \
+#     --signal-s06-metabolic '{"glucose_stable": true, "energy_level": 7}' \
+#     --signal-s07-nutrition '{"water_ml": 1800, "meals": 2}' \
+#     --signal-s08-movement '{"steps": 4200, "strength_sessions": 0}' \
+#     --signal-s09-pain '{"level": 1, "sites": []}' \
+#     --signal-s11-stress '{"subjective_load": 3, "anxiety": 2}'
+#
 # Well score formula (transparent):
 #   well_score = (peace2 * 0.35
 #                + (1.0 - delta_s) * 0.20
@@ -30,6 +39,7 @@ TIMESTAMP_UTC="$(date -u +%Y-%m-%dT%H:%M:%S+00:00)"
 # ---- Parse flags ------------------------------------------------------------
 DRY_RUN=false
 NON_INTERACTIVE=false
+SIGNALS_MODE=false
 IN_DELTA_S=""
 IN_PEACE2=""
 IN_KAPPA_R=""
@@ -37,11 +47,28 @@ IN_RASA=""
 IN_AMANAH=""
 IN_CLARITY=""
 IN_DECISION_FATIGUE=""
+# Per-signal JSON inputs (NEW 2026-06-17)
+declare -A SIGNAL_INPUTS=(
+  [s01_heart_circulation]=""
+  [s02_blood_pressure]=""
+  [s03_breathing_oxygenation]=""
+  [s04_temperature_inflammation]=""
+  [s05_sleep_architecture]=""
+  [s06_metabolic_state]=""
+  [s07_nutrition_hydration]=""
+  [s08_movement_strength]=""
+  [s09_pain_injury]=""
+  [s10_cognitive_clarity]=""
+  [s11_emotional_stress]=""
+  [s12_social_dignity_consent]=""
+  [s13_environment_livelihood]=""
+)
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --dry-run)            DRY_RUN=true; shift ;;
     --non-interactive)    NON_INTERACTIVE=true; shift ;;
+    --signals)            SIGNALS_MODE=true; shift ;;
     --delta-s)            IN_DELTA_S="$2"; shift 2 ;;
     --peace2)             IN_PEACE2="$2"; shift 2 ;;
     --kappa-r)            IN_KAPPA_R="$2"; shift 2 ;;
@@ -49,8 +76,21 @@ while [[ $# -gt 0 ]]; do
     --amanah)             IN_AMANAH="$2"; shift 2 ;;
     --clarity)            IN_CLARITY="$2"; shift 2 ;;
     --decision-fatigue)   IN_DECISION_FATIGUE="$2"; shift 2 ;;
+    --signal-s01-heart-circulation)           SIGNAL_INPUTS[s01_heart_circulation]="$2"; shift 2 ;;
+    --signal-s02-blood-pressure)              SIGNAL_INPUTS[s02_blood_pressure]="$2"; shift 2 ;;
+    --signal-s03-breathing-oxygenation)       SIGNAL_INPUTS[s03_breathing_oxygenation]="$2"; shift 2 ;;
+    --signal-s04-temperature-inflammation)    SIGNAL_INPUTS[s04_temperature_inflammation]="$2"; shift 2 ;;
+    --signal-s05-sleep-architecture)          SIGNAL_INPUTS[s05_sleep_architecture]="$2"; shift 2 ;;
+    --signal-s06-metabolic-state)             SIGNAL_INPUTS[s06_metabolic_state]="$2"; shift 2 ;;
+    --signal-s07-nutrition-hydration)         SIGNAL_INPUTS[s07_nutrition_hydration]="$2"; shift 2 ;;
+    --signal-s08-movement-strength)           SIGNAL_INPUTS[s08_movement_strength]="$2"; shift 2 ;;
+    --signal-s09-pain-injury)                 SIGNAL_INPUTS[s09_pain_injury]="$2"; shift 2 ;;
+    --signal-s10-cognitive-clarity)           SIGNAL_INPUTS[s10_cognitive_clarity]="$2"; shift 2 ;;
+    --signal-s11-emotional-stress)            SIGNAL_INPUTS[s11_emotional_stress]="$2"; shift 2 ;;
+    --signal-s12-social-dignity-consent)      SIGNAL_INPUTS[s12_social_dignity_consent]="$2"; shift 2 ;;
+    --signal-s13-environment-livelihood)      SIGNAL_INPUTS[s13_environment_livelihood]="$2"; shift 2 ;;
     -h|--help)
-      sed -n '2,28p' "$0"
+      sed -n '2,42p' "$0"
       exit 0
       ;;
     *)
@@ -164,6 +204,33 @@ validate_float_01 "$AMANAH" "amanah"
 
 WELL_SCORE="$(compute_well_score "$PEACE2" "$DELTA_S" "$KAPPA_R" "$AMANAH" "$DECISION_FATIGUE")"
 
+# ---- Per-signal self-report (NEW 2026-06-17 — closes 13-signal coverage gaps)
+SIGNAL_JSON_BLOCK=""
+SIGNAL_COUNT=0
+if $SIGNALS_MODE; then
+  _signal_pairs=""
+  for _key in "${!SIGNAL_INPUTS[@]}"; do
+    _val="${SIGNAL_INPUTS[$_key]}"
+    if [[ -n "$_val" ]]; then
+      # Validate JSON
+      if ! echo "$_val" | python3 -c "import json,sys; json.loads(sys.stdin.read())" 2>/dev/null; then
+        err "Invalid JSON for --signal-${_key/_/-}: $_val"
+        exit 2
+      fi
+      _signal_pairs="${_signal_pairs}\"${_key}\": $_val, "
+      SIGNAL_COUNT=$((SIGNAL_COUNT + 1))
+    fi
+  done
+  if [[ $SIGNAL_COUNT -eq 0 ]]; then
+    err "--signals mode requires at least one --signal-S0X-name flag"
+    exit 2
+  fi
+  # Build a valid JSON object: leading '{' + pairs (trailing ', ' stripped) + closing '}'
+  _trimmed="${_signal_pairs%, }"
+  SIGNAL_JSON_BLOCK="{${_trimmed}}"
+  ok "per-signal self-report: $SIGNAL_COUNT signal(s) captured"
+fi
+
 # ---- Confirm ----------------------------------------------------------------
 hr
 say "About to write to $STATE_FILE:"
@@ -178,6 +245,9 @@ say "  biometric.rasa     : \"$RASA\""
 say "  biometric.amanah   : $AMANAH"
 say "  metrics.cognitive  : clarity=$CLARITY, decision_fatigue=$DECISION_FATIGUE"
 say "  well_score         : $WELL_SCORE  (computed: peace2×0.35 + (1-ds)×0.20 + κ×0.20 + amanah×0.15 + (10-fatigue)/10×0.10)"
+if [[ $SIGNAL_COUNT -gt 0 ]]; then
+  say "  signals            : $SIGNAL_COUNT per-signal value(s) injected"
+fi
 say "  truth_status       : VERIFIED"
 say "  freshness          : FRESH"
 say ""
@@ -242,11 +312,27 @@ state = {
     "w0": "OPERATOR_VETO_INTACT / HIERARCHY_INVARIANT",
 }
 
+# Per-signal self-report block (NEW 2026-06-17)
+_signal_raw = """$SIGNAL_JSON_BLOCK"""
+if _signal_raw:
+    try:
+        state["signals"] = json.loads(_signal_raw)
+        state["signals_meta"] = {
+            "injected_count": $SIGNAL_COUNT,
+            "injection_ts": "$TIMESTAMP_UTC",
+            "source": "biometric_inject.sh --signals",
+        }
+    except json.JSONDecodeError as _e:
+        print(f"  ✗ signals JSON parse failed: {_e}", file=os.sys.stderr)
+        state["signals_error"] = str(_e)
+
 tmp = "$STATE_FILE.tmp"
 with open(tmp, "w") as f:
     json.dump(state, f, indent=2)
 os.replace(tmp, "$STATE_FILE")
 print("  ✓ state.json written")
+if _signal_raw:
+    print(f"  ✓ signals block: {$SIGNAL_COUNT} signal(s)")
 EOF
 
 ok "WELL state.json updated"

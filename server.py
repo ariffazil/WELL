@@ -10345,6 +10345,315 @@ except Exception as _e:
     print(f"[GOVERNANCE] WELL governance wrapper failed: {_e}")
 
 
+# ══════════════════════════════════════════════════════════════════════════════
+# F-Ω Federation Handoff Adapters — forged 2026-06-17 by FORGE (000Ω)
+#
+# Three new @mcp.tool() functions wiring explicit federation hooks that the
+# 13-signal coverage report flagged as MISSING:
+#
+#   1. well_handoff_dignity_to_arifos()  →  S12 → arifOS 888_JUDGE
+#   2. well_handoff_livelihood_to_wealth() →  S13 → WEALTH
+#   3. well_attest_to_kernel()           →  WELL → arifOS organ_attest
+#
+# Authority: REFLECT_ONLY.  WELL observes + signals; it does NOT judge.
+# Fail-open: if peer unreachable, returns federation_unavailable (no crash).
+# Reversibility: additive only — no existing function modified.
+# ══════════════════════════════════════════════════════════════════════════════
+
+_ARIFOS_MCP_URL = _os.environ.get("ARIFOS_MCP_URL", "http://127.0.0.1:8088/mcp")
+_WEALTH_MCP_URL = _os.environ.get("WEALTH_MCP_URL", "http://127.0.0.1:18082/mcp")
+_FED_TIMEOUT_S = float(_os.environ.get("WELL_FED_TIMEOUT_S", "5.0"))
+
+
+def _federation_post_tool_call(
+    base_url: str,
+    tool_name: str,
+    arguments: dict,
+    timeout: float | None = None,
+) -> dict[str, Any]:
+    """
+    Helper: POST a tools/call to a federated MCP server.
+
+    Supports two transport modes:
+      1. STATELESS (default for arifOS / WEALTH / WELL since 2026.05):
+         Skip initialize; call tools/call directly.
+      2. STATEFUL (legacy, for peers that return mcp-session-id header):
+         Two-step initialize → tools/call handshake.
+
+    Detection: if peer's initialize response includes mcp-session-id header,
+    use stateful mode; otherwise use stateless direct call.
+
+    Fail-open contract: returns federation_unavailable on any error.
+    """
+    _t = timeout if timeout is not None else _FED_TIMEOUT_S
+    try:
+        # Step 0: probe for stateful mode
+        _init_body = json.dumps(
+            {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "initialize",
+                "params": {
+                    "protocolVersion": "2025-11-25",
+                    "capabilities": {},
+                    "clientInfo": {
+                        "name": "WELL-federation-adapter",
+                        "version": "2026.06.17",
+                    },
+                },
+            }
+        ).encode("utf-8")
+        _init_req = urllib.request.Request(
+            base_url,
+            data=_init_body,
+            headers={
+                "Content-Type": "application/json",
+                "Accept": "application/json, text/event-stream",
+            },
+        )
+        _session_id: str | None = None
+        try:
+            with urllib.request.urlopen(_init_req, timeout=_t) as _init_resp:
+                _session_id = _init_resp.headers.get("mcp-session-id")
+                # Consume body to free connection
+                _init_resp.read()
+        except Exception:
+            # If initialize fails, try stateless direct call
+            _session_id = None
+
+        # Build the tools/call request
+        _call_body = json.dumps(
+            {
+                "jsonrpc": "2.0",
+                "id": 2,
+                "method": "tools/call",
+                "params": {"name": tool_name, "arguments": arguments},
+            }
+        ).encode("utf-8")
+        _call_headers = {
+            "Content-Type": "application/json",
+            "Accept": "application/json, text/event-stream",
+        }
+        if _session_id:
+            _call_headers["mcp-session-id"] = _session_id
+        _call_req = urllib.request.Request(
+            base_url,
+            data=_call_body,
+            headers=_call_headers,
+        )
+        with urllib.request.urlopen(_call_req, timeout=_t) as _resp:
+            _raw = _resp.read().decode("utf-8")
+        # MCP may return JSON or JSONL (SSE-style)
+        try:
+            _json_out = json.loads(_raw)
+        except json.JSONDecodeError:
+            _first_line = _raw.splitlines()[0] if _raw else ""
+            _json_out = json.loads(_first_line) if _first_line else {}
+        return {
+            "ok": True,
+            "result": _json_out,
+            "session_id": _session_id,
+            "transport": "stateful" if _session_id else "stateless",
+        }
+    except Exception as _exc:
+        return {
+            "ok": False,
+            "fail_mode": "federation_unavailable",
+            "error": f"{type(_exc).__name__}: {str(_exc)[:200]}",
+        }
+
+
+def _extract_mcp_text_payload(mcp_result: dict) -> dict:
+    """
+    Extract the inner JSON payload from a MCP tools/call response.
+    MCP wraps results in {result: {content: [{type: text, text: "<json>"}]}}.
+    """
+    try:
+        for _c in mcp_result.get("result", {}).get("content", []):
+            if _c.get("type") == "text":
+                return json.loads(_c.get("text", "{}"))
+        return mcp_result.get("result", mcp_result)
+    except Exception:
+        return {}
+
+
+# ── 1. WELL → arifOS 888_JUDGE explicit handoff for S12 dignity ──────────────
+@mcp.tool()
+def well_handoff_dignity_to_arifos(
+    coercion_signals: list[str] | None = None,
+    dignity_preservation: float | None = None,
+    reductionism_risk: float | None = None,
+    signal: str = "dignity_leakage_under_review",
+    ctx: Context | None = None,
+) -> dict[str, Any]:
+    """
+    Ω-WELL-FED-S12: Explicit handoff of S12 (social_dignity_consent) signal
+    from WELL → arifOS 888_JUDGE for constitutional deliberation.
+
+    WELL observes, signals, and prepares. arifOS judges. arifOS issues
+    the verdict; WELL only reports the signal and the handoff receipt.
+    Per GENESIS/004 §2.1, this function returns 'signal' (not 'verdict').
+
+    Fail-open: if arifOS unreachable, returns federation_unavailable
+    with the signal preserved for later retry.
+    """
+    _dignity_packet = {
+        "organ": "WELL",
+        "signal_layer": "tier_4_dignity",
+        "signal_id": "S12_social_dignity_consent",
+        "signal": signal,
+        "coercion_signals": coercion_signals or [],
+        "dignity_preservation": dignity_preservation,
+        "reductionism_risk": reductionism_risk,
+        "ts": datetime.datetime.now(datetime.timezone.utc).isoformat() + "Z",
+        "w0": "OPERATOR_VETO_INTACT / HIERARCHY_INVARIANT",
+    }
+    _resp = _federation_post_tool_call(
+        _ARIFOS_MCP_URL,
+        "arif_judge_deliberate",
+        {
+            "mode": "judge",
+            "candidate": json.dumps(_dignity_packet),
+            "action_class": "dignity_breach_signal",
+            "actor_id": "well-system",
+        },
+    )
+    if not _resp.get("ok"):
+        return {
+            "ok": False,
+            "signal": signal,
+            "federation": "arifos",
+            "fail_mode": _resp.get("fail_mode", "federation_unavailable"),
+            "error": _resp.get("error"),
+            "packet": _dignity_packet,
+            "w0": "OPERATOR_VETO_INTACT / HIERARCHY_INVARIANT",
+        }
+    _arif_inner = _extract_mcp_text_payload(_resp["result"])
+    return {
+        "ok": True,
+        "signal": signal,
+        "federation": "arifos",
+        "arifos_session_id": _resp.get("session_id"),
+        "arifos_receipt": _arif_inner,
+        "packet": _dignity_packet,
+        "w0": "OPERATOR_VETO_INTACT / HIERARCHY_INVARIANT",
+    }
+
+
+# ── 2. WELL → WEALTH explicit handoff for S13 livelihood ────────────────────
+@mcp.tool()
+def well_handoff_livelihood_to_wealth(
+    duty_load: float | None = None,
+    cashflow_status: str | None = None,
+    ctx: Context | None = None,
+) -> dict[str, Any]:
+    """
+    Ω-WELL-FED-S13: Explicit handoff of S13 (environment_livelihood) signal
+    from WELL → WEALTH for capital/cashflow evidence pull.
+
+    WELL does not compute capital. WELL surfaces the readiness frame
+    (duty_load, role_burden) and asks WEALTH for the livelihood evidence
+    (cashflow_status, runway, expense ratio).  Federation = composition.
+
+    Fail-open: if WEALTH unreachable, returns federation_unavailable
+    with the readiness frame preserved for later retry.
+    """
+    _wealth_resp = _federation_post_tool_call(
+        _WEALTH_MCP_URL,
+        "wealth_personal_finance",
+        {"mode": "summary", "owner": "arif"},
+    )
+    _wealth_payload: dict = {}
+    if _wealth_resp.get("ok"):
+        _wealth_payload = _extract_mcp_text_payload(_wealth_resp["result"])
+
+    _livelihood_packet = {
+        "organ": "WELL",
+        "signal_layer": "tier_4_dignity_environment",
+        "signal_id": "S13_environment_livelihood",
+        "signal": "livelihood_signal_composed",
+        "readiness_frame": {
+            "duty_load": duty_load,
+            "cashflow_status_self_reported": cashflow_status,
+            "operator_id": "arif",
+        },
+        "wealth_evidence": _wealth_payload if _wealth_resp.get("ok") else None,
+        "wealth_fail_mode": _wealth_resp.get("fail_mode") if not _wealth_resp.get("ok") else None,
+        "ts": datetime.datetime.now(datetime.timezone.utc).isoformat() + "Z",
+        "w0": "OPERATOR_VETO_INTACT / HIERARCHY_INVARIANT",
+    }
+    return {
+        "ok": _wealth_resp.get("ok", False),
+        "signal": "livelihood_signal_composed",
+        "federation": "wealth",
+        "wealth_session_id": _wealth_resp.get("session_id"),
+        "wealth_receipt": _wealth_payload,
+        "packet": _livelihood_packet,
+        "fail_mode": _wealth_resp.get("fail_mode") if not _wealth_resp.get("ok") else None,
+        "error": _wealth_resp.get("error") if not _wealth_resp.get("ok") else None,
+        "w0": "OPERATOR_VETO_INTACT / HIERARCHY_INVARIANT",
+    }
+
+
+# ── 3. WELL → arifOS organ_attest (active federation heartbeat) ────────────
+@mcp.tool()
+def well_attest_to_kernel(ctx: Context | None = None) -> dict[str, Any]:
+    """
+    Ω-WELL-FED-ATTEST: Active organ attestation from WELL → arifOS kernel.
+
+    The external organ_heartbeat_daemon polls /health (read-only, one-way).
+    This tool performs an active attestation (WELL → kernel) that records
+    state in the kernel's organ registry via arif_organ_attest.
+
+    Fail-open: if arifOS unreachable, returns federation_unavailable.
+    The /health heartbeat (daemon) remains the canonical health source.
+    """
+    _state: dict = {}
+    try:
+        if "_load_state" in dir():
+            _state = _load_state() or {}
+    except Exception:
+        _state = {}
+    _attestation = {
+        "organ_id": "WELL",
+        "identity_hash": "1b1f46b3e0896994e27b354dfca58efd3f088e58f1428773ac3c45c2b5f3195a",
+        "authority": "REFLECT_ONLY",
+        "final_authority": "ARIF",
+        "verdict_local": _state.get("verdict", "WELL_HOLD"),
+        "well_score": _state.get("well_score"),
+        "freshness": _state.get("freshness", "UNKNOWN"),
+        "ts": datetime.datetime.now(datetime.timezone.utc).isoformat() + "Z",
+    }
+    _resp = _federation_post_tool_call(
+        _ARIFOS_MCP_URL,
+        "arif_organ_attest",
+        {
+            "organ_id": "WELL",
+            "actor_id": "well-system",
+        },
+    )
+    if not _resp.get("ok"):
+        return {
+            "ok": False,
+            "organ": "WELL",
+            "federation": "arifos",
+            "fail_mode": _resp.get("fail_mode", "federation_unavailable"),
+            "error": _resp.get("error"),
+            "attestation": _attestation,
+            "w0": "OPERATOR_VETO_INTACT / HIERARCHY_INVARIANT",
+        }
+    _arif_inner = _extract_mcp_text_payload(_resp["result"])
+    return {
+        "ok": True,
+        "organ": "WELL",
+        "federation": "arifos",
+        "arifos_session_id": _resp.get("session_id"),
+        "arifos_receipt": _arif_inner,
+        "attestation": _attestation,
+        "w0": "OPERATOR_VETO_INTACT / HIERARCHY_INVARIANT",
+    }
+
+
 if __name__ == "__main__":
     # ── Transport mode selection ─────────────────────────────────────────
     import argparse
@@ -13595,6 +13904,11 @@ SOMATIC_TOOLS = {
     "well_13_signal_coverage",
     "well_system_registry_status",
     "well_registry_status",
+    # F-Ω Federation Handoff Adapters — forged 2026-06-17
+    # See FEDERATION_HOOKS.md for the canonical contract.
+    "well_handoff_dignity_to_arifos",       # S12 → arifOS 888_JUDGE
+    "well_handoff_livelihood_to_wealth",    # S13 → WEALTH
+    "well_attest_to_kernel",                # WELL → arifOS organ_attest
 }
 # NOTE: well_system_registry_status and well_registry_status are internal
 # diagnostic tools (no @mcp.tool decorator). Not part of public MCP surface.
