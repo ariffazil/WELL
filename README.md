@@ -26,9 +26,9 @@
 
 <!-- SOT-MANIFEST
 owner: Arif
-last_verified: 2026-06-17
+last_verified: 2026-06-20
 valid_from: 2026-06-14
-valid_until: 2026-07-17
+valid_until: 2026-07-20
 confidence: high
 scope: /root/WELL
 -->
