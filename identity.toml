@@ -23,4 +23,4 @@ openclaw_routed = true
 algorithm = "BLAKE3"
 source = "identity.toml"
 embedded_in_health = true
-chain_upstream = "WEALTH"
+chain_upstream = "arifOS"
