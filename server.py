@@ -14747,6 +14747,7 @@ _WELL_SOMATIC_MANIFEST: list[dict[str, object]] = [
     {"name": "well_medical_boundary", "axis": "boundary", "expose": True},
     {"name": "well_system_registry_status", "axis": "identity", "expose": True},
     {"name": "well_registry_status", "axis": "identity", "expose": True},
+    {"name": "well_signal_coverage", "axis": "reflect", "expose": True},
     {"name": "well_handoff_dignity_to_arifos", "axis": "bridge", "expose": True},
     {"name": "well_handoff_livelihood_to_wealth", "axis": "bridge", "expose": True},
     {"name": "well_attest_to_kernel", "axis": "attest", "expose": True},
