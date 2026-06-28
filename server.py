@@ -11277,8 +11277,10 @@ if __name__ == "__main__":
     # FORGE 2026-06-28: /.well-known/agent.json for AAA A2A mesh discovery.
 
     _WELL_AGENT_CARD = {
-        "schema": "agent-manifest/v1",
+        "schema_version": "0.2",
+        "organ_id": "well",
         "name": "WELL — Human Substrate Vitality",
+        "role": "human",
         "description": (
             "Universal substrate vitality mirror for arifOS federation. "
             "Assesses biological metabolism, homeostasis, repair cycles, vitality, "
@@ -11286,6 +11288,8 @@ if __name__ == "__main__":
         ),
         "version": "2026.06.05",
         "url": "https://well.arif-fazil.com",
+        "a2a_endpoint": "http://127.0.0.1:18083/a2a",
+        "agent_card_url": "http://127.0.0.1:18083/.well-known/agent-card.json",
         "endpoints": {
             "mcp": "https://well.arif-fazil.com/mcp",
             "health": "https://well.arif-fazil.com/health",
@@ -11300,31 +11304,26 @@ if __name__ == "__main__":
             "peer_coordinator": "https://aaa.arif-fazil.com",
             "constitutional_kernel": "https://arifos.arif-fazil.com",
         },
-        "owned_mcp": {
-            "server": "well-mcp",
-            "transport": "streamable-http",
-            "tool_count": 18,
-            "canonical_tools": [
-                "well_assess_homeostasis",
-                "well_assess_metabolism",
-                "well_assess_livelihood",
-                "well_assess_reliability",
-                "well_validate_vitality",
-                "well_guard_dignity",
-                "well_classify_substrate",
-                "well_detect_boundary",
-                "well_measure_gradient",
-                "well_compute_metabolic_flux",
-                "well_assess_sovereign_entropy",
-                "well_trace_lineage",
-                "well_check_repair",
-                "well_signal_coverage",
-                "well_health_check",
-                "well_registry_status",
-                "well_system_registry_status",
-                "well_medical_boundary",
-            ],
-        },
+        "owned_mcp": [
+            "well_assess_homeostasis",
+            "well_assess_livelihood",
+            "well_assess_metabolism",
+            "well_assess_reliability",
+            "well_assess_sovereign_entropy",
+            "well_check_repair",
+            "well_classify_substrate",
+            "well_compute_metabolic_flux",
+            "well_detect_boundary",
+            "well_guard_dignity",
+            "well_measure_gradient",
+            "well_registry_status",
+            "well_trace_lineage",
+            "well_validate_vitality",
+            "well_medical_boundary",
+            "well_handoff_dignity_to_arifos",
+            "well_handoff_livelihood_to_wealth",
+        ],
+        "judge_skills": [],
         "skills": [
             {
                 "id": "substrate.classify",
