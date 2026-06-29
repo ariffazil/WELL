@@ -11328,6 +11328,42 @@ if __name__ == "__main__":
 
     app.add_route("/.well-known/mcp.json", mcp_server_card, methods=["GET"])
     app.add_route("/.well-known/mcp/server.json", mcp_server_card, methods=["GET"])
+
+    # 2026-06-29 — Federation-wide OAuth discovery (Hermes-flow fix)
+    # Spec-compliant MCP clients (Cursor, Claude Code, MiniMax) fetch
+    # /.well-known/oauth-protected-resource first per RFC 8707. Without
+    # this, OAuth clients fail with "failed to get oauth authorization url".
+    # arifOS (port 8088) is the canonical authorization server for the
+    # whole federation; this endpoint mirrors its metadata.
+    async def _well_oauth_protected_resource(request):
+        from starlette.responses import JSONResponse
+        return JSONResponse(
+            {
+                "resource": "https://mcp.arif-fazil.com/mcp",
+                "authorization_servers": ["https://mcp.arif-fazil.com"],
+                "bearer_methods_supported": ["header"],
+                "scopes_supported": ["openid", "profile", "mcp:full", "mcp:read_only"],
+            },
+            headers={"Access-Control-Allow-Origin": "*"},
+        )
+    app.add_route("/.well-known/oauth-protected-resource", _well_oauth_protected_resource, methods=["GET"])
+    app.add_route("/.well-known/oauth-protected-resource/mcp", _well_oauth_protected_resource, methods=["GET"])
+    async def _well_oauth_authorization_server(request):
+        from starlette.responses import JSONResponse
+        return JSONResponse(
+            {
+                "issuer": "https://mcp.arif-fazil.com",
+                "authorization_endpoint": "https://mcp.arif-fazil.com/api/auth/authorize",
+                "token_endpoint": "https://mcp.arif-fazil.com/api/auth/token",
+                "jwks_uri": "https://mcp.arif-fazil.com/.well-known/jwks.json",
+                "response_types_supported": ["code"],
+                "grant_types_supported": ["authorization_code", "refresh_token"],
+                "code_challenge_methods_supported": ["S256"],
+                "scopes_supported": ["openid", "profile", "mcp:full", "mcp:read_only"],
+            },
+            headers={"Access-Control-Allow-Origin": "*"},
+        )
+    app.add_route("/.well-known/oauth-authorization-server", _well_oauth_authorization_server, methods=["GET"])
     app.add_route("/health", health_handler, methods=["GET"])
     app.add_route("/ready", _well_ready_handler, methods=["POST"])
     app.add_route("/api/build-info", build_info_handler, methods=["GET"])
@@ -15640,6 +15676,10 @@ if __name__ == "__main__":
     app.add_route("/ready", _well_ready_handler, methods=["POST"])
     app.add_route("/tools", _well_tools_handler, methods=["GET"])
     app.add_route("/api/build-info", _well_build_info_handler, methods=["GET"])
+
+    # 2026-06-29 — OAuth discovery stripped. Caddy now redirects
+    # well.arif-fazil.com/.well-known/oauth-* → mcp.arif-fazil.com
+    # (one canonical door). WELL becomes an internal endpoint.
 
     # ── A2A Agent Card (Federation Discovery) — FORGE 2026-06-28 ─────────────
     _WELL_A2A_CARD = {

@@ -15,7 +15,7 @@
 > **WELL is the human readiness organ of the arifOS federation.**
 > It observes. It reflects. It warns. It never decides.
 >
-> 17 canonical somatic MCP tools. REFLECT-ONLY authority. `https://well.arif-fazil.com/mcp`
+> 17 canonical somatic MCP tools. REFLECT-ONLY authority. Integrated public frontdoor: `https://mcp.arif-fazil.com/mcp`
 
 [![FastMCP](https://img.shields.io/badge/FastMCP-3.3.1-8b5cf6?logo=python&logoColor=white)](server.py)
 [![Python](https://img.shields.io/badge/python-3.12+-3776AB?logo=python&logoColor=white)](server.py)
@@ -26,9 +26,9 @@
 
 <!-- SOT-MANIFEST
 owner: Arif
-last_verified: 2026-06-28
+last_verified: 2026-06-29
 valid_from: 2026-06-14
-valid_until: 2026-07-28
+valid_until: 2026-07-29
 confidence: high
 scope: /root/WELL
 -->
@@ -149,9 +149,9 @@ Expected response:
 ```json
 {
   "mcpServers": {
-    "well": {
+    "arifos-gateway": {
       "type": "http",
-      "url": "https://well.arif-fazil.com/mcp"
+      "url": "https://mcp.arif-fazil.com/mcp"
     }
   }
 }
