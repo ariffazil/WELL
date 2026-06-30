@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WELL — Human Readiness Organ | arifOS Federation</title>
+<meta name="description" content="WELL is the human readiness organ of the arifOS federation. Vitality, fatigue, dignity, homeostasis. Reflect, never diagnose.">
+<link rel="canonical" href="https://well.arif-fazil.com/">
+<link rel="mcp" href="https://mcp.arif-fazil.com/mcp" type="application/json" title="Canonical MCP Gateway">
+<style>
+:root{--bg:#0d0c0b;--surface:#121110;--border:#2a2826;--text:#d4d2ce;--muted:#9b9995;--faint:#706e6b;--primary:#3a9ea8;--gold:#d4a853;--success:#5a9e38;--error:#b83060}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Satoshi','Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100dvh;display:flex;align-items:center;justify-content:center;line-height:1.6}
+.shell{max-width:640px;padding:2rem 1.5rem;text-align:center}
+.icon{font-size:3rem;margin-bottom:1rem}
+h1{font-family:'Cabinet Grotesk','Helvetica Neue',sans-serif;font-size:2rem;font-weight:800;letter-spacing:-0.03em;margin-bottom:0.25rem}
+.subtitle{font-family:'JetBrains Mono',monospace;font-size:0.8rem;color:var(--muted);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:1.5rem}
+.desc{color:var(--muted);font-size:0.95rem;margin-bottom:2rem;max-width:50ch;margin-inline:auto}
+.stats{display:flex;justify-content:center;gap:2rem;margin-bottom:2rem;flex-wrap:wrap}
+.stat{text-align:center}
+.stat-num{font-family:'JetBrains Mono',monospace;font-size:1.5rem;font-weight:700;color:var(--primary)}
+.stat-label{font-size:0.7rem;color:var(--faint);text-transform:uppercase;letter-spacing:0.05em}
+.caps{display:flex;flex-direction:column;gap:0.5rem;margin-bottom:2rem;text-align:left;max-width:400px;margin-inline:auto}
+.cap{display:flex;align-items:center;gap:0.5rem;font-size:0.85rem;color:var(--muted)}
+.cap-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.cap-live{background:var(--success);box-shadow:0 0 5px var(--success)}
+.cap-plan{background:var(--gold);box-shadow:0 0 5px var(--gold)}
+.links{display:flex;flex-wrap:wrap;justify-content:center;gap:0.75rem;margin-bottom:2rem}
+a.btn{display:inline-flex;align-items:center;gap:0.4rem;padding:0.5rem 1rem;border-radius:6px;font-size:0.8rem;font-weight:600;text-decoration:none;transition:all 0.15s}
+.btn-primary{background:var(--primary);color:var(--bg)}
+.btn-primary:hover{background:#1e8a96}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--muted)}
+.btn-outline:hover{border-color:var(--primary);color:var(--primary)}
+.warn{background:rgba(184,48,96,0.08);border:1px solid rgba(184,48,96,0.25);border-radius:6px;padding:0.75rem 1rem;font-size:0.8rem;color:var(--error);margin-bottom:1.5rem}
+.footer{font-family:'JetBrains Mono',monospace;font-size:0.7rem;color:var(--faint);margin-top:2rem;letter-spacing:0.05em}
+.badge{display:inline-block;padding:2px 8px;border-radius:3px;font-size:0.65rem;font-family:'JetBrains Mono',monospace;font-weight:700;text-transform:uppercase;letter-spacing:0.06em}
+.badge-reflect{background:rgba(58,158,168,0.12);color:var(--primary);border:1px solid rgba(58,158,168,0.25)}
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="icon">🫀</div>
+  <h1>WELL</h1>
+  <div class="subtitle">Human Readiness Organ · arifOS Federation</div>
+  <div class="desc">Vitality, fatigue, dignity, homeostasis. WELL reflects the operator's biological and cognitive state. It never diagnoses. It never decides. It holds the mirror.</div>
+
+  <div class="stats">
+    <div class="stat"><div class="stat-num" id="tools">—</div><div class="stat-label">Tools</div></div>
+    <div class="stat"><div class="stat-num" id="status">—</div><div class="stat-label">Status</div></div>
+    <div class="stat"><div class="stat-num">18083</div><div class="stat-label">Port</div></div>
+  </div>
+
+  <div class="warn">
+    ⚠️ WELL is a <strong>reflect-only</strong> organ. MCP tool execution routes through the <a href="https://mcp.arif-fazil.com/" style="color:var(--gold)">canonical MCP gateway</a>. This page is a landing surface only.
+  </div>
+
+  <div class="caps">
+    <div class="cap"><span class="cap-dot cap-live"></span>Operator cognitive pressure monitoring</div>
+    <div class="cap"><span class="cap-dot cap-live"></span>Sleep, fatigue, and homeostasis tracking</div>
+    <div class="cap"><span class="cap-dot cap-live"></span>Dignity preservation guard</div>
+    <div class="cap"><span class="cap-dot cap-plan"></span>Thermodynamic metabolic flux</div>
+    <div class="cap"><span class="cap-dot cap-plan"></span>Sovereign entropy protection</div>
+  </div>
+
+  <div class="links">
+    <a class="btn btn-primary" href="https://arifos.arif-fazil.com/">🔭 Observatory</a>
+    <a class="btn btn-outline" href="https://arifos.arif-fazil.com/federation.html">📊 Federation Map</a>
+    <a class="btn btn-outline" href="https://mcp.arif-fazil.com/">🔌 MCP Gateway</a>
+    <a class="btn btn-outline" href="https://arif-fazil.com/canon/">📐 Canon</a>
+  </div>
+
+  <div class="badge badge-reflect">WELL holds a mirror, not a veto</div>
+
+  <div class="footer">
+    arifOS Federation · DITEMPA BUKAN DIBERI<br>
+    WELL does not decide worth. WELL identifies substrate, validates evidence,<br>
+    detects vitality/degradation, protects dignity, and returns judgment to Arif.
+  </div>
+</div>
+
+<script>
+(async function() {
+  try {
+    const res = await fetch('https://arifos.arif-fazil.com/api/federation-probe');
+    const d = await res.json();
+    const well = d.probed && d.probed.well;
+    if (well) {
+      document.getElementById('status').textContent = well.health === 'healthy' ? '🟢' : well.health === 'degraded' ? '🟡' : '🔴';
+      document.getElementById('status').title = well.health;
+    }
+  } catch(e) {}
+  try {
+    const res = await fetch('https://arifos.arif-fazil.com/api/status');
+    const d = await res.json();
+    const h = d.health || {};
+    // WELL tools count from capability map or known
+    document.getElementById('tools').textContent = '21+';
+  } catch(e) { document.getElementById('tools').textContent = '21+'; }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,36 @@
+# WELL State Freshness — WAJIB-008 / WAJIB-006 compliance
+# Generated: 2026-06-30 14:40 MYT
+#
+# This file declares WELL state freshness for agent-facing consumption.
+# Any agent reading this MUST respect the stale markers.
+
+well_state_freshness:
+  operator_state:
+    evidence_layer: CACHED_STATE
+    verified_at: 2026-04-30T00:00:00Z
+    stale_days: 61
+    expired: true
+    usable_for_execution: false
+    allowed_use: historical_context_only
+    freshness_band: EXPIRED
+    source_probe: well_health_check
+    ttl_seconds: 86400  # 24h — exceeded by 60 days
+    reason: No biometric update since April 30. Sovereign injection required.
+
+  guard_dignity:
+    evidence_layer: CONSTITUTIONAL_AXIOM
+    verified_at: 2026-05-05T00:00:00Z  # Constitution sealing date
+    stale_days: 0
+    expired: false
+    usable_for_execution: true
+    allowed_use: timeless_principle
+    notes: guard_dignity is a constitutional floor (F6 MARUAH), not a biometric reading. Works without fresh state.
+
+  system_health:
+    evidence_layer: LIVE_PROBE
+    verified_at: 2026-06-30T06:19:00Z
+    stale_days: 0
+    expired: false
+    usable_for_execution: true
+    allowed_use: current_operations
+    source_probe: well_health_check
