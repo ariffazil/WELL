@@ -6,7 +6,7 @@
     "organization": "arifOS",
     "system": "WELL"
   },
-  "version": "2026.05.08-REFORGED",
+  "version": "2026.06.30",
   "protocol_version": "1.0.0",
   "capabilities": {
     "streaming": false,
@@ -239,9 +239,9 @@
     "packet": "GET /mcp (tool: well_get_packet)"
   },
   "honesty_disclaimer": {
-    "transport_note": "MCP primary (60 tools: 13 canonical verb_noun + 13 alias + 34 legacy); A2A agent card for federation discovery only. No medical diagnosis.",
-    "last_audited": "2026-05-08"
+    "transport_note": "MCP primary (17 somatic tools: classify, trace, detect, measure, assess, validate, guard, compute, check, signal, registry, medical boundary, classify state). No medical diagnosis.",
+    "last_audited": "2026-06-30"
   },
-  "last_updated": "2026-05-08T14:00:00Z",
+  "last_updated": "2026-06-30T00:00:00Z",
   "deprecation_notice": "\u03a9-WELL v2 canonical surface active. Legacy tools (well_anchor, well_arifos_packet, well_bandwidth_recommendation, well_check_floor, well_check_floors) are deprecated aliases retained for compatibility. Use well_verb_noun ontology."
 }

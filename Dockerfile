@@ -30,4 +30,11 @@ ENV FEDERATION_SOMATIC_BOUNDARY=1
 
 EXPOSE 8083
 
+LABEL org.opencontainers.image.source="https://github.com/ariffazil/WELL" \
+      org.opencontainers.image.description="Human readiness — 15-tool vitality mirror" \
+      org.opencontainers.image.version="kanon-1.0.0" \
+      org.opencontainers.image.licenses="BSL-1.1" \
+      arifos.organ="WELL" \
+      arifos.authority="REFLECT_ONLY"
+
 CMD ["python", "server.py"]
