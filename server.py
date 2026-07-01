@@ -2668,15 +2668,28 @@ def well_log(
 
 
 # DEPRECATED: Use well_validate_vitality(mode="readiness") instead.
+# ZEN TTL constants for well_readiness
+_TTL_FRESH = 12    # hours — GREEN
+_TTL_WARN = 24     # hours — YELLOW
+_TTL_STALE = 48    # hours — RED/STALE
+
+
 # @mcp.tool() restored — test compatibility only. Internal callers should use
 # well_validate_vitality directly.
 @mcp.tool()
 def well_readiness(ctx: Context | None = None) -> dict[str, Any]:
     """
-    Reflect current biological readiness for arifOS JUDGE context.
-    Returns score, floor status, and a readiness verdict for the constitutional kernel.
+    ZEN: Single readiness verdict. One tool, one answer.
+    
+    Returns score, color (GREEN/YELLOW/RED/STALE), TTL, action, and biometric signals.
     W0: This is informational only — WELL never blocks unilaterally.
     If no verified telemetry exists, returns UNKNOWN rather than faking biological knowledge.
+    
+    TTL rules:
+      < 12h  = GREEN (if score OK)
+      12-24h = YELLOW
+      24-48h = RED
+      > 48h  = STALE → INJECT_NEEDED
     """
     state = _load_state()
     resolved = _resolve_readiness(state)
@@ -2689,6 +2702,30 @@ def well_readiness(ctx: Context | None = None) -> dict[str, Any]:
         "FUNCTIONAL": "PASS",
         "LOW_CAPACITY": "CAUTION",
     }
+    
+    # ZEN: Compute TTL and color/action
+    ts_str = state.get("last_successful_read") or state.get("signals_meta", {}).get("injection_ts")
+    ttl_hours = 999.0
+    if ts_str:
+        try:
+            ts = datetime.datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
+            now = datetime.datetime.now(datetime.timezone.utc)
+            ttl_hours = max(0, (now - ts).total_seconds() / 3600)
+        except (ValueError, TypeError):
+            pass
+    score = _state_score(state) or 0
+    if ttl_hours > _TTL_STALE:
+        zen_color, zen_action = "STALE", "INJECT_NEEDED"
+    elif ttl_hours > _TTL_WARN:
+        zen_color, zen_action = "RED", "HOLD"
+    elif ttl_hours > _TTL_FRESH:
+        zen_color, zen_action = "YELLOW", "SIMPLIFY"
+    elif score >= 75:
+        zen_color, zen_action = "GREEN", "PROCEED"
+    elif score >= 50:
+        zen_color, zen_action = "YELLOW", "SIMPLIFY"
+    else:
+        zen_color, zen_action = "RED", "HOLD"
 
     # I3 — Evidence discipline: confidence gated by truth_status AND telemetry presence
     truth_status = state.get("truth_status", "UNVERIFIED")
@@ -2718,7 +2755,12 @@ def well_readiness(ctx: Context | None = None) -> dict[str, Any]:
         if reconcile["verdict"] == "HOLD"
         else status_map.get(resolved["readiness"], "HOLD")
     )
-    return _compose_verdict(
+    # Extract biometric signals for zen output
+    bio = state.get("biometric", {})
+    signals = state.get("signals", {})
+    sleep = signals.get("s05_sleep_architecture", {})
+    
+    result = _compose_verdict(
         mcp="AFWELL",
         task="readiness_reflection",
         status=status,
@@ -2738,6 +2780,19 @@ def well_readiness(ctx: Context | None = None) -> dict[str, Any]:
         next_safe_action=resolved["reason"],
         federation_reconcile=reconcile,
     )
+    # ZEN: Add color, action, TTL, biometric to the verdict
+    result["color"] = zen_color
+    result["action"] = zen_action
+    result["ttl_hours"] = round(ttl_hours, 1)
+    result["biometric"] = {
+        "peace2": bio.get("peace2"),
+        "delta_s": bio.get("delta_s"),
+        "kappa_r": bio.get("kappa_r"),
+        "rasa": bio.get("rasa"),
+        "clarity": state.get("metrics", {}).get("cognitive", {}).get("clarity"),
+        "sleep_hours": sleep.get("hours"),
+    }
+    return result
 
 
 @mcp.tool()
@@ -4546,108 +4601,6 @@ def well_daily_brief(ctx: Context | None = None) -> dict[str, Any]:
     return result
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# well_readiness — ZEN SINGLE VERDICT
-# One pipe in, one verdict out. No overlap with 17 somatic tools.
-# ══════════════════════════════════════════════════════════════════════════════
-
-TTL_FRESH = 12    # hours — GREEN
-TTL_WARN = 24     # hours — YELLOW
-TTL_STALE = 48    # hours — RED/STALE
-
-
-@mcp.tool()
-def well_readiness() -> dict[str, Any]:
-    """
-    ZEN: Single readiness verdict. One tool, one answer.
-    
-    Returns:
-      - color: GREEN | YELLOW | RED | STALE
-      - score: 0-100
-      - ttl_hours: hours since last data
-      - action: PROCEED | SIMPLIFY | HOLD | INJECT_NEEDED
-      - biometric: key signals (peace2, delta_s, kappa_r, rasa, clarity, sleep)
-    
-    TTL rules:
-      < 12h  = GREEN (if score OK)
-      12-24h = YELLOW
-      24-48h = RED
-      > 48h  = STALE → INJECT_NEEDED
-    
-    Use this for quick federation checks. Use well_validate_vitality for full assessment.
-    """
-    state = _load_state()
-    score = _state_score(state) or 0
-    
-    # Compute TTL
-    ts_str = state.get("last_successful_read") or state.get("signals_meta", {}).get("injection_ts")
-    ttl_hours = 999.0
-    if ts_str:
-        try:
-            ts = datetime.datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
-            now = datetime.datetime.now(datetime.timezone.utc)
-            ttl_hours = max(0, (now - ts).total_seconds() / 3600)
-        except (ValueError, TypeError):
-            pass
-    
-    # Classify
-    if ttl_hours > TTL_STALE:
-        color, action = "STALE", "INJECT_NEEDED"
-    elif ttl_hours > TTL_WARN:
-        color, action = "RED", "HOLD"
-    elif ttl_hours > TTL_FRESH:
-        color, action = "YELLOW", "SIMPLIFY"
-    elif score >= 75:
-        color, action = "GREEN", "PROCEED"
-    elif score >= 50:
-        color, action = "YELLOW", "SIMPLIFY"
-    else:
-        color, action = "RED", "HOLD"
-    
-    # Build reason
-    reasons = []
-    if color == "STALE":
-        reasons.append(f"No data for {ttl_hours:.0f}h")
-    elif color == "RED":
-        reasons.append(f"Data is {ttl_hours:.0f}h old")
-    elif color == "YELLOW":
-        reasons.append(f"Data aging ({ttl_hours:.0f}h)")
-    else:
-        reasons.append(f"Fresh ({ttl_hours:.1f}h)")
-    
-    if score < 50:
-        reasons.append(f"low score ({score:.0f})")
-    elif score < 75:
-        reasons.append(f"moderate score ({score:.0f})")
-    
-    # Extract biometric signals
-    bio = state.get("biometric", {})
-    signals = state.get("signals", {})
-    sleep = signals.get("s05_sleep_architecture", {})
-    
-    return {
-        "ok": True,
-        "color": color,
-        "score": round(score, 1),
-        "ttl_hours": round(ttl_hours, 1),
-        "action": action,
-        "reason": " | ".join(reasons),
-        "biometric": {
-            "peace2": bio.get("peace2"),
-            "delta_s": bio.get("delta_s"),
-            "kappa_r": bio.get("kappa_r"),
-            "rasa": bio.get("rasa"),
-            "clarity": state.get("metrics", {}).get("cognitive", {}).get("clarity"),
-            "sleep_hours": sleep.get("hours"),
-        },
-        "freshness": state.get("freshness", "UNKNOWN"),
-        "confidence": state.get("confidence", "UNKNOWN"),
-        "w0": "OPERATOR_VETO_INTACT / HIERARCHY_INVARIANT",
-    }
-
-
-
-# ══════════════════════════════════════════════════════════════════════════════
 # M-WELL — Machine Substrate
 # Tracks tool/system health, model reliability, context integrity, compute limits
 # Purpose: Is the Instrument technically reliable enough for this task?
