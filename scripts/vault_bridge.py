@@ -95,19 +95,21 @@ def _extract_flux(state: dict[str, Any]) -> dict[str, Any]:
     )
     return {
         "flux": flux_val,
-        "verdict": "COMPULSORY_REALLOCATION" if flux_val >= FLUX_CRITICAL_THRESHOLD
-                   else "SYSTEM_HOLD" if flux_val >= FLUX_SYSTEM_HOLD_THRESHOLD
-                   else "NOMINAL",
+        "verdict": "COMPULSORY_REALLOCATION"
+        if flux_val >= FLUX_CRITICAL_THRESHOLD
+        else "SYSTEM_HOLD"
+        if flux_val >= FLUX_SYSTEM_HOLD_THRESHOLD
+        else "NOMINAL",
         "compulsory_reallocation": flux_val >= FLUX_CRITICAL_THRESHOLD,
     }
 
 
 async def _seal_to_vault_api(payload: dict[str, Any]) -> dict[str, Any]:
     """Seal a WELL entropy event to VAULT999 via writer /transition (port 5001).
-    
+
     The writer's /transition endpoint accepts KSR_TRANSITION events without
     requiring human signature — suitable for automated entropy reports.
-    
+
     Returns SUCCESS with seal_hash or ERROR with details.
     Falls back to local file if writer is unreachable (ADR-001).
     """
@@ -120,12 +122,19 @@ async def _seal_to_vault_api(payload: dict[str, Any]) -> dict[str, Any]:
         "payload": payload,
     }
 
+    # Build auth header if token is available
+    headers = {}
+    _token = os.getenv("VAULT_WRITER_TOKEN") or os.getenv("VAULT999_WRITER_TOKEN")
+    if _token:
+        headers["X-Writer-Token"] = _token
+
     # Try VAULT999 writer /transition first
     try:
         async with httpx.AsyncClient(timeout=5.0) as client:
             resp = await client.post(
                 f"{VAULT999_WRITER_BASE}/transition",
                 json=transition_payload,
+                headers=headers,
             )
             if resp.status_code == 200:
                 result = resp.json()
@@ -138,7 +147,9 @@ async def _seal_to_vault_api(payload: dict[str, Any]) -> dict[str, Any]:
                     "epoch": result.get("epoch"),
                 }
             else:
-                logger.warning(f"VAULT999 /transition returned {resp.status_code}: {resp.text[:200]}")
+                logger.warning(
+                    f"VAULT999 /transition returned {resp.status_code}: {resp.text[:200]}"
+                )
     except Exception as e:
         logger.warning(f"VAULT999 /transition unreachable: {e}")
 
@@ -146,30 +157,41 @@ async def _seal_to_vault_api(payload: dict[str, Any]) -> dict[str, Any]:
     try:
         LEGACY_VAULT_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
         with open(LEGACY_VAULT_LOG_PATH, "a") as f:
-            f.write(json.dumps(seal_payload) + "\n")
-        return {"status": "SUCCESS", "method": "local-file", "path": str(LEGACY_VAULT_LOG_PATH)}
+            f.write(json.dumps(payload) + "\n")
+        return {
+            "status": "SUCCESS",
+            "method": "local-file",
+            "path": str(LEGACY_VAULT_LOG_PATH),
+        }
     except OSError as e:
         return {"status": "ERROR", "message": f"Local write failed: {e}"}
 
 
 async def bridge_to_vault(force: bool = False) -> dict[str, Any]:
     """Bridge WELL state to VAULT999 cooling ledger.
-    
+
     Seals metabolic flux + entropy readings to VAULT999.
     Only seals on significant events (score delta, flux critical, violations)
     unless force=True.
     """
     state = _load_well_state()
     if not state:
-        return {"status": "ERROR", "message": "WELL state not found — run well_well_compute_metabolic_flux first"}
+        return {
+            "status": "ERROR",
+            "message": "WELL state not found — run well_well_compute_metabolic_flux first",
+        }
 
     # Check identity invariant
-    identity_ok = (
-        state.get("identity") == "WELL"
-        and state.get("authority") in ("REFLECT_ONLY", "Body", "Body / Human Intelligence")
+    identity_ok = state.get("identity") == "WELL" and state.get("authority") in (
+        "REFLECT_ONLY",
+        "Body",
+        "Body / Human Intelligence",
     )
     if not identity_ok and not force:
-        return {"status": "ERROR", "message": "WELL identity invariant failed — seal rejected"}
+        return {
+            "status": "ERROR",
+            "message": "WELL identity invariant failed — seal rejected",
+        }
 
     # Extract data
     current_score = state.get("well_score", 0)
@@ -180,10 +202,15 @@ async def bridge_to_vault(force: bool = False) -> dict[str, Any]:
     # Condition logic: only seal on high-signal events
     is_stale = freshness["is_stale"]
     is_degraded = len(violations) > 0 or current_score < 70
-    is_flux_critical = flux_info["verdict"] in ("COMPULSORY_REALLOCATION", "SYSTEM_HOLD")
+    is_flux_critical = flux_info["verdict"] in (
+        "COMPULSORY_REALLOCATION",
+        "SYSTEM_HOLD",
+    )
     is_low_capacity = current_score < 70
 
-    should_seal = force or is_degraded or is_flux_critical or (is_stale and current_score < 80)
+    should_seal = (
+        force or is_degraded or is_flux_critical or (is_stale and current_score < 80)
+    )
 
     if not should_seal:
         return {
@@ -196,7 +223,13 @@ async def bridge_to_vault(force: bool = False) -> dict[str, Any]:
         "vault_type": "well_entropy_event",
         "epoch": datetime.now(timezone.utc).isoformat(),
         "well_score": current_score,
-        "status": "FLUX_CRITICAL" if is_flux_critical else "DEGRADED" if is_degraded else "STALE" if is_stale else "STABLE",
+        "status": "FLUX_CRITICAL"
+        if is_flux_critical
+        else "DEGRADED"
+        if is_degraded
+        else "STALE"
+        if is_stale
+        else "STABLE",
         "violations": violations,
         "metabolic_flux": flux_info["flux"],
         "flux_verdict": flux_info["verdict"],
@@ -207,9 +240,17 @@ async def bridge_to_vault(force: bool = False) -> dict[str, Any]:
         "peace2": max(0.0, 1.0 - flux_info["flux"]),  # peace = 1 - flux
         "domain_law": "SUBSTRATE_LAW",
         "w0_assertion": "OPERATOR_VETO_INTACT / HIERARCHY_INVARIANT",
-        "trigger": "FLUX_CRITICAL" if is_flux_critical else "DEGRADED" if is_degraded else "STALE" if is_stale else "FORCE",
+        "trigger": "FLUX_CRITICAL"
+        if is_flux_critical
+        else "DEGRADED"
+        if is_degraded
+        else "STALE"
+        if is_stale
+        else "FORCE",
     }
-    payload["hash"] = hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()
+    payload["hash"] = hashlib.sha256(
+        json.dumps(payload, sort_keys=True).encode()
+    ).hexdigest()
 
     # Seal to VAULT999
     seal_result = await _seal_to_vault_api(payload)
