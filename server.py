@@ -2472,8 +2472,8 @@ def _compose_verdict(
 
 
 # DEPRECATED: Use well_validate_vitality(mode="state") instead.
-# @mcp.tool() restored — test compatibility only. Internal callers should use
-# well_validate_vitality directly.
+# @mcp.tool() REMOVED by FORGE entropy audit 2026-07-03 — reduces callable surface from 27→26.
+# Internal callers use well_validate_vitality directly. Legacy bridge in compatibility.py.
 @mcp.tool()
 def well_state(include: str = "full", ctx: Context | None = None) -> dict[str, Any]:
     """
@@ -5564,7 +5564,8 @@ def _check_data_freshness(state: dict[str, Any]) -> dict[str, Any]:
 # ── WELL-01 well_get_health ───────────────────────────────────────────────────
 # DEPRECATED: Use well_assess_reliability(mode="health") instead.
 # NOTE: Expose=False in SOMATIC_TOOLS — not in public MCP tools/list, not a phantom
-@mcp.tool()
+# @mcp.tool() REMOVED by FORGE entropy audit 2026-07-03 — reduces callable surface.
+# @mcp.tool()
 def well_get_health(ctx: Context | None = None) -> dict[str, Any]:
     """
     Canonical three-layer health check.
