@@ -1,0 +1,89 @@
+{
+  "$schema": "https://google.com/genai/a2a/agent-card/v1",
+  "arifos_internal_card": "/.well-known/agent-card.json",
+  "name": "WELL",
+  "description": "Human substrate governance — operator biological state, cognitive pressure, fatigue, dignity under F1-F13. REFLECT_ONLY: never makes clinical or diagnostic claims, never adjudicates strategic action, signals readiness for the federation. 22 canonical well_* tools across Ω-WELL-01..12.",
+  "version": "2026.07.01",
+  "protocolVersion": "1.0.0",
+  "url": "https://well.arif-fazil.com",
+  "provider": {
+    "organization": "arifOS Federation",
+    "sovereign": "Muhammad Arif bin Fazil (F13 SOVEREIGN)",
+    "doctrine": "DITEMPA BUKAN DIBERI",
+    "url": "https://arif-fazil.com"
+  },
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true,
+    "extensions": [
+      {
+        "uri": "https://arif-fazil.com/extensions/floor-compliance/v1",
+        "description": "F1 AMANAH / F2 TRUTH / F4 CLARITY / F6 MARUAH / F9 ANTI-HANTU / F11 AUDIT / F13 SOVEREIGN footer."
+      },
+      {
+        "uri": "https://arif-fazil.com/extensions/reflect-only/v1",
+        "description": "REFLECT_ONLY lane — never a strategic judge, never a clinical authority."
+      },
+      {
+        "uri": "https://arif-fazil.com/extensions/dignity-guard/v1",
+        "description": "F6 MARUAH: dignity is non-negotiable. WELL signals; humans decide."
+      }
+    ]
+  },
+  "defaultInputModes": ["application/json"],
+  "defaultOutputModes": ["application/json"],
+  "skills": [
+    {"id": "substrate-classify", "name": "Substrate Classification", "description": "Ω-WELL-01 — classify body/machine/membrane/federation substrate."},
+    {"id": "lineage-trace", "name": "Memory Lineage", "description": "Ω-WELL-02 — trace biological + ledger state through time."},
+    {"id": "boundary-detect", "name": "Boundary Detection", "description": "Ω-WELL-03 — membrane, body, machine, federation boundaries."},
+    {"id": "gradient-measure", "name": "Energy Gradient", "description": "Ω-WELL-04 — chemical, energy, pressure, attention, compute gradients."},
+    {"id": "metabolism-assess", "name": "Metabolism Assessment", "description": "Ω-WELL-05 — biological + cognitive throughput."},
+    {"id": "homeostasis-assess", "name": "Homeostasis", "description": "Ω-WELL-06 — regulation, stability, empathic balance under change."},
+    {"id": "repair-check", "name": "Repair & Forge Cycle", "description": "Ω-WELL-07 — recovery and forge-cycle integrity."},
+    {"id": "vitality-validate", "name": "Vitality Validation", "description": "Ω-WELL-08 — validate readiness (Floor compliance removed; arifOS adjudicates floors)."},
+    {"id": "livelihood-assess", "name": "Livelihood Assessment", "description": "Ω-WELL-09 — wellness, role, dignity, support, meaning."},
+    {"id": "reliability-assess", "name": "Machine Reliability", "description": "Ω-WELL-10 — operational tool and institutional reliability."},
+    {"id": "dignity-guard", "name": "Dignity Guard", "description": "Ω-WELL-12 — protect soul, personhood, meaning, symbolic boundaries."}
+  ],
+  "owned_mcp_count": 22,
+  "can_do": [
+    "Classify substrate (chemistry-level)",
+    "Trace biological lineage + ledger state",
+    "Detect boundaries across membrane/body/machine/federation",
+    "Measure energy + cognitive gradients",
+    "Assess metabolism, homeostasis, repair, vitality, livelihood, reliability",
+    "Guard dignity under constitutional floor F6 MARUAH",
+    "Anchor substrate state to VAULT999"
+  ],
+  "cannot_do": [
+    "Make medical, therapeutic, or diagnostic claims (F9 ANTI-HANTU + non-diagnosis guard)",
+    "Adjudicate strategic decisions for the federation (REFLECT_ONLY lane)",
+    "Be the sole judge of cross-organ strategic action",
+    "Read or mutate WEALTH/GEOX/A-FORGE records",
+    "Expose biometric state to other organs without consent",
+    "Provide medical advice; recommend professional care for severe/persistent/urgent symptoms"
+  ],
+  "constitutional_floors": ["F1_AMANAH","F2_TRUTH","F4_CLARITY","F6_MARUAH","F7_HUMILITY","F9_ANTI_HANTU","F11_AUDIT","F13_SOVEREIGN"],
+  "lane": "reflect_only",
+  "self_judge": false,
+  "judge_authority": "arifOS arif_judge_deliberate",
+  "verdict_grammar": "PROCEED | SIMPLIFY | HOLD | INJECT_NEEDED",
+  "color_grammar": "GREEN | YELLOW | RED | STALE",
+  "ledger": "VAULT999",
+  "authentication": {
+    "schemes": ["bearer"],
+    "credentials": "Lease-token issued by arifOS arif_lease_issue; transport-layer JWT auth."
+  },
+  "a2a_endpoints": {
+    "health": "GET /health",
+    "mcp": "POST /mcp",
+    "packet": "GET /mcp (tool: well_get_packet)",
+    "agent_card_internal": "GET /.well-known/agent-card.json"
+  },
+  "metadata": {
+    "generated_at": "2026-07-04",
+    "generator": "arifos-federation-alignment",
+    "spec": "github.com/a2aproject/A2A v1.0 + arifOS internal v2.0.0 wrapper"
+  }
+}
