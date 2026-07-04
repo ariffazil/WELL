@@ -1,3 +1,10 @@
+<!-- SOT-MANIFEST
+federation_release: v2026.07.04-MCP-A2A
+last_verified: 2026-07-04
+changelog: /root/CHANGELOG-2026-07-04.md
+a2a_agent_json: /root/WELL/.well-known/agent.json
+-->
+
 # WELL — Human Readiness Intelligence
 
 ```
