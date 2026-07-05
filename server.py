@@ -4825,7 +4825,15 @@ COUPLED_RISK_PATTERNS = [
 
 
 @mcp.tool()
-def well_coupled_readiness(ctx: Context | None = None) -> dict[str, Any]:
+def well_coupled_readiness(
+    ctx: Context | None = None,
+    energy_level: float | None = None,
+    duty_load: float | None = None,
+    role_clarity: float | None = None,
+    role_burden: float | None = None,
+    dignity_preservation: float | None = None,
+    purpose_alignment: float | None = None,
+) -> dict[str, Any]:
     """
     C-WELL: Evaluate coupled human-machine readiness.
 
@@ -4836,6 +4844,7 @@ def well_coupled_readiness(ctx: Context | None = None) -> dict[str, Any]:
     Governance sees both. Judgment remains Arif's.
 
     If no verified body telemetry, human readiness is UNKNOWN — not faked.
+    When scenario parameters are provided, they override state.json values.
     """
     h_state = _load_state()
     h_resolved = _resolve_readiness(h_state)
@@ -4848,6 +4857,20 @@ def well_coupled_readiness(ctx: Context | None = None) -> dict[str, Any]:
     stress = h_metrics.get("stress", {})
     sleep = h_metrics.get("sleep", {})
 
+    # Scenario overrides — use passed parameters when available
+    if energy_level is not None:
+        cognitive["energy_level"] = energy_level
+    if duty_load is not None:
+        cognitive["duty_load"] = duty_load
+    if role_clarity is not None:
+        cognitive["role_clarity"] = role_clarity
+    if role_burden is not None:
+        cognitive["role_burden"] = role_burden
+    if dignity_preservation is not None:
+        cognitive["dignity_preservation"] = dignity_preservation
+    if purpose_alignment is not None:
+        cognitive["purpose_alignment"] = purpose_alignment
+
     m_state = well_machine_state(ctx=None)
     m_metrics = m_state.get("metrics", {})
     m_state.get("m_well_score", 100)
@@ -4855,6 +4878,48 @@ def well_coupled_readiness(ctx: Context | None = None) -> dict[str, Any]:
 
     # Human verdict — use resolver, never fake
     h_verdict = h_resolved["readiness"]
+
+    # Scenario override — recompute verdict when parameters are provided
+    _scenario_provided = any(
+        v is not None
+        for v in [
+            energy_level,
+            duty_load,
+            role_clarity,
+            role_burden,
+            dignity_preservation,
+            purpose_alignment,
+        ]
+    )
+    if _scenario_provided:
+        # Simple scenario scoring: energy - load = capacity
+        _energy = (
+            energy_level
+            if energy_level is not None
+            else cognitive.get("energy_level", 5)
+        )
+        _load = duty_load if duty_load is not None else cognitive.get("duty_load", 5)
+        _clarity = (
+            role_clarity
+            if role_clarity is not None
+            else cognitive.get("role_clarity", 5)
+        )
+        _purpose = (
+            purpose_alignment
+            if purpose_alignment is not None
+            else cognitive.get("purpose_alignment", 5)
+        )
+        _scenario_score = (
+            (_energy * 0.3) + ((10 - _load) * 0.3) + (_clarity * 0.2) + (_purpose * 0.2)
+        )
+        if _scenario_score >= 7.5:
+            h_verdict = "OPTIMAL"
+        elif _scenario_score >= 5.0:
+            h_verdict = "FUNCTIONAL"
+        elif _scenario_score >= 3.0:
+            h_verdict = "DEGRADED"
+        else:
+            h_verdict = "LOW_CAPACITY"
 
     # Metabolic flux override — thermodynamic threshold check
     flux = _compute_metabolic_flux(h_state)
@@ -5169,6 +5234,23 @@ def well_forge_precheck(
         base_mode = "pause"
         max_task_size = "minimal"
         h_verdict = "LOW_CAPACITY"
+
+    # 1b. Decision-class escalation — higher class = more conservative
+    dc = (decision_class or "C3").upper()
+    DECISION_CLASS_MODE_MAP = {
+        "C1": "full",  # Reversible, low risk
+        "C2": "structured",  # Semi-reversible
+        "C3": "structured",  # Standard
+        "C4": "draft_only",  # High impact, requires confirmation
+        "C5": "pause",  # Critical, irreversible — human must decide
+    }
+    dc_mode = DECISION_CLASS_MODE_MAP.get(dc, "structured")
+    mode_priority = {"full": 3, "structured": 2, "draft_only": 1, "pause": 0}
+    # Take the more conservative of base_mode and dc_mode
+    if mode_priority.get(dc_mode, 2) < mode_priority.get(base_mode, 2):
+        base_mode = dc_mode
+        if dc in ("C4", "C5"):
+            h_verdict = "HIGH_IMPACT" if dc == "C4" else "CRITICAL_DECISION"
 
     # Coupled risk
     c_state = well_coupled_readiness(ctx=None)
@@ -8306,7 +8388,15 @@ def well_333_mind(
         )
 
     if mode == "coupled":
-        res = well_coupled_readiness(ctx=ctx)
+        res = well_coupled_readiness(
+            ctx=ctx,
+            energy_level=energy_level,
+            duty_load=duty_load,
+            role_clarity=role_clarity,
+            role_burden=role_burden,
+            dignity_preservation=dignity_preservation,
+            purpose_alignment=purpose_alignment,
+        )
         cr = res.get("risk_level", "AMBER")
         return _omega_well_output(
             ok=res.get("ok", False),
@@ -13569,7 +13659,7 @@ def well_compute_metabolic_flux(
 @mcp.tool(task=True)
 async def well_assess_sovereign_entropy(
     mode: str = "current",
-    behavioral_signals: dict[str, float] | None = None,
+    behavioral_signals: dict[str, float] | str | None = None,
     digital_footprint_diversity: float | None = None,
     paradox_density: float | None = None,
     inconsistency_rate: float | None = None,
@@ -13592,6 +13682,14 @@ async def well_assess_sovereign_entropy(
       protect   — return protection recommendations if entropy is dropping
       baseline  — establish baseline entropy fingerprint
     """
+    # Fix: MCP transport may serialize dict as JSON string — parse it
+    if isinstance(behavioral_signals, str):
+        try:
+            import json
+
+            behavioral_signals = json.loads(behavioral_signals)
+        except (json.JSONDecodeError, TypeError):
+            pass
     state = _load_state()
 
     if mode == "current":
