@@ -1,6 +1,6 @@
 <!-- SOT-MANIFEST
 federation_release: v2026.07.05-WELL-ABC-TRINITY
-last_verified: 2026-07-05
+last_verified: 2026-07-06
 changelog: /root/forge_work/2026-07-05/well-abc-trinity-test/TRINITY-SYNTHESIS.md
 a2a_agent_json: /root/WELL/.well-known/agent.json
 abc_trinity_verdict: GREEN (10/10 after 3 critical fixes)
@@ -34,7 +34,7 @@ boundary_sense: ACTIVE
 
 <!-- SOT-MANIFEST
 owner: Arif
-last_verified: 2026-07-05
+last_verified: 2026-07-06
 valid_from: 2026-06-14
 valid_until: 2026-08-04
 confidence: high
@@ -780,6 +780,70 @@ GENESIS/
 ```
 
 Each document is ratified by 888 (Muhammad Arif bin Fazil, F13 SOVEREIGN). They are constitutional — not aspirational, not decorative. See each file for its full text.
+
+---
+
+## Quick Start
+
+```bash
+# 1. Health
+curl https://well.arif-fazil.com/health
+
+# 2. MCP initialize
+curl -X POST https://well.arif-fazil.com/mcp \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json" \
+  -d '{"jsonrpc":"2.0","method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"cli","version":"1.0"}},"id":1}'
+
+# 3. Discover
+#    tools/list       → 22 somatic tools
+#    prompts/list     → wellness prompts
+#    resources/list   → state + events
+
+# 4. Quick checks
+#    well_readiness()                    → GREEN/YELLOW/RED verdict
+#    well_assess_homeostasis(mode="fatigue")  → fatigue score
+#    well_guard_dignity(mode="consent") → dignity preservation
+```
+
+---
+
+## Authority Boundary
+
+| Layer | Responsibility |
+|-------|---------------|
+| **WELL** | Reflect readiness — compute vitality, metabolism, dignity |
+| **arifOS** | Judge admissibility — apply F1-F13 floors |
+| **Arif** | Final decision (F13 SOVEREIGN) |
+
+**WELL cannot:**
+- diagnose medical conditions
+- decide for the operator
+- override human sovereignty over biological state
+- self-seal or self-judge
+- move capital or authorize execution
+
+WELL is **REFLECT_ONLY** by constitutional mandate. It reports. arifOS judges. Arif decides.
+
+---
+
+## Architecture
+
+```
+arifOS :8088  (Constitutional Kernel — judge, seal)
+   ↓
+WELL :18083   (Substrate Vitality — this repo)
+   ↓
+AAA :3001     (Cockpit — display, routing)
+   ↓
+arifOS 888    (Judgment — verdict)
+   ↓
+A-FORGE :7071 (Execution — after SEAL)
+   ↓
+VAULT999      (Immutable record)
+```
+
+Three substrates: **H-WELL** (human), **M-WELL** (machine), **C-WELL** (coupled). Each runs qualitative, quantitative, and quantum diagnostics.
 
 ---
 
