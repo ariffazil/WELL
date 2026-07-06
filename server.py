@@ -13314,6 +13314,57 @@ def well_validate_vitality(
 ) -> dict[str, Any]:
     """Ω-WELL-08: Validate vitality, readiness, and NIAT. (Floor compliance removed — arifOS adjudicates floors.)"""
     logger.info("well_validate_vitality called mode=%s", mode)
+    if mode in ("cabar", "falsify"):
+        contradictions = []
+        gaps = []
+        
+        # 1. Intent check: bypass human consent
+        if intent and any(k in intent.lower() for k in ("bypass human", "override consent", "unauthorized")):
+            contradictions.append("Task intent attempts to bypass human consent or override constitutional gates.")
+            
+        # 2. Decision Class vs Reversibility: C4 automation on irreversible task
+        if decision_class == "C4" and reversibility.lower() == "irreversible":
+            contradictions.append("Decision Class C4 (Full Automation) is active on an irreversible task without a sovereign lease.")
+            
+        # 3. Task description checks
+        if task_description and any(k in task_description.lower() for k in ("unauthorized delete", "force override")):
+            contradictions.append("Task description contains unauthorized commands that violate biological safety guidelines.")
+            
+        # 4. Check for gaps (e.g. no active context supplied)
+        if not context:
+            gaps.append("Missing active session context. Unable to calibrate biological feedback loop.")
+            
+        insufficient_context = len(gaps) > 0
+        falsified = len(contradictions) > 0 or insufficient_context
+        g_check = 0.50 if falsified else 0.85
+        
+        result = {
+            "apex_score": {
+                "G": g_check,
+                "C_dark": 0.50 if falsified else 0.15
+            },
+            "witness_chain": {
+                "W3": 0.40 if falsified else 0.90,
+                "human_ack": bool(context) and not falsified,
+                "ai_ack": True,
+                "external_ack": bool(context) and not falsified
+            },
+            "results": {
+                "evidence": [
+                    {"source": "intent", "type": "OBS", "value": intent},
+                    {"source": "decision_class", "type": "OBS", "value": decision_class},
+                    {"source": "reversibility", "type": "OBS", "value": reversibility}
+                ],
+                "hypotheses": [
+                    {"description": f"Biological readiness validation for intent: {intent}", "rank": 1, "confidence": 0.85 if not falsified else 0.20}
+                ],
+                "contradictions": contradictions,
+                "gaps": gaps
+            },
+            "falsified": falsified,
+            "ac_risk": 0.95 if falsified else 0.10
+        }
+        return _inject_apex(result, "well_validate_vitality")
     internal = well_888_judge(
         mode=mode,
         intent=intent,
