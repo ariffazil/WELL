@@ -1,10 +1,18 @@
 <!-- SOT-MANIFEST
 federation_release: v2026.07.05-WELL-ABC-TRINITY
-last_verified: 2026-07-06
+last_verified: 2026-07-09T04:50Z
+live_commit: 9eb8951
+port: 18083
+tool_count: 22
+health_status: degraded
+owner_summary: RED
+truth_status: INSUFFICIENT_DATA (state.json timestamp 2026-04-30 — SELF_REPORT stale, not sensor lie)
+fix: sovereign biometric_inject.sh self-report (do not invent vitals)
 changelog: /root/forge_work/2026-07-05/well-abc-trinity-test/TRINITY-SYNTHESIS.md
 a2a_agent_json: /root/WELL/.well-known/agent.json
 abc_trinity_verdict: GREEN (10/10 after 3 critical fixes)
 boundary_sense: ACTIVE
+machine_sot: /root/A-FORGE/forge_work/2026-07-09/MACHINE-SOT-2026-07-09.json
 -->
 
 # WELL — Constitutional Wellness Parliament
@@ -34,9 +42,9 @@ boundary_sense: ACTIVE
 
 <!-- SOT-MANIFEST
 owner: Arif
-last_verified: 2026-07-06
+last_verified: 2026-07-09
 valid_from: 2026-06-14
-valid_until: 2026-08-05
+valid_until: 2026-08-08
 confidence: high
 scope: /root/WELL
 -->
