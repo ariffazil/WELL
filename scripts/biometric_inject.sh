@@ -248,7 +248,7 @@ say "  well_score         : $WELL_SCORE  (computed: peace2×0.35 + (1-ds)×0.20 
 if [[ $SIGNAL_COUNT -gt 0 ]]; then
   say "  signals            : $SIGNAL_COUNT per-signal value(s) injected"
 fi
-say "  truth_status       : VERIFIED"
+say "  truth_status       : OPERATOR_REPORTED (self-report — not sensor VERIFIED)"
 say "  freshness          : FRESH"
 say ""
 hr
@@ -301,12 +301,15 @@ state = {
     "vault_access": "OK",
     "test_contamination": "NO",
     "contamination_quarantined": False,
-    "confidence": "HIGH",
+    "confidence": "MEDIUM",
     "freshness": "FRESH",
-    "truth_status": "VERIFIED",
+    "truth_status": "OPERATOR_REPORTED",
+    "source_type": "OPERATOR_REPORTED",
+    "evidence_class": "SOVEREIGN_SELF_REPORT",
     "environment": "PROD",
-    "telemetry_confidence": "HIGH",
-    "reason": "Sovereign biometric injection (biometric_inject.sh)",
+    "telemetry_confidence": "SELF_REPORT",
+    "reason": "Sovereign biometric injection (biometric_inject.sh) — SELF-REPORT not sensor",
+    "honesty_banner": "SELF-REPORT — sovereign inject, not wearable telemetry",
     "safe_mode": "off",
     "arif_decision_required": False,
     "w0": "OPERATOR_VETO_INTACT / HIERARCHY_INVARIANT",

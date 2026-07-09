@@ -1228,20 +1228,121 @@ SENSITIVE_METRIC_KEYS = {
 }
 
 
+def _normalize_truth_status(state: dict[str, Any]) -> str:
+    """
+    F2 honesty: sovereign inject / self-report must never masquerade as sensor VERIFIED.
+
+    biometric_inject.sh historically wrote truth_status=VERIFIED. That is a category
+    error — operator-asserted scores are OPERATOR_REPORTED, not wearable telemetry.
+    """
+    raw = str(state.get("truth_status") or "UNVERIFIED").upper()
+    source_type = str(state.get("source_type") or state.get("evidence_class") or "").upper()
+    reason = str(state.get("reason") or "").lower()
+    inject_markers = (
+        "biometric injection",
+        "biometric_inject",
+        "sovereign biometric",
+        "self-report",
+        "self report",
+        "operator inject",
+    )
+    if raw == "VERIFIED" and (
+        source_type
+        in ("OPERATOR_REPORTED", "USER_CONFIRMED", "SOVEREIGN_SELF_REPORT", "SELF_REPORT")
+        or any(m in reason for m in inject_markers)
+    ):
+        return "OPERATOR_REPORTED"
+    return raw
+
+
+def _honesty_block(
+    truth_status: str,
+    *,
+    source_type: str | None = None,
+    freshness_band: str | None = None,
+    insufficient: bool = False,
+    insufficient_reasons: list[str] | None = None,
+) -> dict[str, Any]:
+    """Permanent honesty surface for cockpit / agents (STALE · MOCK · SELF-REPORT)."""
+    reasons = list(insufficient_reasons or [])
+    is_mock = truth_status in ("TEST",) or any(
+        "mock" in r.lower() or "fixture" in r.lower() for r in reasons
+    )
+    is_self = truth_status in ("OPERATOR_REPORTED",) or (
+        source_type or ""
+    ).upper() in (
+        "OPERATOR_REPORTED",
+        "USER_CONFIRMED",
+        "SOVEREIGN_SELF_REPORT",
+        "SELF_REPORT",
+    )
+    is_stale = (freshness_band or "") in ("STALE", "AGED", "EXPIRED")
+    is_sensor = truth_status == "VERIFIED" and not is_self and not is_mock
+
+    if is_mock:
+        banner = "MOCK / TEST — not live biometrics. Do not treat as body truth."
+        code = "MOCK"
+    elif is_self:
+        banner = (
+            "SELF-REPORT — sovereign inject / presence assert. "
+            "Not wearable sensor telemetry."
+        )
+        code = "SELF_REPORT"
+    elif truth_status == "INSUFFICIENT_DATA" or insufficient:
+        banner = "INSUFFICIENT — sovereign biometric state unknown. Inject or sensor feed required."
+        code = "INSUFFICIENT"
+    elif is_stale:
+        banner = "STALE — biometrics aged out. Refresh before high-stakes work."
+        code = "STALE"
+    elif is_sensor:
+        banner = "SENSOR — verified telemetry (within freshness band)."
+        code = "SENSOR"
+    else:
+        banner = f"truth={truth_status}"
+        code = truth_status
+
+    return {
+        "code": code,
+        "banner": banner,
+        "source_type": source_type or ("SENSOR" if is_sensor else "UNKNOWN"),
+        "is_sensor_verified": is_sensor,
+        "is_self_report": is_self,
+        "is_mock_or_test": is_mock,
+        "is_stale": is_stale,
+        "cockpit_banner_required": not is_sensor,
+    }
+
+
 def _has_verified_telemetry(state: dict[str, Any]) -> bool:
     """
     Return True only if state contains actual body telemetry, not defaults.
-    UNVERIFIED or VOID truth_status fails immediately.
+    UNVERIFIED / VOID / OPERATOR_REPORTED / inject self-report fail immediately.
     """
-    if state.get("truth_status") in ("VOID", "TEST", "UNVERIFIED", "INSUFFICIENT_DATA"):
+    truth = _normalize_truth_status(state)
+    if truth in (
+        "VOID",
+        "TEST",
+        "UNVERIFIED",
+        "INSUFFICIENT_DATA",
+        "OPERATOR_REPORTED",
+    ):
         return False
     metrics = state.get("metrics", {})
     if not metrics or not isinstance(metrics, dict):
         return False
-    # Must have at least one dimension with real data (not just empty dicts)
-    for dim in ("sleep", "stress", "cognitive", "metabolic", "structural"):
+    # Sensor-class dims only — cognitive self-scores alone are not body telemetry
+    for dim in ("sleep", "stress", "metabolic", "structural"):
         if metrics.get(dim):
             return True
+    # cognitive alone with VERIFIED may be inject residue — require non-inject reason
+    if metrics.get("cognitive") and truth == "VERIFIED":
+        reason = str(state.get("reason") or "").lower()
+        if any(
+            m in reason
+            for m in ("biometric injection", "biometric_inject", "self-report")
+        ):
+            return False
+        return True
     return False
 
 
@@ -2037,7 +2138,7 @@ def _state_is_insufficient(state: dict[str, Any]) -> tuple[bool, list[str]]:
       - no verified body telemetry (unless sovereign manually reported presence)
     """
     reasons: list[str] = []
-    raw_truth = state.get("truth_status", "UNVERIFIED")
+    raw_truth = _normalize_truth_status(state)
     environment = state.get("environment", "PROD")
     reason = str(state.get("reason", "")).lower()
 
@@ -2051,6 +2152,7 @@ def _state_is_insufficient(state: dict[str, Any]) -> tuple[bool, list[str]]:
         reasons.append("mocked_state")
     if not is_well(state):
         reasons.append("identity_invalid")
+    # OPERATOR_REPORTED is sufficient for *presence* honesty, not body telemetry
     if raw_truth != "OPERATOR_REPORTED" and not _has_verified_telemetry(state):
         reasons.append("no_verified_telemetry")
 
@@ -2127,7 +2229,7 @@ def _classify_well_state(state: dict[str, Any]) -> dict[str, Any]:
             else "expired"
         )
     else:
-        raw_truth = state.get("truth_status", "UNVERIFIED")
+        raw_truth = _normalize_truth_status(state)
         truth_status = raw_truth
         freshness_band = _get_freshness_band(state)
         well_score = state.get("well_score")
@@ -2137,7 +2239,8 @@ def _classify_well_state(state: dict[str, Any]) -> dict[str, Any]:
                 "color": "YELLOW",
                 "reasons": [
                     "operator_reported_presence",
-                    "no_biometric_telemetry",
+                    "self_report_not_sensor",
+                    "cockpit_banner_self_report",
                 ],
             }
         else:
@@ -2185,6 +2288,19 @@ def _classify_well_state(state: dict[str, Any]) -> dict[str, Any]:
         "expired_after_seconds": 86400,
     }
 
+    source_type = (
+        state.get("source_type")
+        or state.get("evidence_class")
+        or ("OPERATOR_REPORTED" if truth_status == "OPERATOR_REPORTED" else None)
+    )
+    honesty = _honesty_block(
+        truth_status,
+        source_type=str(source_type) if source_type else None,
+        freshness_band=freshness_band,
+        insufficient=insufficient,
+        insufficient_reasons=insufficient_reasons,
+    )
+
     return {
         "well_ok": is_well(state),
         "has_telemetry": _has_verified_telemetry(state),
@@ -2199,6 +2315,8 @@ def _classify_well_state(state: dict[str, Any]) -> dict[str, Any]:
         else None,
         "insufficient": insufficient,
         "insufficient_reasons": insufficient_reasons,
+        "honesty": honesty,
+        "honesty_banner": honesty["banner"],
     }
 
 
@@ -11442,6 +11560,8 @@ if __name__ == "__main__":
                 "truth_status": classification["truth_status"],
                 "freshness_band": classification["freshness_band"],
                 "owner_summary": classification["owner_summary"],
+                "honesty": classification.get("honesty"),
+                "honesty_banner": classification.get("honesty_banner"),
                 "clarity": _clarity,
             }
         )
@@ -15717,6 +15837,9 @@ if __name__ == "__main__":
                 # Phase 2 hardening: standardized freshness + owner summary
                 "freshness": classification["freshness"],
                 "owner_summary": classification["owner_summary"],
+                # F2 honesty surface — permanent STALE/MOCK/SELF-REPORT banner
+                "honesty": classification.get("honesty"),
+                "honesty_banner": classification.get("honesty_banner"),
                 # Boundary disclaimer
                 "boundary_notice": "Not diagnosis. Not therapy. Reflective readiness only. Arif remains final judge.",
             }

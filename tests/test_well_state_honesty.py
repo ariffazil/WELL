@@ -157,3 +157,48 @@ def test_load_state_default_is_honest(monkeypatch, tmp_path):
     assert state["well_score"] is None
     assert state["environment"] == "PROD"
     assert state["reason"] == "No state file found. Sovereign state unknown."
+
+
+# ── 5. Inject-as-VERIFIED must coerce to OPERATOR_REPORTED (T2 F2 harden) ─────
+
+
+def test_inject_verified_coerces_to_self_report():
+    """biometric_inject.sh historically wrote VERIFIED — that is a category error."""
+    from server import _normalize_truth_status
+
+    state = {
+        "timestamp": "2026-07-09T00:55:21+00:00",
+        "operator_id": "arif",
+        "identity": "WELL",
+        "role": "Body / Human Intelligence",
+        "authority": "REFLECT_ONLY",
+        # is_well() thresholds: peace2>=1.0, kappa_r>=0.95, rasa True, amanah LOCK
+        "delta_s": 0.1,
+        "peace2": 1.0,
+        "kappa_r": 0.95,
+        "rasa": True,
+        "amanah": "LOCK",
+        "metrics": {"cognitive": {"clarity": 9.0}},
+        "well_score": 90.4,
+        "truth_status": "VERIFIED",
+        "environment": "PROD",
+        "reason": "Sovereign biometric injection (biometric_inject.sh)",
+    }
+    assert _normalize_truth_status(state) == "OPERATOR_REPORTED"
+    classification = _classify_well_state(state)
+    assert classification["truth_status"] == "OPERATOR_REPORTED"
+    assert classification["well_signal"] == "WELL_OPERATOR_PRESENT"
+    assert classification["owner_summary"]["color"] == "YELLOW"
+    assert classification["honesty"]["is_self_report"] is True
+    assert classification["honesty"]["cockpit_banner_required"] is True
+    assert "SELF-REPORT" in classification["honesty_banner"]
+    assert classification["has_telemetry"] is False
+
+
+def test_honesty_block_stale_banner():
+    from server import _honesty_block
+
+    h = _honesty_block("VERIFIED", source_type="SENSOR", freshness_band="STALE")
+    assert h["is_stale"] is True
+    assert h["code"] == "STALE"
+    assert "STALE" in h["banner"]
