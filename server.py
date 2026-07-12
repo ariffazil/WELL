@@ -12859,6 +12859,11 @@ def well_assess_homeostasis(
     raw_emotional_state = emotional_state
     normalized_emotional_class = emotional_state
     operator_risk = "standard"
+    # ZEN FIX (2026-07-12): Preserve raw emotional state even when not in
+    # VALID_EMOTIONAL list. Previously collapsed to "neutral" + "unclassified_emotional_state",
+    # losing meaning (e.g., "controlled_performative", "dominant_aggressive", "duty_bound").
+    # Now: keep raw_emotional_state intact, add classification metadata.
+    _emotional_state_was_normalized = False
     if mode not in VALID_MODES:
         return {
             "error": "UNKNOWN_MODE",
@@ -12869,14 +12874,17 @@ def well_assess_homeostasis(
     if hrv_status not in VALID_HRV:
         hrv_status = "normal"
     if emotional_state not in VALID_EMOTIONAL:
+        _emotional_state_was_normalized = True
         lowered_emotion = str(emotional_state).lower()
         if "tired" in lowered_emotion and "driven" in lowered_emotion:
             emotional_state = "anxious"
             normalized_emotional_class = "fatigued_drive_state"
             operator_risk = "overextension"
         else:
-            emotional_state = "neutral"
-            normalized_emotional_class = "unclassified_emotional_state"
+            # ZEN: Don't overwrite — preserve the raw value in metadata
+            # emotional_state stays as-is for downstream; normalized_emotional_class
+            # notes it's outside the validated set
+            normalized_emotional_class = f"unvalidated:{raw_emotional_state}"
             operator_risk = "unknown_context"
     decision_class_upper = (
         decision_class.upper() if isinstance(decision_class, str) else "C3"
@@ -13555,6 +13563,57 @@ def well_assess_homeostasis(
             }
             _saf_cross_metric = None
 
+        # ZEN FIX (2026-07-12): Epistemic honesty layer.
+        # When inputs are caller-provided overrides (not from verified telemetry),
+        # flag the provenance so downstream consumers know the score is computed
+        # from ESTIMATES, not MEASUREMENTS. This prevents the "fabricated precision"
+        # failure mode where narrative inputs produce decimal scores that look
+        # authoritative but are interpretation wearing laboratory clothing.
+        _input_source = {}
+        _input_source["sleep_debt"] = (
+            "override"
+            if sleep_debt_days is not None
+            else ("state.json" if _has_verified_telemetry(state) else "default")
+        )
+        _input_source["cognitive_clarity"] = (
+            "override"
+            if cognitive_clarity is not None
+            else ("state.json" if _has_verified_telemetry(state) else "default")
+        )
+        _input_source["decision_fatigue"] = (
+            "override"
+            if decision_fatigue is not None
+            else ("state.json" if _has_verified_telemetry(state) else "default")
+        )
+        _input_source["stress_load"] = (
+            "override"
+            if stress_load is not None
+            else ("state.json" if _has_verified_telemetry(state) else "default")
+        )
+        _input_source["emotional_state"] = (
+            "caller_provided" if raw_emotional_state != "neutral" else "default"
+        )
+        _all_from_overrides = all(
+            v == "override" for v in _input_source.values() if v != "default"
+        )
+        _any_from_override = any(v == "override" for v in _input_source.values())
+        if _all_from_overrides:
+            _epistemic_class = "NARRATIVE_ESTIMATE"
+            _epistemic_note = "All inputs are caller-provided estimates. Score is computed from narrative, not measurement. Treat as INTERPRETED, not OBSERVED."
+        elif _any_from_override:
+            _epistemic_class = "MIXED"
+            _epistemic_note = "Some inputs are caller overrides, some from telemetry. Score precision may exceed evidence quality."
+        elif _has_verified_telemetry(state):
+            _epistemic_class = "MEASURED"
+            _epistemic_note = (
+                "Inputs from verified telemetry. Score reflects measured state."
+            )
+        else:
+            _epistemic_class = "DEFAULT_ESTIMATE"
+            _epistemic_note = (
+                "No telemetry and no overrides. Using defaults. Score is meaningless."
+            )
+
         _data_payload = {
             "homeostasis_score": round(homeostasis_score, 2),
             "status": status,
@@ -13575,6 +13634,19 @@ def well_assess_homeostasis(
             "decision_class": decision_class_upper,
             "route_signal": route_signal,
             "routing_note": routing_note,
+            # ZEN: Epistemic honesty — what the score is actually made of
+            "_epistemic": {
+                "class": _epistemic_class,
+                "note": _epistemic_note,
+                "input_source": _input_source,
+                "precision_warning": (
+                    "Score precision (2 decimal places) exceeds evidence quality. "
+                    "This is computation, not measurement."
+                    if _epistemic_class
+                    in ("NARRATIVE_ESTIMATE", "MIXED", "DEFAULT_ESTIMATE")
+                    else None
+                ),
+            },
         }
         if _saf_summary is not None:
             _data_payload["_saf_assumptions"] = _saf_summary
@@ -13812,9 +13884,20 @@ def well_assess_livelihood(
     mission_clarity: float | None = None,
     cashflow_status: str | None = None,
     internal_consistency: float | None = None,
+    # ZEN FIX (2026-07-12): Choice vs coercion dimension.
+    # "voluntary" indicates whether the burden is chosen or imposed.
+    # Sandow chose to commodify his body. Cyr had to — his family needed income.
+    # The moral reality is completely different even when the burden score is the same.
+    voluntary: bool | None = None,
     ctx: Context | None = None,
 ) -> dict[str, Any]:
-    """Ω-WELL-09: Assess human wellness, role, dignity, support, and meaning."""
+    """Ω-WELL-09: Assess human wellness, role, dignity, support, and meaning.
+
+    ZEN ADDITION (2026-07-12): The voluntary parameter distinguishes chosen burden
+    from imposed burden. When voluntary=True, the role burden is an expression of
+    agency. When voluntary=False, it may be coercion, economic necessity, or
+    structural capture. Same burden score, completely different moral reality.
+    """
     mode = mode.lower() if isinstance(mode, str) else mode
     VALID_MODES = ["role", "meaning", "dignity"]
     if mode not in VALID_MODES:
@@ -13865,6 +13948,30 @@ def well_assess_livelihood(
                     "substrate_class": substrate_class or "HUMAN_PERSON",
                     "mode": mode,
                     "assessment": sub_data,
+                    # ZEN FIX (2026-07-12): Choice vs coercion dimension.
+                    # voluntary=None means not specified. voluntary=True means the
+                    # burden is chosen (agency). voluntary=False means imposed
+                    # (economic necessity, structural capture, coercion).
+                    # Same burden score, completely different moral reality.
+                    "voluntary": voluntary,
+                    "capture_risk": (
+                        "LOW"
+                        if voluntary is True
+                        else "HIGH"
+                        if voluntary is False
+                        else "UNKNOWN"
+                        if voluntary is None
+                        else "UNKNOWN"
+                    ),
+                    "capture_note": (
+                        "Burden is chosen — sovereign expression."
+                        if voluntary is True
+                        else "Burden may be imposed — reciprocal capture risk. The role may have become too costly to leave."
+                        if voluntary is False
+                        else "Voluntary status not specified. Cannot distinguish chosen from imposed burden."
+                        if voluntary is None
+                        else "Unknown"
+                    ),
                     "w0": "OPERATOR_VETO_INTACT / HIERARCHY_INVARIANT",
                     "human_judge_required": not assessment_ok,
                     "boundary_notice": "Not diagnosis. Not therapy. Reflective readiness only. Arif remains final judge.",
@@ -14375,12 +14482,13 @@ async def well_dark_geometry_mirror(
     Never infers hidden niat or diagnoses identity.
     """
     from gate.darkgeometrydetect import DarkGeometryDetector
+
     detector = DarkGeometryDetector()
 
     context = {
         "baseline_ref": baseline_ref,
         "time_window": time_window,
-        "vitality_signals": vitality_signals
+        "vitality_signals": vitality_signals,
     }
     return detector.analyze_with_context(text_or_events, context)
 
@@ -15652,6 +15760,7 @@ except ImportError:
 # DITEMPA BUKAN DIBERI
 # ═══════════════════════════════════════════════════════════════════
 
+
 @mcp.tool()
 def well_sabar_latency(
     events: list[dict[str, Any]] | None = None,
@@ -15663,20 +15772,33 @@ def well_sabar_latency(
     Does NOT say 'loss of sabar' based on speed alone."""
     try:
         import importlib.util, os
+
         _spec = importlib.util.spec_from_file_location(
             "sabar_latency",
-            os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "entropy-integrity", "mcp", "well", "sabar_latency.py")
+            os.path.join(
+                os.path.dirname(os.path.abspath(__file__)),
+                "..",
+                "entropy-integrity",
+                "mcp",
+                "well",
+                "sabar_latency.py",
+            ),
         )
         _mod = importlib.util.module_from_spec(_spec)
         _spec.loader.exec_module(_mod)
         result = _mod.well_sabar_latency(
             events=events or [],
             baseline_response_latency=baseline_response_latency,
-            baseline_revision_latency=baseline_revision_latency
+            baseline_revision_latency=baseline_revision_latency,
         )
         return _inject_apex(result, "well_sabar_latency")
     except Exception as e:
-        return {"error": str(e), "tool": "well_sabar_latency", "authority": "advisory_only"}
+        return {
+            "error": str(e),
+            "tool": "well_sabar_latency",
+            "authority": "advisory_only",
+        }
+
 
 @mcp.tool()
 def well_trust_compression(
@@ -15689,19 +15811,31 @@ def well_trust_compression(
     All-or-nothing trust, universal threat, loyalty tests, witness narrowing."""
     try:
         import importlib.util, os
+
         _spec = importlib.util.spec_from_file_location(
             "trust_compression",
-            os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "entropy-integrity", "mcp", "well", "trust_compression.py")
+            os.path.join(
+                os.path.dirname(os.path.abspath(__file__)),
+                "..",
+                "entropy-integrity",
+                "mcp",
+                "well",
+                "trust_compression.py",
+            ),
         )
         _mod = importlib.util.module_from_spec(_spec)
         _spec.loader.exec_module(_mod)
         result = _mod.well_trust_compression(
-            text=text, events=events,
-            baseline_trust_diversity=baseline_trust_diversity
+            text=text, events=events, baseline_trust_diversity=baseline_trust_diversity
         )
         return _inject_apex(result, "well_trust_compression")
     except Exception as e:
-        return {"error": str(e), "tool": "well_trust_compression", "authority": "advisory_only"}
+        return {
+            "error": str(e),
+            "tool": "well_trust_compression",
+            "authority": "advisory_only",
+        }
+
 
 @mcp.tool()
 def well_niat_impact_mirror(
@@ -15716,19 +15850,34 @@ def well_niat_impact_mirror(
     Forbidden: 'The intention was false.'"""
     try:
         import importlib.util, os
+
         _spec = importlib.util.spec_from_file_location(
             "niat_impact_mirror",
-            os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "entropy-integrity", "mcp", "well", "niat_impact_mirror.py")
+            os.path.join(
+                os.path.dirname(os.path.abspath(__file__)),
+                "..",
+                "entropy-integrity",
+                "mcp",
+                "well",
+                "niat_impact_mirror.py",
+            ),
         )
         _mod = importlib.util.module_from_spec(_spec)
         _spec.loader.exec_module(_mod)
         result = _mod.well_niat_impact_mirror(
-            declared_niat=declared_niat, acknowledged_impact=acknowledged_impact,
-            repair_response=repair_response, witness_acceptance=witness_acceptance
+            declared_niat=declared_niat,
+            acknowledged_impact=acknowledged_impact,
+            repair_response=repair_response,
+            witness_acceptance=witness_acceptance,
         )
         return _inject_apex(result, "well_niat_impact_mirror")
     except Exception as e:
-        return {"error": str(e), "tool": "well_niat_impact_mirror", "authority": "advisory_only"}
+        return {
+            "error": str(e),
+            "tool": "well_niat_impact_mirror",
+            "authority": "advisory_only",
+        }
+
 
 @mcp.tool()
 def well_correction_capacity(
@@ -15740,19 +15889,32 @@ def well_correction_capacity(
     Can add context, revise, tolerate ambiguity, separate self from error, hear consequence."""
     try:
         import importlib.util, os
+
         _spec = importlib.util.spec_from_file_location(
             "correction_capacity",
-            os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "entropy-integrity", "mcp", "well", "correction_capacity.py")
+            os.path.join(
+                os.path.dirname(os.path.abspath(__file__)),
+                "..",
+                "entropy-integrity",
+                "mcp",
+                "well",
+                "correction_capacity.py",
+            ),
         )
         _mod = importlib.util.module_from_spec(_spec)
         _spec.loader.exec_module(_mod)
         result = _mod.well_correction_capacity(
             correction_events=correction_events or [],
-            baseline_capacity=baseline_capacity
+            baseline_capacity=baseline_capacity,
         )
         return _inject_apex(result, "well_correction_capacity")
     except Exception as e:
-        return {"error": str(e), "tool": "well_correction_capacity", "authority": "advisory_only"}
+        return {
+            "error": str(e),
+            "tool": "well_correction_capacity",
+            "authority": "advisory_only",
+        }
+
 
 @mcp.tool()
 def well_regulation_recovery(
@@ -15765,19 +15927,31 @@ def well_regulation_recovery(
     than one who remains outwardly calm while suppressing feedback."""
     try:
         import importlib.util, os
+
         _spec = importlib.util.spec_from_file_location(
             "regulation_recovery",
-            os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "entropy-integrity", "mcp", "well", "regulation_recovery.py")
+            os.path.join(
+                os.path.dirname(os.path.abspath(__file__)),
+                "..",
+                "entropy-integrity",
+                "mcp",
+                "well",
+                "regulation_recovery.py",
+            ),
         )
         _mod = importlib.util.module_from_spec(_spec)
         _spec.loader.exec_module(_mod)
         result = _mod.well_regulation_recovery(
             activation_events=activation_events or [],
-            baseline_recovery_time=baseline_recovery_time
+            baseline_recovery_time=baseline_recovery_time,
         )
         return _inject_apex(result, "well_regulation_recovery")
     except Exception as e:
-        return {"error": str(e), "tool": "well_regulation_recovery", "authority": "advisory_only"}
+        return {
+            "error": str(e),
+            "tool": "well_regulation_recovery",
+            "authority": "advisory_only",
+        }
 
 
 def well_sense_substrate(
