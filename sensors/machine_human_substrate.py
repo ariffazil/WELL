@@ -185,7 +185,11 @@ def _detect_sleep_gap(auth_events: list[dict]) -> dict[str, Any]:
     if not auth_events:
         return {"sleeping": False, "last_activity_hours_ago": None}
 
-    human_events = [e for e in auth_events if e["user"] == "ariffazil"]
+    # Detect actual human users — root SSH = Arif on this VPS
+    human_users = {"ariffazil", "root"}
+    human_events = [
+        e for e in auth_events if e["user"] in human_users and e["action"] == "opened"
+    ]
     if not human_events:
         return {"sleeping": False, "last_activity_hours_ago": None}
 
