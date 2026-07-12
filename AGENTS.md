@@ -74,7 +74,7 @@ python test_well.py
 
 | File | Purpose |
 |------|---------|
-| `server.py` | FastMCP server (~15,755 lines, 22 somatic tools) |
+| `server.py` | FastMCP server (~15,755 lines, 24 tools exposed live (tools/list 2026-07-12); docs previously said 22) |
 | `vault_bridge.py` | VAULT999 append-only ledger client |
 | `gate/well_gate.py` | Pre-JUDGE biological readiness mirror |
 | `gate/dignity_shadow.py` | Dignity shadow scoring |
