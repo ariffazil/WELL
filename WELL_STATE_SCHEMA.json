@@ -1,57 +1,90 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "well-state-schema-v1",
-  "title": "WELL Four-Mirror State Schema",
-  "description": "Enumerated states for H-WELL, M-WELL, G-WELL, C-WELL. Weakest substrate gates all decisions.",
-  "version": "1.0.0",
+  "$id": "well-state-schema-v2",
+  "title": "WELL Four-Mirror State Schema — Vitality Peace Score",
+  "description": "Multi-dimensional readiness index for consequential action. VPS = decision-readiness, not wellness oracle. Weakest substrate gates all decisions.",
+  "version": "2.0.0",
   "sealed": "2026-07-12",
   "owner": "F13 SOVEREIGN",
+  "supersedes": "well-state-schema-v1",
+
+  "vitality_peace_score": {
+    "description": "How safe and ready the whole human-machine system is for consequential action right now. NOT health, happiness, productivity, obedience, or moral worth.",
+    "formula": "VPS = 0.40H + 0.20M + 0.25G + 0.15C",
+    "weights": {
+      "H": 0.40,
+      "M": 0.20,
+      "G": 0.25,
+      "C": 0.15
+    },
+    "note": "Weights must be personal and adaptive. Until real human evidence exists, H must be marked UNKNOWN, not inferred from machine behaviour.",
+    "override_rule": "Weakest critical dimension overrides the weighted average. A score of 80 must not hide a security score of 18. The overall verdict must still be HOLD.",
+    "score_range": [0, 100]
+  },
+
+  "score_bands": {
+    "KUKUH":     {"range": [85, 100], "meaning": "Suitable for normal and consequential work"},
+    "STABLE":    {"range": [70, 84],  "meaning": "Proceed, but monitor emerging strain"},
+    "STRAINED":  {"range": [50, 69],  "meaning": "Reduce mutation; favour review and consolidation"},
+    "DEGRADED":  {"range": [30, 49],  "meaning": "No irreversible decisions; enter cooling mode"},
+    "CRITICAL":  {"range": [0, 29],   "meaning": "Stop high-risk execution and prioritise human recovery or machine repair"},
+    "UNKNOWN":   {"range": null,      "meaning": "Evidence is insufficient; do not manufacture a score"}
+  },
 
   "definitions": {
     "H_WELL": {
-      "description": "Human substrate — human-origin evidence only. Baseline-relative. Non-medical.",
+      "description": "Human recovery — sleep, HRV, movement, self-reported energy, pain, stress. Baseline-relative. Non-medical.",
+      "weight": 0.40,
+      "score_range": [0, 100],
       "states": ["READY", "BELOW_BASELINE", "DEGRADED", "CRITICAL", "UNKNOWN"],
       "transitions": {
-        "READY":           {"requires": "biometric_inject within 12h OR sensor fresh", "allows": ["BELOW_BASELINE", "UNKNOWN"]},
+        "READY":           {"requires": "biometric_inject within 12h OR sovereign self-report 'good'", "allows": ["BELOW_BASELINE", "UNKNOWN"]},
         "BELOW_BASELINE":  {"requires": "1+ signals below personal baseline", "allows": ["READY", "DEGRADED", "UNKNOWN"]},
         "DEGRADED":        {"requires": "2+ signals degraded OR self-report stress/fatigue", "allows": ["BELOW_BASELINE", "CRITICAL", "UNKNOWN"]},
         "CRITICAL":        {"requires": "sovereign self-report critical OR medical signal", "allows": ["DEGRADED", "UNKNOWN"], "action": "SEEK_HUMAN_CARE"},
-        "UNKNOWN":         {"requires": "no data >48h OR inject refused", "allows": ["READY", "BELOW_BASELINE", "DEGRADED", "CRITICAL"]}
+        "UNKNOWN":         {"requires": "no data >48h OR inject refused OR no self-report", "allows": ["READY", "BELOW_BASELINE", "DEGRADED", "CRITICAL"]}
       },
       "evidence_sources": ["biometric_inject.sh", "well_assess_livelihood", "well_guard_dignity", "sovereign self-report"],
-      "forbidden": ["medical diagnosis", "population comparison", "psychological profiling"]
+      "forbidden": ["medical diagnosis", "population comparison", "psychological profiling", "biometric inference from VPS data", "diagnosis from prompt tone"],
+      "hard_rule": "H = UNKNOWN until real human evidence exists. No inference from machine load, interaction patterns, or language behaviour."
     },
 
     "M_WELL": {
-      "description": "Machine substrate — VPS physics only. No psychologizing the operator.",
+      "description": "Machine stability — VPS health, tool reliability, latency, failed jobs, security state.",
+      "weight": 0.20,
+      "score_range": [0, 100],
       "states": ["STABLE", "STRAINED", "DEGRADED", "CRITICAL", "UNKNOWN"],
       "transitions": {
-        "STABLE":    {"requires": "CPU <70%, memory <80%, disk <80%, no container crashes", "allows": ["STRAINED", "UNKNOWN"]},
-        "STRAINED":  {"requires": "1 metric above threshold OR tool latency >2s", "allows": ["STABLE", "DEGRADED", "UNKNOWN"]},
-        "DEGRADED":  {"requires": "2+ metrics degraded OR container restarts >3/h", "allows": ["STRAINED", "CRITICAL", "UNKNOWN"]},
-        "CRITICAL":  {"requires": "disk >95% OR memory >95% OR multiple organs down", "allows": ["DEGRADED", "UNKNOWN"], "action": "RECOVER_MACHINE"},
+        "STABLE":    {"requires": "CPU <70%, memory <80%, disk <80%, no container crashes, tool latency <2s", "allows": ["STRAINED", "UNKNOWN"]},
+        "STRAINED":  {"requires": "1 metric above threshold OR tool latency >2s OR 1 failed job", "allows": ["STABLE", "DEGRADED", "UNKNOWN"]},
+        "DEGRADED":  {"requires": "2+ metrics degraded OR container restarts >3/h OR multiple tool failures", "allows": ["STRAINED", "CRITICAL", "UNKNOWN"]},
+        "CRITICAL":  {"requires": "disk >95% OR memory >95% OR multiple organs down OR security breach", "allows": ["DEGRADED", "UNKNOWN"], "action": "RECOVER_MACHINE"},
         "UNKNOWN":   {"requires": "health probe failed", "allows": ["STABLE", "STRAINED", "DEGRADED", "CRITICAL"]}
       },
-      "evidence_sources": ["machine_human_substrate.py", "well_assess_reliability", "health probes", "docker stats"],
-      "forbidden": ["operator fatigue inference", "emotional state from load"]
+      "evidence_sources": ["health probes", "docker stats", "systemctl status", "forge_vps_services", "forge_vps_ports"],
+      "forbidden": ["operator fatigue inference", "emotional state from load", "productivity judgment"]
     },
 
     "G_WELL": {
-      "description": "Governance coherence — F1-F13 floors, epistemic hygiene, amanah.",
+      "description": "Governance integrity — evidence quality, contradiction rate, drift, authority clarity, constitutional compliance.",
+      "weight": 0.25,
+      "score_range": [0, 100],
       "states": ["COHERENT", "UNCERTAIN", "DRIFTING", "COMPROMISED", "HOLD"],
       "transitions": {
-        "COHERENT":    {"requires": "all floors pass, no contradictions, evidence tagged", "allows": ["UNCERTAIN", "DRIFTING"]},
-        "UNCERTAIN":   {"requires": "1+ unresolved contradiction OR missing evidence", "allows": ["COHERENT", "DRIFTING", "HOLD"]},
-        "DRIFTING":    {"requires": "identity drift detected OR seal chain gap", "allows": ["UNCERTAIN", "COMPROMISED", "COHERENT"]},
-        "COMPROMISED": {"requires": "F1-F13 violation OR fabrication detected", "allows": ["HOLD"], "action": "888_HOLD"},
+        "COHERENT":    {"requires": "all floors pass, no contradictions, evidence tagged, seal chain intact", "allows": ["UNCERTAIN", "DRIFTING"]},
+        "UNCERTAIN":   {"requires": "1+ unresolved contradiction OR missing evidence OR vague triggers", "allows": ["COHERENT", "DRIFTING", "HOLD"]},
+        "DRIFTING":    {"requires": "identity drift detected OR seal chain gap OR git SHA mismatch", "allows": ["UNCERTAIN", "COMPROMISED", "COHERENT"]},
+        "COMPROMISED": {"requires": "F1-F13 violation OR fabrication detected OR authority confusion", "allows": ["HOLD"], "action": "888_HOLD"},
         "HOLD":        {"requires": "sovereign ack to release", "allows": ["COHERENT", "UNCERTAIN"]}
       },
-      "evidence_sources": ["_g_well_assess", "carry_forward.json", "seal_chain", "floor checks"],
+      "evidence_sources": ["forge_drift_scanner", "forge_constitutional_sync", "carry_forward.json", "seal_chain", "floor checks"],
       "forbidden": ["overriding constitutional verdict", "self-certification"]
     },
 
     "C_WELL": {
-      "description": "Coupled human-machine state — interaction risk, not identity collapse.",
+      "description": "Coupling safety — whether current human and machine conditions amplify one another dangerously.",
+      "weight": 0.15,
+      "score_range": [0, 100],
       "states": ["LOW_RISK", "MEDIUM_RISK", "HIGH_RISK", "RECOVERY", "HOLD"],
       "transitions": {
         "LOW_RISK":    {"requires": "H≥BELOW_BASELINE AND M≤STRAINED AND G≥UNCERTAIN", "allows": ["MEDIUM_RISK"]},
@@ -61,13 +94,14 @@
         "HOLD":        {"requires": "sovereign ack OR all substrates recovered", "allows": ["RECOVERY", "MEDIUM_RISK"]}
       },
       "evidence_sources": ["H_WELL state", "M_WELL state", "G_WELL state", "interaction patterns"],
-      "forbidden": ["collapsing substrates", "blaming one substrate for another"]
+      "forbidden": ["collapsing substrates", "blaming one substrate for another", "inferring emotion from coupling patterns"]
     }
   },
 
   "gate_rule": {
-    "description": "Weakest substrate determines the response. Floor dominance — same as constitutional floors.",
+    "description": "Weakest substrate determines the response. The score is a decision-readiness index with visible causes, not a wellness oracle.",
     "formula": "vitality_verdict = min(H_WELL_rank, M_WELL_rank, G_WELL_rank, C_WELL_rank)",
+    "override_rule": "Weakest critical dimension overrides the weighted average. A VPS of 80 with Security=18 must verdict HOLD.",
     "rank_map": {
       "READY/STABLE/COHERENT/LOW_RISK": 4,
       "BELOW_BASELINE/STRAINED/UNCERTAIN/MEDIUM_RISK": 3,
@@ -76,11 +110,11 @@
       "UNKNOWN": 0
     },
     "verdict_map": {
-      "4": "PROCEED",
-      "3": "REDUCE_LOAD",
-      "2": "RECOVER",
-      "1": "HOLD",
-      "0": "INSUFFICIENT_DATA"
+      "4": {"verdict": "PROCEED", "meaning": "Normal + consequential work allowed"},
+      "3": {"verdict": "REDUCE_LOAD", "meaning": "Proceed, monitor strain"},
+      "2": {"verdict": "RECOVER", "meaning": "No irreversible decisions; consolidate"},
+      "1": {"verdict": "HOLD", "meaning": "Stop high-risk execution; recover"},
+      "0": {"verdict": "INSUFFICIENT_DATA", "meaning": "Do not manufacture a score"}
     }
   },
 
@@ -90,6 +124,35 @@
     "RECOVER":            {"allowed": "observe only, reflection, health checks", "blocked": "all mutations, all seals, all deploys"},
     "HOLD":               {"allowed": "health probes only", "blocked": "everything else", "requires": "sovereign ack to release"},
     "INSUFFICIENT_DATA":  {"allowed": "observe, inject, sensor read", "blocked": "mutations, seals", "action": "request sovereign inject or wait for sensor"}
+  },
+
+  "morning_brief_format": {
+    "description": "The morning brief must never show only one number. It must show decomposition with visible causes.",
+    "example": {
+      "vitality_peace": {"score": 64, "band": "STRAINED"},
+      "dimensions": {
+        "human":      {"score": null, "state": "UNKNOWN", "note": "No biometric data or self-report in 48h"},
+        "machine":    {"score": 81, "state": "STABLE", "note": "All organs UP, latency normal"},
+        "governance": {"score": 58, "state": "DRIFTING", "note": "Identity drift detected, git SHA mismatch"},
+        "coupling":   {"score": 46, "state": "MEDIUM_RISK", "note": "Prolonged high-mutation pattern"}
+      },
+      "primary_cause": "Governance strain, not confirmed biological strain",
+      "recommended_posture": "Consolidation only. No deploy, publish, delete or seal.",
+      "evidence_confidence": "Medium"
+    }
+  },
+
+  "constitutional_hard_rules": {
+    "description": "Non-negotiable constraints on VPS computation and use.",
+    "rules": [
+      {"id": "HR1", "rule": "No biometric inference from VPS data alone", "enforcement": "H_WELL forbidden list"},
+      {"id": "HR2", "rule": "No diagnosis from prompt tone", "enforcement": "H_WELL forbidden list"},
+      {"id": "HR3", "rule": "Human self-report can override weak behavioural inference", "enforcement": "H_WELL transition requires"},
+      {"id": "HR4", "rule": "A low score must reduce machine authority, not human dignity", "enforcement": "tool_routing gates machine, not human choices"},
+      {"id": "HR5", "rule": "The agent may pause dangerous tools, but must not control ordinary human choices", "enforcement": "tool_routing scope"},
+      {"id": "HR6", "rule": "Raw biometric data should remain local; WELL receives derived states where possible", "enforcement": "receipt_policy"},
+      {"id": "HR7", "rule": "The weakest critical dimension overrides the average", "enforcement": "gate_rule override_rule"}
+    ]
   },
 
   "receipt_policy": {
@@ -103,6 +166,6 @@
   "peace_condition": {
     "description": "Peace = recoverable homeostasis with preserved sovereignty",
     "formula": "H.recovery_capacity AND (M.stable OR M.safely_degraded) AND G.coherent AND C.low_escalation",
-    "not": "permanent calm, obedient behavior, optimized predictability"
+    "not": "permanent calm, obedient behavior, optimized predictability, absence of unpredictability"
   }
 }
