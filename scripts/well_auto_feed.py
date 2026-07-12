@@ -52,7 +52,7 @@ def main():
     print("3. Stress level? (1-10)")
     print("4. How do you feel? (grounded/scattered/anxious/tired/clear)")
     print("")
-    print("Then call: bash /root/WELL/biometric_inject.sh --non-interactive \\")
+    print("Then call: bash /root/WELL/scripts/biometric_inject.sh --non-interactive \\")
     print("  --delta-s <1.0-energy/10> --peace2 <energy/10> --kappa-r <0.8-default> \\")
     print("  --rasa <feeling> --amanah 0.9")
     sys.exit(1)

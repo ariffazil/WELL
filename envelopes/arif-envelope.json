@@ -1,0 +1,115 @@
+{
+  "version": "1.0.0",
+  "human_id": "arif",
+  "created_at": "2026-07-12T16:00:00+08:00",
+  "last_updated": "2026-07-12T16:00:00+08:00",
+  "memory_backend": "arifosmcp:L4",
+  "vitality_ref": "WELL/state.json#operator_id=arif",
+
+  "identity": {
+    "name": "Muhammad Arif bin Fazil",
+    "pseudonym": "Arif",
+    "jurisdiction": "MY",
+    "consent_status": "active",
+    "consent_token": "ct_arif_20260712_sovereign",
+    "consent_expiry": "until_revoked",
+    "revocation_channel": "tell hermes to forget me"
+  },
+
+  "planes": {
+    "values": {
+      "sacred": "self — the whole self",
+      "interpretation": "Radical self-sovereignty. The self as container for all principles, relationships, and purpose. Protect the self and everything inside survives.",
+      "evidence_type": "declared",
+      "question": "What matters to you so much that you would protect it even when it costs you?",
+      "answer_raw": "My self. The whole self",
+      "last_updated": "2026-07-12T16:00:00+08:00"
+    },
+
+    "direction": {
+      "life_building": "peaceful life",
+      "interpretation": "Earned peace — not passive, but the peace that comes after the forge. After MSS, after institutional betrayal, after building a federation. The destination is calm.",
+      "evidence_type": "declared",
+      "question": "What kind of life are you trying to build?",
+      "answer_raw": "Peaceful life",
+      "last_updated": "2026-07-12T16:00:00+08:00"
+    },
+
+    "scars": {
+      "formative_events": [
+        {
+          "event": "Amanah dikhianati — trust betrayed",
+          "impact": "Rewrote relationship with institutions, authority, and trust. Not a wound — a permanent change in operating assumptions.",
+          "lesson": "Nothing is trusted by default. Receipts or it didn't happen.",
+          "constraint": "F1 AMANAH as first constitutional floor. Verification before trust.",
+          "evidence_type": "declared"
+        }
+      ],
+      "question": "What has hurt or changed you the most?",
+      "answer_raw": "Amanah dikhianati",
+      "last_updated": "2026-07-12T16:00:00+08:00"
+    },
+
+    "shadow": {
+      "stress_signature": "sabar and reflect",
+      "coping_pattern": "inward — not fight, not flight, not freeze. Endurance with dignity. Sit with the storm, wait for clarity, then think.",
+      "fight_flight_freeze": "none_of_the_above — sabar (patient endurance with dignity)",
+      "implication": "Under pressure, give space. Don't rush. Don't fix. Don't suggest. Let the human sit with it. He will come back when he's ready.",
+      "evidence_type": "declared",
+      "question": "When you are afraid, angry, or under pressure, what do you usually do?",
+      "answer_raw": "Sabar and reflect",
+      "last_updated": "2026-07-12T16:00:00+08:00"
+    },
+
+    "boundary": {
+      "sovereign_territory": "keikhlasan — sincerity, intention",
+      "hard_no": [
+        "never presume to know what Arif really means",
+        "never collapse the gap between action and intention",
+        "never decide what his heart is doing",
+        "never assume his motivation"
+      ],
+      "system_must_not": [
+        "infer sincerity from actions",
+        "label his emotional state without evidence",
+        "decide what he 'really' wants",
+        "override his stated intention with system's interpretation"
+      ],
+      "evidence_type": "declared",
+      "question": "What must I never decide, change, or do for you without asking first?",
+      "answer_raw": "Keikhlasan? Niat?",
+      "last_updated": "2026-07-12T16:00:00+08:00"
+    },
+
+    "interaction": {
+      "language": "mixed — BM casual, English technical, Penang dialect natural",
+      "abstraction_level": "high",
+      "pacing": "fast",
+      "humour": "dry",
+      "preferred_style": "direct, one next step, no confirmation loops, no verbose explanations",
+      "cultural_context": "Malay-Islamic civilizational frame. Sabar, amanah, ikhlas are operating concepts not just vocabulary.",
+      "last_updated": "2026-07-12T16:00:00+08:00",
+      "evidence_type": "observed"
+    }
+  },
+
+  "consent_ledger": [
+    {
+      "timestamp": "2026-07-12T16:00:00+08:00",
+      "action": "onboard",
+      "scope": ["values", "direction", "scars", "shadow", "boundary", "vitality", "interaction"],
+      "consent": true,
+      "expiry": "until_revoked",
+      "method": "voluntary_conversation",
+      "note": "Sovereign chose to answer all 5 questions. None declined."
+    }
+  ],
+
+  "history": [
+    {
+      "timestamp": "2026-07-12T16:00:00+08:00",
+      "event": "initial_onboard",
+      "detail": "First human onboarded via intake ritual. All 5 questions answered. Sovereign-level honesty."
+    }
+  ]
+}

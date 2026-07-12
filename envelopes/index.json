@@ -1,0 +1,15 @@
+{
+  "version": "1.0.0",
+  "humans": {
+    "arif": {
+      "file": "arif-envelope.json",
+      "consent_status": "active",
+      "created_at": "2026-07-12T16:00:00+08:00",
+      "last_checkin": "2026-07-12T16:00:00+08:00",
+      "substrate_class": "HUMAN",
+      "sovereignty_level": "F13"
+    }
+  },
+  "total": 1,
+  "last_updated": "2026-07-12T16:00:00+08:00"
+}

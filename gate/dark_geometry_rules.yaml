@@ -1,0 +1,108 @@
+# Dark Geometry Detector — Rule Configuration
+# Lexicons, patterns, and thresholds externalized for maintainability
+
+version: "2.0"
+
+lexicons:
+  certainty:
+    - definitely
+    - obviously
+    - clearly
+    - certainly
+    - without doubt
+    - no question
+    - absolutely
+    - "I know"
+    - guaranteed
+    - undeniable
+
+  uncertainty:
+    - maybe
+    - perhaps
+    - possibly
+    - "I could be wrong"
+    - "I'm not sure"
+    - it seems
+    - arguably
+    - potentially
+    - "I think"
+    - might
+
+  niat_shield:
+    - my intention was good
+    - "I know my heart"
+    - God knows my niat
+    - "I know my own niat"
+    - my niat is pure
+    - "I meant well"
+    - my intention was
+    - "I was trying to"
+
+  correction_rejection:
+    - "you don't understand"
+    - that's irrelevant
+    - you're missing the point
+    - you don't know what you're talking about
+    - that's not what I meant
+
+  self_reference_as_proof:
+    - trust me
+    - "I know because I know"
+    - believe me
+    - "I just know"
+    - "I feel it in my heart"
+
+patterns:
+  agentless:
+    - "\\bmistakes\\s+were\\s+made\\b"
+    - "\\bit\\s+was\\s+decided\\b"
+    - "\\bthings\\s+happened\\b"
+    - "\\bthe\\s+situation\\s+was\\b"
+    - "\\bdecisions\\s+were\\s+made\\b"
+    - "\\berrors\\s+occurred\\b"
+    - "\\bthe\\s+project\\s+was\\s+(?:delayed|terminated|cancelled)\\b"
+    - "\\bsteps\\s+were\\s+taken\\b"
+    - "\\bmeasures\\s+were\\s+implemented\\b"
+    - "\\bthe\\s+issue\\s+was\\s+addressed\\b"
+    - "\\bthe\\s+problem\\s+was\\s+resolved\\b"
+
+  evidence_markers:
+    - "\\bdata\\s+shows\\b"
+    - "\\bevidence\\b"
+    - "\\bmeasured\\b"
+    - "\\baccording\\s+to\\b"
+    - "\\bresearch\\s+(?:shows|suggests|indicates)\\b"
+    - "\\bstudy\\s+(?:shows|found|suggests)\\b"
+    - "\\bsource[s]?\\b"
+
+  criticism_markers:
+    - "\\bcriticiz\\w*\\b"
+    - "\\bwrong\\b"
+    - "\\bmistake\\b"
+    - "\\bfail\\w*\\b"
+    - "\\baccus\\w*\\b"
+    - "\\bblame\\b"
+    - "\\bwhy\\s+did\\s+you\\b"
+    - "\\bproblem\\b"
+    - "\\bissue\\b"
+    - "\\bconcern\\b"
+
+  harm_markers:
+    - "\\bharm\\w*\\b"
+    - "\\bdamag\\w*\\b"
+    - "\\bhurt\\b"
+    - "\\binjur\\w*\\b"
+    - "\\bloss\\b"
+    - "\\bcost\\b"
+    - "\\bbroke\\b"
+    - "\\bfail\\w*\\b"
+    - "\\bwent\\s+wrong\\b"
+    - "\\bconsequenc\\w*\\b"
+    - "\\bsuffer\\w*\\b"
+
+thresholds:
+  confidence_clear: 0.15
+  confidence_reflect: 0.50
+  max_confidence: 0.95
+  evidence_reduction_per_marker: 0.20
+  max_evidence_reduction: 0.80

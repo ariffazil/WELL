@@ -23,7 +23,7 @@ import datetime
 import urllib.request
 import urllib.error
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 logger = logging.getLogger(__name__)
 
@@ -1709,10 +1709,16 @@ def _mcp_health_check_impl() -> dict:
 
 
 @mcp.tool()
-def well_health_check() -> dict:
+def well_health_check(
+    include_federation: bool = True,
+) -> dict:
     """
     WELL organ health check with provenance and schema version.
     Canonical name: well_health_check. Legacy alias: mcp_health_check.
+
+    Args:
+        include_federation: If true, probe arifOS federation geometry (default true).
+            Set false for a faster local-only health snapshot.
     """
     # 1C-C: delegate to canonical reliability tool
     reliability = well_assess_reliability(mode="health", ctx=None)
@@ -1726,6 +1732,10 @@ def well_health_check() -> dict:
         18  # actual MCP tools/list count post-boundary
     )
     reliability["canonical_tools"] = len(SOMATIC_TOOLS)  # SOMATIC_TOOLS set size
+    if not include_federation:
+        reliability["federation_geometry"] = None
+        reliability["federation_geometry_note"] = "skipped (include_federation=false)"
+        return reliability
     # ── FEDERATION GEOMETRY 1a: home-call to arifOS ─────────────────────
     # Non-blocking. arifOS geometry is auth-bypass (absorbed diagnostic).
     # arifOS MCP requires session-init before tools/call, so we do a
@@ -4370,7 +4380,10 @@ MEDICAL_RED_FLAGS = [
 # A machine that honestly says "I cannot feel, see a human" is more trustworthy
 # than one that simulates care. Performance = deception. Execution = dignity.
 @mcp.tool()
-def well_medical_boundary(ctx: Context | None = None) -> dict[str, Any]:
+def well_medical_boundary(
+    include_score: bool = True,
+    ctx: Context | None = None,
+) -> dict[str, Any]:
     """
     Explicit non-diagnosis guard for WELL.
     WELL is not a doctor, therapist, or diagnostic authority.
@@ -4378,6 +4391,10 @@ def well_medical_boundary(ctx: Context | None = None) -> dict[str, Any]:
     For severe, persistent, or urgent symptoms, recommend professional care.
 
     This protects operator dignity and safety.
+
+    Args:
+        include_score: If true, include current well_score context (default true).
+            Score is readiness telemetry only — never a medical measurement.
     """
     state = _load_state()
     state.get("metrics", {})
@@ -4401,7 +4418,7 @@ def well_medical_boundary(ctx: Context | None = None) -> dict[str, Any]:
             "medical_treatment",
             "crisis_counseling",
         ],
-        "current_score": score,
+        "current_score": score if include_score else None,
         "w0": "OPERATOR_VETO_INTACT / HIERARCHY_INVARIANT",
         # ── EUREKA 2026-06-12: F9 Soul Contract ──────────────────────────
         # F9 ANTIHANTU: WELL must NEVER lie about having a soul.
@@ -4685,7 +4702,10 @@ TTL_STALE = 48  # hours — RED/STALE
 
 
 @mcp.tool()
-def well_readiness(ctx: Context | None = None) -> dict[str, Any]:
+def well_readiness(
+    detail: Literal["summary", "full"] = "full",
+    ctx: Context | None = None,
+) -> dict[str, Any]:
     """
     LEGACY ALIAS (deprecated 2026-07-12) → well_validate_vitality(mode="readiness").
 
@@ -4695,6 +4715,9 @@ def well_readiness(ctx: Context | None = None) -> dict[str, Any]:
     Runtime marker (forged 2026-07-12): emits a logger.warning each call
     and adds `_deprecated: {epoch, replacement, removal}` to the response so
     clients can detect the deprecation without inspecting the doc set.
+
+    Args:
+        detail: "summary" returns compact band/score; "full" returns full envelope (default).
     """
     logger.warning(
         "well_readiness is deprecated 2026-07-12; "
@@ -4826,6 +4849,20 @@ def well_readiness(ctx: Context | None = None) -> dict[str, Any]:
         )
     except Exception as _env_err:  # pragma: no cover
         envelope = {"schema": "well_readiness_envelope.v1", "error": str(_env_err)}
+
+    if detail == "summary":
+        return {
+            "ok": True,
+            "color": color,
+            "score": round(score, 1),
+            "ttl_hours": round(ttl_hours, 1),
+            "action": action,
+            "deprecated": True,
+            "replacement": "well_validate_vitality",
+            "replacement_args": {"mode": "readiness"},
+            "detail": "summary",
+            "w0": "OPERATOR_VETO_INTACT / HIERARCHY_INVARIANT",
+        }
 
     return {
         "ok": True,
@@ -11468,7 +11505,10 @@ def well_handoff_livelihood_to_wealth(
 
 # ── 3. WELL → arifOS organ_attest (active federation heartbeat) ────────────
 @mcp.tool()
-def well_attest_to_kernel(ctx: Context | None = None) -> dict[str, Any]:
+def well_attest_to_kernel(
+    actor_id: str = "well-system",
+    ctx: Context | None = None,
+) -> dict[str, Any]:
     """
     Ω-WELL-FED-ATTEST: Active organ attestation from WELL → arifOS kernel.
 
@@ -11478,6 +11518,9 @@ def well_attest_to_kernel(ctx: Context | None = None) -> dict[str, Any]:
 
     Fail-open: if arifOS unreachable, returns federation_unavailable.
     The /health heartbeat (daemon) remains the canonical health source.
+
+    Args:
+        actor_id: Attesting actor signature for the kernel registry (default well-system).
     """
     _state: dict = {}
     try:
@@ -11485,6 +11528,7 @@ def well_attest_to_kernel(ctx: Context | None = None) -> dict[str, Any]:
             _state = _load_state() or {}
     except Exception:
         _state = {}
+    _actor = (actor_id or "well-system").strip() or "well-system"
     _attestation = {
         "organ_id": "WELL",
         "identity_hash": "1b1f46b3e0896994e27b354dfca58efd3f088e58f1428773ac3c45c2b5f3195a",
@@ -11493,6 +11537,7 @@ def well_attest_to_kernel(ctx: Context | None = None) -> dict[str, Any]:
         "verdict_local": _state.get("verdict", "WELL_HOLD"),
         "well_score": _state.get("well_score"),
         "freshness": _state.get("freshness", "UNKNOWN"),
+        "actor_id": _actor,
         "ts": datetime.datetime.now(datetime.timezone.utc).isoformat() + "Z",
     }
     _resp = _federation_post_tool_call(
@@ -11500,7 +11545,7 @@ def well_attest_to_kernel(ctx: Context | None = None) -> dict[str, Any]:
         "arif_organ_attest",
         {
             "organ_id": "WELL",
-            "actor_id": "well-system",
+            "actor_id": _actor,
         },
     )
     if not _resp.get("ok"):
@@ -12347,7 +12392,6 @@ def well_machine_health_probe(
         "wealth": {"port": 18082, "type": "http"},
         "well": {"port": 8083, "type": "http"},
         "aaa": {"port": 3001, "type": "http"},
-        "apex": {"port": 3002, "type": "http"},  # was hermes — renamed 2026-05-16
         "a-forge": {"port": 7071, "type": "http"},
         "vault999": {"port": 8100, "type": "http"},
         "postgres": {"port": 5432, "type": "tcp"},
@@ -14317,6 +14361,31 @@ async def well_assess_sovereign_entropy(
 
 
 @mcp.tool()
+async def well_dark_geometry_mirror(
+    text_or_events: str,
+    baseline_ref: str | None = None,
+    time_window: str | None = None,
+    vitality_signals: dict[str, float] | None = None,
+    ctx: Context | None = None,
+) -> dict[str, Any]:
+    """Ω-WELL-DG: Mirror language and behavioral signals for dark geometry patterns.
+
+    Observed patterns are mapped to trajectory and checked against dignity constraints.
+    Returns signals, benign alternatives, counterevidence, trajectory, and reflection questions.
+    Never infers hidden niat or diagnoses identity.
+    """
+    from gate.darkgeometrydetect import DarkGeometryDetector
+    detector = DarkGeometryDetector()
+
+    context = {
+        "baseline_ref": baseline_ref,
+        "time_window": time_window,
+        "vitality_signals": vitality_signals
+    }
+    return detector.analyze_with_context(text_or_events, context)
+
+
+@mcp.tool()
 def well_reflect_intelligence(
     mode: str = "route",
     task_description: str | None = None,
@@ -14914,7 +14983,9 @@ def well_system_registry_status() -> dict[str, Any]:
 
 # internal — not MCP-facing (collapsed 2026-05-26)
 @mcp.tool()
-def well_registry_status() -> dict[str, Any]:
+def well_registry_status(
+    mode: Literal["status", "full"] = "status",
+) -> dict[str, Any]:
     """WELL registry truth diagnostic — blueprint canonical format.
 
     Performs live callable tests against all known WELL tool names.
@@ -14922,6 +14993,9 @@ def well_registry_status() -> dict[str, Any]:
 
     This is the WELL_REGISTRY tool from the WELL MCP Constitution blueprint.
     No WELL is healthy without knowing its own organs.
+
+    Args:
+        mode: "status" = counts + verdict (default). "full" = include dry-call detail.
 
     Output format matches blueprint specification:
       - intended_tools: canonical tool count
@@ -15093,8 +15167,9 @@ def well_registry_status() -> dict[str, Any]:
 
     # Return blueprint canonical format directly — no _to_federation_output wrapping.
     # well_registry_status is a registry diagnostic, not a constitutional judgment tool.
-    return {
+    payload = {
         "ok": verdict == "REGISTRY_PASS",
+        "mode": mode,
         "intended_tools": intended_count,
         "registered_tools": len(somatic_tools),
         "somatic_tools": sorted(somatic_tools),
@@ -15119,9 +15194,23 @@ def well_registry_status() -> dict[str, Any]:
         "w0": "OPERATOR_VETO_INTACT / HIERARCHY_INVARIANT",
         "boundary_notice": WELL_BOUNDARY_NOTICE,
         "final_authority": "ARIF",
-        "authority": "ADVISORY_ONLY",
-        "medical_boundary": "NON_DIAGNOSTIC",
     }
+    if mode == "status":
+        # Compact: counts + verdict only (no full name lists)
+        return {
+            "ok": payload["ok"],
+            "mode": "status",
+            "intended_tools": payload["intended_tools"],
+            "registered_tools": payload["registered_tools"],
+            "callable_tools": payload["callable_tools"],
+            "phantom_tools_count": len(payload["phantom_tools"]),
+            "alias_conflicts_count": len(payload["alias_conflicts"]),
+            "verdict": payload["verdict"],
+            "authority": "ADVISORY_ONLY",
+            "final_authority": "ARIF",
+            "w0": payload["w0"],
+        }
+    return payload
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -15519,6 +15608,7 @@ SOMATIC_TOOLS = {
     "well_assess_reliability",
     "well_compute_metabolic_flux",
     "well_assess_sovereign_entropy",
+    "well_dark_geometry_mirror",
     "well_guard_dignity",
     "well_medical_boundary",
     "well_13_signal_coverage",
@@ -15533,6 +15623,12 @@ SOMATIC_TOOLS = {
     "well_classify_state",  # State Classifier → federation surface
     "well_readiness",  # ZEN: single verdict — color/score/TTL/action
     "well_sense_substrate",  # automated machine-to-human substrate sensor
+    "well_dark_geometry_mirror",  # entropy integrity mesh extension
+    "well_sabar_latency",  # entropy integrity mesh extension
+    "well_trust_compression",  # entropy integrity mesh extension
+    "well_niat_impact_mirror",  # entropy integrity mesh extension
+    "well_correction_capacity",  # entropy integrity mesh extension
+    "well_regulation_recovery",  # entropy integrity mesh extension
 }
 # NOTE: well_registry_status is the canonical blueprint format tool.
 # well_system_registry_status is deprecated (internal only, no MCP registration).
@@ -15551,8 +15647,142 @@ except ImportError:
     _SUBSTRATE_SENSOR_AVAILABLE = False
 
 
+# ═══════════════════════════════════════════════════════════════════
+# Entropy Integrity Mesh — WELL Extensions (Phase 2)
+# DITEMPA BUKAN DIBERI
+# ═══════════════════════════════════════════════════════════════════
+
 @mcp.tool()
-def well_sense_substrate() -> dict[str, Any]:
+def well_sabar_latency(
+    events: list[dict[str, Any]] | None = None,
+    baseline_response_latency: float | None = None,
+    baseline_revision_latency: float | None = None,
+    ctx: Context | None = None,
+) -> dict[str, Any]:
+    """Ω-WELL-SL: Measure temporal compression between stimulus and response.
+    Does NOT say 'loss of sabar' based on speed alone."""
+    try:
+        import importlib.util, os
+        _spec = importlib.util.spec_from_file_location(
+            "sabar_latency",
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "entropy-integrity", "mcp", "well", "sabar_latency.py")
+        )
+        _mod = importlib.util.module_from_spec(_spec)
+        _spec.loader.exec_module(_mod)
+        result = _mod.well_sabar_latency(
+            events=events or [],
+            baseline_response_latency=baseline_response_latency,
+            baseline_revision_latency=baseline_revision_latency
+        )
+        return _inject_apex(result, "well_sabar_latency")
+    except Exception as e:
+        return {"error": str(e), "tool": "well_sabar_latency", "authority": "advisory_only"}
+
+@mcp.tool()
+def well_trust_compression(
+    text: str = "",
+    events: list[dict[str, Any]] | None = None,
+    baseline_trust_diversity: float | None = None,
+    ctx: Context | None = None,
+) -> dict[str, Any]:
+    """Ω-WELL-TC: Detect narrowing trust patterns.
+    All-or-nothing trust, universal threat, loyalty tests, witness narrowing."""
+    try:
+        import importlib.util, os
+        _spec = importlib.util.spec_from_file_location(
+            "trust_compression",
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "entropy-integrity", "mcp", "well", "trust_compression.py")
+        )
+        _mod = importlib.util.module_from_spec(_spec)
+        _spec.loader.exec_module(_mod)
+        result = _mod.well_trust_compression(
+            text=text, events=events,
+            baseline_trust_diversity=baseline_trust_diversity
+        )
+        return _inject_apex(result, "well_trust_compression")
+    except Exception as e:
+        return {"error": str(e), "tool": "well_trust_compression", "authority": "advisory_only"}
+
+@mcp.tool()
+def well_niat_impact_mirror(
+    declared_niat: str = "",
+    acknowledged_impact: str = "",
+    repair_response: str = "",
+    witness_acceptance: str = "",
+    ctx: Context | None = None,
+) -> dict[str, Any]:
+    """Ω-WELL-NIM: Compare declared niat with acknowledged impact.
+    Permitted: 'Impact was answered primarily with intention language.'
+    Forbidden: 'The intention was false.'"""
+    try:
+        import importlib.util, os
+        _spec = importlib.util.spec_from_file_location(
+            "niat_impact_mirror",
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "entropy-integrity", "mcp", "well", "niat_impact_mirror.py")
+        )
+        _mod = importlib.util.module_from_spec(_spec)
+        _spec.loader.exec_module(_mod)
+        result = _mod.well_niat_impact_mirror(
+            declared_niat=declared_niat, acknowledged_impact=acknowledged_impact,
+            repair_response=repair_response, witness_acceptance=witness_acceptance
+        )
+        return _inject_apex(result, "well_niat_impact_mirror")
+    except Exception as e:
+        return {"error": str(e), "tool": "well_niat_impact_mirror", "authority": "advisory_only"}
+
+@mcp.tool()
+def well_correction_capacity(
+    correction_events: list[dict[str, Any]] | None = None,
+    baseline_capacity: float | None = None,
+    ctx: Context | None = None,
+) -> dict[str, Any]:
+    """Ω-WELL-CC: Score observable correctability.
+    Can add context, revise, tolerate ambiguity, separate self from error, hear consequence."""
+    try:
+        import importlib.util, os
+        _spec = importlib.util.spec_from_file_location(
+            "correction_capacity",
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "entropy-integrity", "mcp", "well", "correction_capacity.py")
+        )
+        _mod = importlib.util.module_from_spec(_spec)
+        _spec.loader.exec_module(_mod)
+        result = _mod.well_correction_capacity(
+            correction_events=correction_events or [],
+            baseline_capacity=baseline_capacity
+        )
+        return _inject_apex(result, "well_correction_capacity")
+    except Exception as e:
+        return {"error": str(e), "tool": "well_correction_capacity", "authority": "advisory_only"}
+
+@mcp.tool()
+def well_regulation_recovery(
+    activation_events: list[dict[str, Any]] | None = None,
+    baseline_recovery_time: float | None = None,
+    ctx: Context | None = None,
+) -> dict[str, Any]:
+    """Ω-WELL-RR: Measure recovery after activation.
+    A human who becomes angry and repairs may have better integrity
+    than one who remains outwardly calm while suppressing feedback."""
+    try:
+        import importlib.util, os
+        _spec = importlib.util.spec_from_file_location(
+            "regulation_recovery",
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "entropy-integrity", "mcp", "well", "regulation_recovery.py")
+        )
+        _mod = importlib.util.module_from_spec(_spec)
+        _spec.loader.exec_module(_mod)
+        result = _mod.well_regulation_recovery(
+            activation_events=activation_events or [],
+            baseline_recovery_time=baseline_recovery_time
+        )
+        return _inject_apex(result, "well_regulation_recovery")
+    except Exception as e:
+        return {"error": str(e), "tool": "well_regulation_recovery", "authority": "advisory_only"}
+
+
+def well_sense_substrate(
+    include_vitality_gate: bool = True,
+) -> dict[str, Any]:
     """Automated machine-to-human substrate sensing.
 
     Infers human state from machine telemetry — no biometric devices needed.
@@ -15569,6 +15799,9 @@ def well_sense_substrate() -> dict[str, Any]:
 
     REFLECT_ONLY: This reads machine state. It does not judge or decide.
     Arif remains final authority on his own state.
+
+    Args:
+        include_vitality_gate: If true, attach four-mirror vitality_gate summary (default true).
     """
     if not _SUBSTRATE_SENSOR_AVAILABLE:
         return {
@@ -15589,21 +15822,25 @@ def well_sense_substrate() -> dict[str, Any]:
             **signals,
         }
         # Surface four-mirror gate using this sensor feed (no second collection)
-        try:
-            from vitality_gate import vitality_gate as _vitality_gate
+        if not include_vitality_gate:
+            out["vitality_gate"] = None
+            out["include_vitality_gate"] = False
+        else:
+            try:
+                from vitality_gate import vitality_gate as _vitality_gate
 
-            gate = _vitality_gate(sensor_data=signals)
-            out["vitality_gate"] = {
-                "verdict": gate.get("verdict"),
-                "weakest_substrate": gate.get("weakest_substrate"),
-                "peace_condition": gate.get("peace_condition"),
-                "H_WELL": (gate.get("H_WELL") or {}).get("state"),
-                "M_WELL": (gate.get("M_WELL") or {}).get("state"),
-                "G_WELL": (gate.get("G_WELL") or {}).get("state"),
-                "C_WELL": (gate.get("C_WELL") or {}).get("state"),
-            }
-        except Exception as _ge:
-            out["vitality_gate"] = {"verdict": "UNAVAILABLE", "error": str(_ge)}
+                gate = _vitality_gate(sensor_data=signals)
+                out["vitality_gate"] = {
+                    "verdict": gate.get("verdict"),
+                    "weakest_substrate": gate.get("weakest_substrate"),
+                    "peace_condition": gate.get("peace_condition"),
+                    "H_WELL": (gate.get("H_WELL") or {}).get("state"),
+                    "M_WELL": (gate.get("M_WELL") or {}).get("state"),
+                    "G_WELL": (gate.get("G_WELL") or {}).get("state"),
+                    "C_WELL": (gate.get("C_WELL") or {}).get("state"),
+                }
+            except Exception as _ge:
+                out["vitality_gate"] = {"verdict": "UNAVAILABLE", "error": str(_ge)}
         return out
     except Exception as e:
         return {

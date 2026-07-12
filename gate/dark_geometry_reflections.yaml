@@ -1,0 +1,30 @@
+# Dark Geometry Detector — Reflection Prompts
+# Questions surfaced to humans for each detected mode.
+# These are mirrors, not accusations.
+
+version: "2.0"
+
+prompts:
+  JUDGMENT_COLLAPSE:
+    - Is there evidence you might be missing?
+    - Who is allowed to challenge this frame?
+    - What would change your mind?
+    - Are you certain because of evidence, or because certainty feels safe?
+
+  SELF_CERTIFIED_NIAT:
+    - Are you using intention to avoid examining impact?
+    - Would a witness confirm what you're saying?
+    - Can you separate your intention from the outcome?
+    - If your intention was good, what was the actual impact?
+
+  RESPONSIBILITY_LAUNDERING:
+    - Who specifically made this decision?
+    - What was your role in this outcome?
+    - If not you, then who bears responsibility?
+    - Can you name the person who chose this?
+
+  CERTAINTY_IMMUNITY:
+    - What evidence would change your mind?
+    - Have you considered you might be wrong about this?
+    - Who disagrees with you, and why might they be right?
+    - When was the last time you changed your mind about something important?

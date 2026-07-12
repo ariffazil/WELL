@@ -1,0 +1,29 @@
+{
+  "human_id": "arif",
+  "consents": [
+    {
+      "stream": "biometrics",
+      "granted": true,
+      "scope": "sleep, energy, stress, cognitive load",
+      "source": "voluntary injection or conversation observation",
+      "expiry": "until_revoked",
+      "revocation": "tell hermes to forget me"
+    },
+    {
+      "stream": "interaction_logs",
+      "granted": true,
+      "scope": "conversation patterns, communication style, emotional signals",
+      "source": "observed during interaction",
+      "expiry": "until_revoked",
+      "revocation": "tell hermes to forget me"
+    },
+    {
+      "stream": "cross_human_visibility",
+      "granted": false,
+      "scope": "existence visible to other humans — state never visible",
+      "note": "Default: other humans cannot see Arif's state. Existence is known only if Arif consents."
+    }
+  ],
+  "created_at": "2026-07-12T16:00:00+08:00",
+  "last_updated": "2026-07-12T16:00:00+08:00"
+}
