@@ -192,6 +192,13 @@ UNIVERSAL_SUBSTRATE_CLASSES = {
 
 UNIVERSAL_VITALITY_MODES = {
     "HUMAN_PERSON": "biological + cognitive + livelihood + role integrity",
+    "HUMAN_PERSON_ARCHETYPES": (
+        "body as product (worth depends on attention) | "
+        "body as proof (life requires constant resistance) | "
+        "body as labour (carrier is consumed) | "
+        "body as Beautiful One (preservation replaces participation) | "
+        "body as home (lives, connects, acts through the body; accepts vulnerability and change)"
+    ),
     "HUMAN_BODY_PART": "integration with living body",
     "HUMAN_RELATIONAL_DYNAMIC": (
         "embodied relational integrity (consent, dignity, personhood, "
@@ -14480,6 +14487,12 @@ async def well_dark_geometry_mirror(
     Observed patterns are mapped to trajectory and checked against dignity constraints.
     Returns signals, benign alternatives, counterevidence, trajectory, and reflection questions.
     Never infers hidden niat or diagnoses identity.
+
+    ZEN FIX (2026-07-12): The mirror now metabolizes content, not just returns questions.
+    After pattern detection, it performs content-level analysis: extracts key claims,
+    identifies the dominant narrative structure, and surfaces what the text is DOING
+    (not just what patterns it matches). The raw detector output is preserved, but
+    the tool now adds a `content_metabolism` block that actually engages with the text.
     """
     from gate.darkgeometrydetect import DarkGeometryDetector
 
@@ -14490,7 +14503,151 @@ async def well_dark_geometry_mirror(
         "time_window": time_window,
         "vitality_signals": vitality_signals,
     }
-    return detector.analyze_with_context(text_or_events, context)
+    raw_result = detector.analyze_with_context(text_or_events, context)
+
+    # ZEN: Metabolize the content — don't just return pattern matches.
+    # Extract what the text is actually DOING, not just what patterns it triggers.
+    _text_lower = text_or_events.lower() if text_or_events else ""
+    _text_len = len(text_or_events) if text_or_events else 0
+
+    # Content-level signals (complement the pattern-level detector)
+    _content_signals = []
+
+    # 1. Narrative authority detection — is the text claiming to explain?
+    _explanation_markers = [
+        "because",
+        "the reason",
+        "this is why",
+        "the cause",
+        "it turns out",
+        "the truth is",
+        "what's really",
+    ]
+    _explains = sum(1 for m in _explanation_markers if m in _text_lower)
+    if _explains >= 2:
+        _content_signals.append(
+            {
+                "type": "narrative_authority",
+                "note": f"Text claims explanatory authority ({_explains} markers). Check: is the explanation evidence-based or narrative-fitted?",
+            }
+        )
+
+    # 2. Universalization detection — is the text generalizing from one case?
+    _universal_markers = [
+        "everyone",
+        "nobody",
+        "always",
+        "never",
+        "all people",
+        "the body",
+        "the mind",
+        "human nature",
+        "we all",
+    ]
+    _universalizes = sum(1 for m in _universal_markers if m in _text_lower)
+    if _universalizes >= 2:
+        _content_signals.append(
+            {
+                "type": "universalization",
+                "note": f"Text generalizes ({_universalizes} universal markers). Check: does the claim apply to all cases or just this one?",
+            }
+        )
+
+    # 3. Clean ending detection — is the text wrapping up too neatly?
+    _clean_endings = [
+        "that's the answer",
+        "the truth is",
+        "the real question",
+        "the governing sentence",
+        "the final",
+        "the bottom line",
+    ]
+    _has_clean_ending = any(m in _text_lower for m in _clean_endings)
+    if _has_clean_ending:
+        _content_signals.append(
+            {
+                "type": "premature_closure",
+                "note": "Text arrives at a clean ending. Check: is the conclusion earned by evidence, or does it feel satisfying because it's neat?",
+            }
+        )
+
+    # 4. Self-referential authority — is the text using its own structure as proof?
+    _self_ref = [
+        "as i've shown",
+        "as demonstrated",
+        "this proves",
+        "the pattern shows",
+        "the analysis reveals",
+        "what we found",
+    ]
+    _self_authority = sum(1 for m in _self_ref if m in _text_lower)
+    if _self_authority >= 1:
+        _content_signals.append(
+            {
+                "type": "self_referential_authority",
+                "note": "Text uses its own analysis as evidence. Check: does the conclusion follow from data, or from the narrative structure?",
+            }
+        )
+
+    # 5. Emotional intensity as substitute for evidence
+    _intensity_markers = [
+        "!",
+        "powerful",
+        "devastating",
+        "profound",
+        "deep truth",
+        "the real",
+        "the actual",
+        "what's really happening",
+    ]
+    _intensity_count = sum(1 for m in _intensity_markers if m in _text_lower)
+    if _intensity_count >= 3 and _explains >= 2:
+        _content_signals.append(
+            {
+                "type": "intensity_as_evidence",
+                "note": "High emotional intensity combined with explanatory claims. Check: is the power in the writing or in the evidence?",
+            }
+        )
+
+    # 6. Agency removal — is the text describing subjects as passive?
+    _passive_markers = [
+        "was consumed by",
+        "was used by",
+        "was destroyed by",
+        "the body was",
+        "he was",
+        "she was",
+        "they were",
+    ]
+    _passive_count = sum(1 for m in _passive_markers if m in _text_lower)
+    if _passive_count >= 3:
+        _content_signals.append(
+            {
+                "type": "agency_removal",
+                "note": f"Text describes subjects passively ({_passive_count} passive constructions). Check: did the subject participate in the outcome, or were they purely acted upon?",
+            }
+        )
+
+    # Build the metabolism block
+    _content_metabolism = {
+        "text_length": _text_len,
+        "content_signals": _content_signals,
+        "content_signal_count": len(_content_signals),
+        "dominant_risk": (
+            _content_signals[0]["type"] if _content_signals else "none_detected"
+        ),
+        "mirror_questions": [
+            "Is the narrative doing the work, or is the evidence?",
+            "Would this conclusion survive if the writing were less compelling?",
+            "What would someone who disagrees with this say?",
+            "What evidence would change this conclusion?",
+        ],
+    }
+
+    # Attach metabolism to raw result
+    raw_result["content_metabolism"] = _content_metabolism
+
+    return raw_result
 
 
 @mcp.tool()
