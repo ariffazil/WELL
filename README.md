@@ -1,11 +1,12 @@
 <!-- SOT-MANIFEST
 federation_release: v2026.07.12-CONSOLIDATION-EPOCH
-last_verified: 2026-07-10T04:50Z
-live_commit: 9eb8951
+last_verified: 2026-07-12T23:38Z
+live_commit: 765cf92
 port: 18083
-tool_count: 22
+mcp_tools_live: 29
 health_status: degraded
 owner_summary: RED
+truth_rule: tools/list + /health beat any static count in prose
 truth_status: INSUFFICIENT_DATA (state.json timestamp 2026-04-30 — SELF_REPORT stale, not sensor lie)
 fix: sovereign biometric_inject.sh self-report (do not invent vitals)
 changelog: /root/forge_work/2026-07-05/well-abc-trinity-test/TRINITY-SYNTHESIS.md
