@@ -1,92 +1,24 @@
 <!-- SOT-MANIFEST
 owner: Arif
-last_verified: 2026-07-01
-valid_from: 2026-06-24
-valid_until: 2026-07-31
+last_verified: 2026-07-12
+valid_from: 2026-07-12
+valid_until: 2026-08-12
 confidence: high
-scope: /root/WELL
+scope: organ-local pointer
 -->
 
-# Federation Contract — WELL (Vitality Guard)
+# Federation Contract — Pointer (Consolidation Phase 888)
 
-> **Organ:** WELL | **Repo:** `ariffazil/well` | **Port:** 18083
-> **Canonical federation contract:** [`ariffazil/arifos/FEDERATION_CONTRACT.md`](https://github.com/ariffazil/arifos/blob/main/FEDERATION_CONTRACT.md)
-> **Role:** Human readiness — reflect, never judge or diagnose.
-> **DITEMPA BUKAN DIBERI — Forged, Not Given.**
+**Canonical source:** `/root/arifOS/FEDERATION_CONTRACT.md`  
+**GitHub:** `ariffazil/arifos` · ratified 2026-07-12 (§5.5 + §13)
 
----
+This organ-local file is a **thin bootstrap** after doctrine deduplication (Batch medium, agentic 2026-07-12).
 
-## 1. Position in the Federation
+- Do **not** maintain a parallel full contract here.
+- Link upward. Import / reference / generate from arifOS.
+- Organ-specific authority still lives in this repo's `AGENTS.md` + domain canon.
 
-```
-Arif (F13 SOVEREIGN)
-  → arifOS kernel (8088) — constitutional judgment
-    → WELL (18083) — human readiness signals
-      → arifOS 888 JUDGE — SEAL / SABAR / HOLD / VOID
-        → A-FORGE (7071/7072) — execution under SEAL
-          → VAULT999 — immutable audit ledger
-```
+**Rollback:** git history of this path prior to commit `docs(doctrine): pointer to arifOS FEDERATION_CONTRACT`.
 
-WELL is the **Vitality Guard** organ. It reads human readiness signals (sleep, fatigue, stress, cognitive clarity) and emits structured readiness evidence. It never diagnoses, never judges fitness for duty, and never authorizes action.
+*DITEMPA BUKAN DIBERI — one contract, many organs.*
 
----
-
-## 2. Authority
-
-### WELL OWNS
-- Sleep/fatigue/stress state estimation
-- Cognitive clarity and decision-fatigue metrics
-- Sovereign entropy (unmodelability) scoring
-- Dignity-preservation and medical-boundary guards
-- WELL → GEOX gate (`geox_well_decision_class`) for field-operation readiness
-
-### WELL NEVER
-- Makes medical diagnoses or prescribes treatment
-- Judges whether a human is fit for duty
-- Authorizes drilling, capital, or operational decisions
-- Adjudicates constitutional verdicts
-- Self-authorizes irreversible actions
-
----
-
-## 3. External Contracts
-
-| Contract | Canonical Location | Purpose |
-|---|---|---|
-| Federation topology | `ariffazil/arifos/FEDERATION_CONTRACT.md` | Organ roles and authority chain |
-| Constitutional floors | `ariffazil/arifos/static/arifos/theory/000/000_CONSTITUTION.md` | F1–F13 |
-| Agent landing | `/root/WELL/AGENTS.md` | Build/test/run rules for this repo |
-| Tool registry | `/root/WELL/server.py` | Canonical tool surface |
-
----
-
-## 4. MCP Surface
-
-- **HTTP/SSE:** `https://well.arif-fazil.com/mcp`
-- **stdio:** `python server.py --transport stdio`
-- **Canonical tools:** 22 FastMCP vitality/readiness tools
-
----
-
-## 5. Handoffs
-
-| To | When | Format |
-|---|---|---|
-| arifOS 888 JUDGE | Readiness concern requires verdict | Readiness receipt |
-| GEOX | Gate field operations informed by evidence | `geox_well_decision_class` |
-| AAA | Cockpit display | Readiness dashboard |
-| A-FORGE | Execution under SEAL | Via arifOS `arif_forge_execute` |
-
----
-
-## 6. Medical Boundary
-
-WELL is not a doctor, therapist, or diagnostic authority. For severe, persistent, or urgent symptoms, WELL recommends professional care. This protects operator dignity and safety.
-
----
-
-## 7. Verdict
-
-WELL tells you how the human looks. It does not tell you what the human should do. The sovereign decides.
-
-*DITEMPA BUKAN DIBERI.*
