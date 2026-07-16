@@ -48,3 +48,8 @@ Copilot/
 # recovery receipts (ledger local)
 loop/receipts/
 !loop/receipts/.gitkeep
+
+# WELL MOCK-fallback quarantine (carry-forward 2026-07-16-06)
+state.test.json
+state.test.json.*
+scripts/*.bak-*

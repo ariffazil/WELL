@@ -1,10 +1,50 @@
 {
-  "generated_at": "2026-07-12T03:56:13.543906+00:00",
-  "period": "7 days",
-  "auth_events_total": 0,
-  "human_sessions_by_day": {},
-  "bash_history_total": 743,
-  "unique_commands": 197,
-  "agent_launches": 431,
-  "note": "Historical baseline for WELL sensor calibration"
+  "generated_at": "2026-07-16T04:26:15.483432+00:00",
+  "period": "30 days",
+  "period_start": "2026-06-16T04:26:15.483432+00:00",
+  "period_end": "2026-07-16T04:26:15.483432+00:00",
+  "auth_events_total": 1192,
+  "human_sessions_by_day": {
+    "2026-07-15": 10,
+    "2026-07-16": 1182
+  },
+  "human_session_days_with_activity": 2,
+  "bash_history_total": 951,
+  "unique_commands": 221,
+  "agent_launches": 669,
+  "agent_cli_set": [
+    "claude",
+    "codex",
+    "copilot",
+    "cursor",
+    "grok",
+    "hermes",
+    "kimi",
+    "opencode"
+  ],
+  "live_substrate_snapshot": {
+    "sessions_total": 29,
+    "human_ptys": [
+      "pts/0",
+      "pts/1",
+      "pts/3",
+      "pts/5",
+      "pts/7"
+    ],
+    "agent_ptys": [
+      "pts/3",
+      "pts/4",
+      "pts/9"
+    ],
+    "circadian_phase": "MIDDAY_DIP",
+    "readiness_band": "YELLOW",
+    "fatigue_level": "LOW"
+  },
+  "sources": {
+    "auth_log": "journalctl (last 30d)",
+    "bash_history": "/root/.bash_history",
+    "agent_launches": "from bash history command set",
+    "substrate_module": "/root/WELL/sensors/machine_human_substrate.py"
+  },
+  "note": "30d rolling window \u2014 re-aggregate on /well cycle to keep defaults fresh. Sparse PROD WELL_LOG events (2 in events.jsonl) mean substrate signal dominates; not a substitute for sovereign biometric inject."
 }
