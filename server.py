@@ -1757,6 +1757,9 @@ def _mcp_health_check_impl() -> dict:
 @mcp.tool()
 def well_health_check(
     include_federation: bool = True,
+    session_id: str | None = None,
+    actor_id: str | None = None,
+    trace_id: str | None = None,
 ) -> dict:
     """
     WELL organ health check with provenance and schema version.
@@ -1778,6 +1781,10 @@ def well_health_check(
         18  # actual MCP tools/list count post-boundary
     )
     reliability["canonical_tools"] = len(SOMATIC_TOOLS)  # SOMATIC_TOOLS set size
+    reliability["session_id"] = session_id
+    reliability["actor_id"] = actor_id
+    reliability["trace_id"] = trace_id
+    reliability["dependencies_ok"] = _check_dependencies()["all_ok"]
     if not include_federation:
         reliability["federation_geometry"] = None
         reliability["federation_geometry_note"] = "skipped (include_federation=false)"
@@ -15289,6 +15296,9 @@ def well_system_registry_status() -> dict[str, Any]:
 @mcp.tool()
 def well_registry_status(
     mode: Literal["status", "full"] = "status",
+    session_id: str | None = None,
+    actor_id: str | None = None,
+    trace_id: str | None = None,
 ) -> dict[str, Any]:
     """WELL registry truth diagnostic — blueprint canonical format.
 
@@ -15514,6 +15524,9 @@ def well_registry_status(
         "w0": "OPERATOR_VETO_INTACT / HIERARCHY_INVARIANT",
         "boundary_notice": WELL_BOUNDARY_NOTICE,
         "final_authority": "ARIF",
+        "session_id": session_id,
+        "actor_id": actor_id,
+        "trace_id": trace_id,
     }
     if mode == "status":
         # Compact: counts + verdict only (no full name lists)
@@ -15532,6 +15545,9 @@ def well_registry_status(
             "authority": "ADVISORY_ONLY",
             "final_authority": "ARIF",
             "w0": payload["w0"],
+            "session_id": session_id,
+            "actor_id": actor_id,
+            "trace_id": trace_id,
         }
     return payload
 
