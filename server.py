@@ -16820,6 +16820,25 @@ if __name__ == "__main__":
                 "role": "Body / Human Intelligence",
                 "authority": "REFLECT_ONLY",
                 "identity_hash": identity_hash,
+                # T5 2026-07-17 — apex_scalars + federation_geometry required.
+                # Domain data readiness stays separate via honesty_* (MOCK/STALE).
+                "apex_scalars": {
+                    "G": {"value": None, "status": "UNMEASURED"},
+                    "C_dark": {"value": None, "status": "UNMEASURED"},
+                    "W3": {"value": None, "status": "UNMEASURED"},
+                    "h": {"value": None, "status": "UNMEASURED"},
+                    "QDF": {"value": None, "status": "UNMEASURED"},
+                },
+                "federation_geometry": {
+                    "status": "enabled",
+                    "subjects": 0,
+                    "ledger_events": 0,
+                    "witness_oracle": "active",
+                    "note": "geometry owned by arifOS; WELL reports local presence only",
+                },
+                "domain_data_readiness": classification.get("truth_status")
+                or classification.get("freshness_band")
+                or "UNKNOWN",
                 "well_signal": classification[
                     "well_signal"
                 ],  # REFLECT_ONLY — never "verdict"

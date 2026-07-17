@@ -1,0 +1,24 @@
+{
+  "@context": [
+    "https://www.w3.org/ns/did/v1",
+    "https://w3id.org/security/v1"
+  ],
+  "id": "did:web:well.arif-fazil.com",
+  "verificationMethod": [{
+    "id": "did:web:well.arif-fazil.com#well-key-1",
+    "type": "Ed25519VerificationKey2020",
+    "controller": "did:web:well.arif-fazil.com"
+  }],
+  "authentication": ["did:web:well.arif-fazil.com#well-key-1"],
+  "assertionMethod": ["did:web:well.arif-fazil.com#well-key-1"],
+  "service": [
+    {
+      "id": "did:web:well.arif-fazil.com#mcp",
+      "type": "MCPEndpoint",
+      "serviceEndpoint": "https://well.arif-fazil.com/mcp",
+      "policy": "WELL is REFLECT_ONLY — never makes clinical/diagnostic claims, never adjudicates strategic action."
+    }
+  ],
+  "policy": "Human readiness substrate. REFLECT_ONLY lane. Signals; humans decide.",
+  "created": "2026-07-17"
+}

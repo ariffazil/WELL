@@ -1,0 +1,22 @@
+{
+  "schema": "federation-manifest/v1",
+  "federation": "arifOS",
+  "name": "arifOS Federation",
+  "published_at": "https://well.arif-fazil.com",
+  "organs": [
+    {"id": "arifOS", "name": "Constitutional Kernel", "port": 8088, "role": "MIND", "ring": "kernel", "endpoint": "http://127.0.0.1:8088"},
+    {"id": "aforge", "name": "Execution Shell", "port": 7071, "role": "MIND", "ring": "executor", "endpoint": "http://127.0.0.1:7071", "mcp_endpoint": "http://127.0.0.1:7072"},
+    {"id": "aaa", "name": "Cockpit & A2A", "port": 3001, "role": "BODY", "ring": "control", "endpoint": "http://127.0.0.1:3001"},
+    {"id": "geox", "name": "Earth Intelligence", "port": 8081, "role": "SOUL", "ring": "domain", "endpoint": "http://127.0.0.1:8081"},
+    {"id": "wealth", "name": "Capital Intelligence", "port": 18082, "role": "BODY", "ring": "domain", "endpoint": "http://127.0.0.1:18082"},
+    {"id": "well", "name": "Human Readiness", "port": 18083, "role": "SOUL", "ring": "domain", "endpoint": "http://127.0.0.1:18083"},
+    {"id": "mcp", "name": "MCP Gateway", "port": null, "role": "MIND", "ring": "ingress", "endpoint": "https://mcp.arif-fazil.com/mcp"}
+  ],
+  "public_endpoint": "https://mcp.arif-fazil.com/mcp",
+  "doctrine": {
+    "floors": "F1-F13 constitutional floors enforced on every operation",
+    "authority": "arifOS judges (no self-authorization by A-FORGE)",
+    "executor": "A-FORGE executes only after arif_judge SEAL",
+    "ledger": "VAULT999 append-only hash chain, /999/ public proof"
+  }
+}
