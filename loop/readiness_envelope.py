@@ -27,6 +27,9 @@ def build_readiness_envelope(
     vitality_gate: dict[str, Any] | None = None,
     decision_class: str | None = None,
     evidence_quality: float | None = None,
+    energy: dict[str, Any] | None = None,
+    shadow: dict[str, Any] | None = None,
+    intelligence: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """
     Canonical readiness schema (Priority 3).
@@ -43,7 +46,9 @@ def build_readiness_envelope(
             # expires = when data becomes stale (48h policy) from measure time
             expires = (base + timedelta(hours=48)).isoformat()
         except Exception:
-            expires = (now + timedelta(hours=max(0.0, 48 - float(ttl_hours)))).isoformat()
+            expires = (
+                now + timedelta(hours=max(0.0, 48 - float(ttl_hours)))
+            ).isoformat()
 
     rec = action
     if rec == "INJECT_NEEDED":
@@ -59,7 +64,9 @@ def build_readiness_envelope(
     env = {
         "schema": "well_readiness_envelope.v1",
         "readiness": {
-            "state": color if color in ("GREEN", "YELLOW", "RED", "STALE", "UNKNOWN") else "UNKNOWN",
+            "state": color
+            if color in ("GREEN", "YELLOW", "RED", "STALE", "UNKNOWN")
+            else "UNKNOWN",
             "score": score,
             "confidence": round(float(confidence), 3),
             "measured_at": measured,
@@ -77,8 +84,12 @@ def build_readiness_envelope(
                     "evidence_type": machine.get("evidence_type", "none"),
                     "source": machine.get("source"),
                 },
-                "interaction": (interaction or {"state": "UNKNOWN", "evidence_type": "none"}),
-                "governance": (governance or {"state": "UNKNOWN", "evidence_type": "none"}),
+                "interaction": (
+                    interaction or {"state": "UNKNOWN", "evidence_type": "none"}
+                ),
+                "governance": (
+                    governance or {"state": "UNKNOWN", "evidence_type": "none"}
+                ),
             },
             "missing_evidence": missing,
             "recommendation": rec,
@@ -94,6 +105,12 @@ def build_readiness_envelope(
                 "medical_boundary": "NON_DIAGNOSTIC",
             },
             "vitality_gate": vitality_gate,
+            "thermodynamic": {
+                "energy": energy or {"state": "UNKNOWN", "evidence_type": "none"},
+                "shadow": shadow or {"state": "UNKNOWN", "evidence_type": "none"},
+                "intelligence": intelligence
+                or {"state": "UNKNOWN", "evidence_type": "none"},
+            },
         },
         "canonical_tool": "well_validate_vitality",
         "legacy_alias": "well_readiness",
@@ -102,8 +119,19 @@ def build_readiness_envelope(
     return env
 
 
-def map_gate_to_substrates(gate: dict[str, Any], state: dict[str, Any]) -> dict[str, Any]:
-    """Build human/machine/interaction/governance substrate blocks from vitality_gate."""
+def map_gate_to_substrates(
+    gate: dict[str, Any],
+    state: dict[str, Any],
+    energy: dict[str, Any] | None = None,
+    shadow: dict[str, Any] | None = None,
+    intelligence: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Build human/machine/interaction/governance substrate blocks from vitality_gate.
+
+    Optionally accepts thermodynamic-APEX signals (energy, shadow, intelligence)
+    from well_measure_gradient, well_dark_geometry_mirror, well_reflect_intelligence, etc.
+    These are passed through to the readiness envelope as the thermodynamic block.
+    """
     h = gate.get("H_WELL") or {}
     m = gate.get("M_WELL") or {}
     c = gate.get("C_WELL") or {}
@@ -112,7 +140,11 @@ def map_gate_to_substrates(gate: dict[str, Any], state: dict[str, Any]) -> dict[
 
     if h.get("state") == "UNKNOWN":
         h_type, h_state = "none", "UNKNOWN"
-    elif "OPERATOR" in truth or "SELF" in truth or "self_report" in str(h.get("note", "")).lower():
+    elif (
+        "OPERATOR" in truth
+        or "SELF" in truth
+        or "self_report" in str(h.get("note", "")).lower()
+    ):
         h_type, h_state = "self_report", h.get("state", "UNKNOWN")
     else:
         h_type, h_state = "inferred", h.get("state", "UNKNOWN")
@@ -139,5 +171,11 @@ def map_gate_to_substrates(gate: dict[str, Any], state: dict[str, Any]) -> dict[
             "state": g.get("state", "UNKNOWN"),
             "evidence_type": "observed",
             "source": g.get("source"),
+        },
+        "thermodynamic": {
+            "energy": energy or {"state": "UNKNOWN", "evidence_type": "none"},
+            "shadow": shadow or {"state": "UNKNOWN", "evidence_type": "none"},
+            "intelligence": intelligence
+            or {"state": "UNKNOWN", "evidence_type": "none"},
         },
     }

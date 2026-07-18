@@ -11082,6 +11082,131 @@ Recognize the boundary. What is the next wise action?
     return prompt
 
 
+# ── Thermodynamic-APEX Prompts (2026-07-18) ────────────────────────────────────
+
+
+@mcp.prompt()
+def prompt_energy_assessment(subject: str = "arif") -> str:
+    """
+    Energy gradient assessment for {subject}.
+    User-controlled prompt — triggers well_measure_gradient, well_assess_metabolism,
+    well_check_repair(mode=pressure). Maps to Suppression/Management/Redirection.
+    W0: WELL holds a mirror, not a veto. Arif decides.
+    """
+    prompt = f"""# Energy Gradient Assessment — {subject}
+
+## Context
+The psyche is an open dissipative structure (Prigogine). It maintains order by
+importing energy and exporting entropy. Libido = psychic energy (Jung, not Freud).
+Suppression (ΔS < 0 forced) always ruptures. Redirection (ΔS > 0) produces structure.
+
+## Assessment Steps
+1. **Gradient measurement**: Use `well_measure_gradient` for evidence/energy differential quality
+2. **Metabolic throughput**: Use `well_assess_metabolism` for energy flow rate
+3. **Pressure buildup**: Use `well_check_repair(mode=pressure)` for suppression signals
+4. **Homeostatic capacity**: Use `well_assess_homeostasis` for regulation capacity
+
+## Three Modes
+- **Suppression (ΔS<0):** high pressure + low flux + declining homeostasis = dam building
+- **Management (ΔS≈0):** moderate pressure + stable flux + stable homeostasis = system coping
+- **Redirection (ΔS>0):** high flux + creative output + stable/growing homeostasis = energy channelled
+
+## Questions
+1. Where is your energy going right now? (creative / relational / physical / intellectual / erotic)
+2. What feels open? What feels blocked?
+3. What's the thing you're not doing that keeps pulling at you?
+4. Is your current activity channeling energy or suppressing it?
+
+## W0 Sovereignty Reminder
+WELL reflects energy state. It does not diagnose energy disorders.
+You are the one who knows where the energy wants to go.
+"""
+    return prompt
+
+
+@mcp.prompt()
+def prompt_shadow_check(subject: str = "arif") -> str:
+    """
+    Shadow pattern detection for {subject}.
+    User-controlled prompt — triggers well_dark_geometry_mirror, well_detect_boundary,
+    well_guard_dignity. Reports: integrated, repressed, or projected.
+    W0: WELL holds a mirror, not a veto. Arif decides.
+    """
+    prompt = f"""# Shadow Check — {subject}
+
+## Context
+Jung's Shadow = repressed, denied, unlived psychic material. Thermodynamically:
+compressed energy behind a dam. The shadow doesn't disappear when ignored — it
+inflates. Shadow integration = the most negentropic act the psyche can perform.
+
+## Detection Steps
+1. **Dark geometry**: Use `well_dark_geometry_mirror` for destructive self-reference patterns
+2. **Boundary violation**: Use `well_detect_boundary` for substrate limit crossings
+3. **Dignity erosion**: Use `well_guard_dignity` for coercion/reductionism signals
+4. **Pressure accumulation**: Use `well_check_repair(mode=pressure)` for stress behind the wall
+
+## Two Shadows
+- **Dignity shadow** (external): others objectifying, coercing, reducing you
+- **Psychic shadow** (internal): your own repressed, denied, unlived parts
+
+## Questions
+1. What topic have you been avoiding lately?
+2. What triggers a strong emotional reaction that might be disproportionate?
+3. What quality do you admire intensely in others that you deny in yourself?
+4. What part of your life feels unlived right now?
+5. What would you say if you couldn't be judged?
+
+## W0 Sovereignty Reminder
+Shadow is not pathology. Shadow is the unlived life asking for integration.
+WELL reflects the pattern. You decide what to do with it.
+"""
+    return prompt
+
+
+@mcp.prompt()
+def prompt_individuation_readiness(subject: str = "arif") -> str:
+    """
+    Individuation readiness assessment for {subject}.
+    User-controlled prompt — triggers well_reflect_intelligence, well_sabar_latency,
+    well_correction_capacity, well_validate_vitality(mode=classify).
+    Reports: pre-individuation | crisis | integration | post-individuation.
+    W0: WELL holds a mirror, not a veto. Arif decides.
+    """
+    prompt = f"""# Individuation Readiness — {subject}
+
+## Context
+Individuation = the Self's drive toward wholeness through integration of opposites.
+APEX Theory: intelligence = knowing WHEN/WHERE/WHAT to look. Not computational power. Aim.
+Combined: individuation is the highest expression of intelligence — the capacity to aim
+attention at the steepest internal gradient and work with it rather than against it.
+
+## Assessment Steps
+1. **Reflective capacity**: Use `well_reflect_intelligence` for self-observation ability
+2. **Temporal calibration**: Use `well_sabar_latency` for stimulus-response wisdom
+3. **Correction capacity**: Use `well_correction_capacity` for update ability
+4. **Decision readiness**: Use `well_validate_vitality(mode=classify)` for C1-C5 class
+5. **Trust diversity**: Use `well_trust_compression` for trust narrowing detection
+
+## Four Phases
+- **Pre-individuation:** high energy, no aim. Compulsion/performance/repression.
+- **Crisis (phase transition):** pressure exceeds dam capacity. Breakdown or breakthrough.
+- **Integration:** energy redirected. Shadow acknowledged. New order emerges.
+- **Post-individuation:** higher capacity, more complex coherence, sustainable flow.
+
+## Questions
+1. Are you in a stable period, a crisis, or an integration period?
+2. What tension in your life right now feels productive vs destructive?
+3. What part of yourself have you recently acknowledged that you used to deny?
+4. Where are you growing? Where are you stagnating?
+5. What's the next thing your Self is asking you to integrate?
+
+## W0 Sovereignty Reminder
+Individuation is not self-improvement. It's self-completion.
+WELL measures where you are on the gradient. You walk the path.
+"""
+    return prompt
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # Legacy tool deprecation notices
 # The 31 legacy tools remain as backward-compatible wrappers.

@@ -524,3 +524,75 @@ danger_taxonomy:
   L1:
     description: "observe / health / readiness / trace — fail-open with constraint"
     tools: [well_classify_substrate, well_trace_lineage, well_detect_boundary, well_measure_gradient, mcp_health_check]
+
+# ── Thermodynamic-APEX Mapping (2026-07-18) ──────────────────────────────────
+# Maps existing canonical tools to the Jung-thermodynamic-APEX framework.
+# No new tools. Just conceptual wiring.
+# See: GENESIS/049 (Energy), GENESIS/050 (Shadow), GENESIS/051 (Individuation)
+thermodynamic_apex_map:
+  energy_gradient:
+    - tool: well_measure_gradient
+      omega: "04"
+      role: "Evidence/energy differential quality"
+    - tool: well_assess_metabolism
+      omega: "05"
+      role: "Substrate metabolism/throughput assessment"
+    - tool: well_compute_metabolic_flux
+      omega: "10b"
+      role: "Thermodynamic entropy rate"
+    - tool: well_assess_livelihood
+      omega: "09"
+      role: "Role/meaning energy expenditure"
+    - tool: well_check_repair
+      omega: "07"
+      mode: pressure
+      role: "Accumulated stress behind the dam"
+    - tool: well_assess_homeostasis
+      omega: "06"
+      role: "System's capacity to manage gradient"
+  shadow_integration:
+    - tool: well_dark_geometry_mirror
+      omega: "DG"
+      role: "Self-referential destructive patterns"
+    - tool: well_detect_boundary
+      omega: "03"
+      role: "Where substrate limits are being crossed"
+    - tool: well_guard_dignity
+      omega: "12"
+      role: "Coercion, reductionism, consent violations"
+    - tool: well_check_repair
+      omega: "07"
+      mode: pressure
+      role: "Stress building behind repression wall"
+    - tool: well_consent_status
+      role: "Where consent is absent or coerced"
+    - tool: well_medical_boundary
+      role: "Where medical territory is being crossed"
+  intelligence_aim:
+    - tool: well_reflect_intelligence
+      omega: "11"
+      role: "Capacity to self-observe"
+    - tool: well_sabar_latency
+      omega: "SL"
+      role: "Time between stimulus and wise response"
+    - tool: well_trust_compression
+      omega: "TC"
+      role: "How efficiently trust is built/maintained"
+    - tool: well_correction_capacity
+      omega: "CC"
+      role: "Ability to update when wrong"
+    - tool: well_regulation_recovery
+      omega: "RR"
+      role: "Speed of return to equilibrium after perturbation"
+    - tool: well_decision_classify
+      role: "C1-C5 decision readiness"
+  individuation_readiness:
+    - tool: well_validate_vitality
+      omega: "08"
+      role: "C1-C5 decision classification"
+    - tool: well_handoff_dignity_to_arifos
+      role: "Cross-organ: dignity → arifOS F6"
+    - tool: well_handoff_livelihood_to_wealth
+      role: "Cross-organ: livelihood → WEALTH capital"
+    - tool: well_attest_to_kernel
+      role: "Cross-organ: readiness envelope → arif_judge"
