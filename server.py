@@ -16710,13 +16710,78 @@ def well_assess_readiness(
                 "source_tools": ["well_sabar_latency"],
             },
             "correction_capacity": {
-                "state": "REDUCED"
-                if (_correction.get("capacity_score") or 1.0) < 0.6
-                else "ADEQUATE",
-                "score": _correction.get("capacity_score"),
-                "dimensions": _correction.get("dimensions", {}),
+                "state": "INTACT"
+                if (_correction.get("capacity_score") or 0) >= 0.70
+                else "STRAINED"
+                if (_correction.get("capacity_score") or 0) >= 0.40
+                else "DEGRADED"
+                if (_correction.get("capacity_score") is not None)
+                else "UNKNOWN",
+                "aggregate_score": _correction.get("capacity_score"),
+                "components": {
+                    "evidence_acceptance": {
+                        "score": _correction.get("dimensions", {}).get(
+                            "can_add_context", None
+                        ),
+                        "basis": ["operator adds qualifying context when challenged"]
+                        if _correction.get("dimensions", {}).get("can_add_context")
+                        is not None
+                        else [],
+                    },
+                    "position_revision": {
+                        "score": _correction.get("dimensions", {}).get(
+                            "can_revise", None
+                        ),
+                        "basis": [
+                            "operator changes position when contradictory evidence presented"
+                        ]
+                        if _correction.get("dimensions", {}).get("can_revise")
+                        is not None
+                        else [],
+                    },
+                    "ambiguity_tolerance": {
+                        "score": _correction.get("dimensions", {}).get(
+                            "can_tolerate_ambiguity", None
+                        ),
+                        "basis": [
+                            "operator holds uncertainty without forcing premature closure"
+                        ]
+                        if _correction.get("dimensions", {}).get(
+                            "can_tolerate_ambiguity"
+                        )
+                        is not None
+                        else [],
+                    },
+                    "self_error_separation": {
+                        "score": _correction.get("dimensions", {}).get(
+                            "can_separate_self_from_error", None
+                        ),
+                        "basis": ["operator distinguishes self-worth from mistake"]
+                        if _correction.get("dimensions", {}).get(
+                            "can_separate_self_from_error"
+                        )
+                        is not None
+                        else [],
+                    },
+                    "consequence_reception": {
+                        "score": _correction.get("dimensions", {}).get(
+                            "can_hear_consequence", None
+                        ),
+                        "basis": ["operator acknowledges downstream impact of error"]
+                        if _correction.get("dimensions", {}).get("can_hear_consequence")
+                        is not None
+                        else [],
+                    },
+                },
+                "thresholds": {
+                    "intact": "score >= 0.70",
+                    "strained": "0.40 <= score < 0.70",
+                    "degraded": "score < 0.40",
+                    "note": "Engineering thresholds — calibrate on held-out data",
+                },
                 "interpretation": _correction.get("interpretation", ""),
                 "confidence": 0.6,
+                "rule_version": "correction_capacity.v1.2026-07-18",
                 "source_tools": ["well_correction_capacity"],
             },
             "regulation_recovery": {
