@@ -305,5 +305,22 @@
     </footer>
 
   </div>
+<script src="/_shared/webmcp/arifos-webmcp-adapter.js"></script>
+<script>
+(function() {
+  if (typeof arifosWebMCP === 'undefined') return;
+  arifosWebMCP.registerReadonly('get_organ_health', 'Get organ service health status', {}, async function() {
+    try { var r = await fetch('/health'); return await r.json(); }
+    catch(e) { return {status: 'unreachable', error: e.message}; }
+  });
+  arifosWebMCP.registerReadonly('get_registry', 'List this organ available tools', {}, async function() {
+    try {
+      var r = await fetch('/mcp', {method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({jsonrpc: '2.0', id: 1, method: 'tools/list'})});
+      return await r.json();
+    } catch(e) { return {status: 'unreachable', error: e.message}; }
+  });
+})();
+</script>
 </body>
 </html>
