@@ -4,7 +4,7 @@ last_verified: 2026-07-19T17:00Z
 live_commit: 6e6f44b
 port: 18083
 domain_law: SUBSTRATE_LAW
-mcp_tools_live: 27
+mcp_tools_live: 8
 authority: REFLECT_ONLY — never diagnose
 health_status: DEGRADED (apex_scalars UNMEASURED — known, non-blocking)
 truth_rule: tools/list + /health beat any static count in prose
@@ -12,7 +12,7 @@ a2a_agent_json: /root/WELL/.well-known/agent.json
 -->
 
 [![Agentic CI](https://github.com/ariffazil/well/actions/workflows/agentic-ci.yml/badge.svg?branch=main)](https://github.com/ariffazil/well/actions/workflows/agentic-ci.yml)
-[![🫀 REFLECT](https://img.shields.io/badge/%F0%9F%AB%80%20REFLECT-27%20tools-purple)](https://well.arif-fazil.com/mcp)
+[![🫀 REFLECT](https://img.shields.io/badge/%F0%9F%AB%80%20REFLECT-8%20tools-purple)](https://well.arif-fazil.com/mcp)
 [![Federation](https://img.shields.io/badge/Federation-v2026.07.19-0a7b83)](https://arifos.arif-fazil.com)
 [![License](https://img.shields.io/github/license/ariffazil/well?label=License)](LICENSE)
 
@@ -158,6 +158,6 @@ curl -s http://localhost:18083/health | python3 -m json.tool
 **Muhammad Arif bin Fazil** is F13 SOVEREIGN. Only he knows his own state.
 
 ```
-WELL · Port 18083 · 27 tools · REFLECT_ONLY · AGPL-3.0
+WELL · Port 18083 · 8 tools · REFLECT_ONLY · AGPL-3.0
 Reflects, never diagnoses. DITEMPA BUKAN DIBERI.
 ```

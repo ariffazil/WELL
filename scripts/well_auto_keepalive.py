@@ -98,7 +98,9 @@ def main():
     # gets quarantined to state.test.json instead of stuck in MOCK limbo (F1 + F2).
     env = str(state.get("environment", "")).upper()
     truth = str(state.get("truth_status", "")).upper()
-    if env == "TEST" or truth in ("TEST", "VOID", "INSUFFICIENT_DATA", "UNVERIFIED"):
+    # Only quarantine TEST/MOCK environments or truly void/unverified truth.
+    # INSUFFICIENT_DATA with PROD environment is HONEST (F2) — don't quarantine.
+    if env == "TEST" or truth in ("TEST", "VOID", "UNVERIFIED"):
         quarantine_test_state(state, now_utc)
         # Continue to restart well service so it picks up the fresh minimal PROD state.
         # The fresh state is "INSUFFICIENT_DATA" + "arif_decision_required" — cockpit
