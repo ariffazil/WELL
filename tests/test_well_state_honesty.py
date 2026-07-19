@@ -145,6 +145,27 @@ def test_assert_sovereign_presence_writes_operator_reported(monkeypatch, tmp_pat
     assert event["event"] == "SOVEREIGN_PRESENCE_ASSERTED"
 
 
+def test_autouse_fixture_preserves_production_state():
+    """A write-capable call must use the per-test paths from conftest."""
+    import server
+
+    production_state_path = ROOT / "state.json"
+    production_events_path = ROOT / "events.jsonl"
+    state_before = production_state_path.read_bytes()
+    state_mtime_before = production_state_path.stat().st_mtime_ns
+
+    assert server.STATE_PATH != production_state_path
+    assert server.EVENTS_PATH != production_events_path
+
+    result = _assert_sovereign_presence(operator_id="arif")
+
+    assert result["ok"] is True
+    assert server.STATE_PATH.exists()
+    assert server.EVENTS_PATH.exists()
+    assert production_state_path.read_bytes() == state_before
+    assert production_state_path.stat().st_mtime_ns == state_mtime_before
+
+
 # ── 4. Default missing-state payload is honest, not a fabricated score ────────
 
 
