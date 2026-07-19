@@ -12081,9 +12081,26 @@ if __name__ == "__main__":
         classification = _classify_well_state(state)
         # W-1: expose substrate advisory fields so arifOS judge HTTP fallback can consume them
         _clarity = state.get("metrics", {}).get("cognitive", {}).get("clarity")
+
+        git_commit = "UNAVAILABLE"
+        try:
+            import subprocess as _sp
+            _r = _sp.run(["git", "-C", "/root/WELL", "rev-parse", "--short=7", "HEAD"],
+                         capture_output=True, text=True, timeout=3)
+            if _r.returncode == 0:
+                git_commit = _r.stdout.strip()
+        except Exception:
+            pass
+        if git_commit == "UNAVAILABLE":
+            try:
+                git_commit = Path("/root/WELL/.git_commit").read_text().strip()
+            except Exception:
+                pass
+
         return JSONResponse(
             {
-                "identity": "WELL",
+                "identity": identity_hash if identity_hash != "UNAVAILABLE" else "WELL",
+                "git_commit": git_commit,
                 "role": "Body / Human Intelligence",
                 "authority": "REFLECT_ONLY",
                 "delta_s": state.get("delta_s", -1),
