@@ -1,60 +1,14 @@
 {
-    "$schema": "arifOS/agent-card/v2.0.0",
-    "id": "well-mcp",
-    "name": "WELL Substrate Vitality",
-    "description": "Human substrate governance layer for the arifOS federation. Monitors operator biological state, cognitive pressure, and readiness under constitutional floors F1-F13. Exposes unified substrate packet (human + machine + MCP coupled verdict) for federation-wide substrate assessment.",
-    "version": "2026.07.01",
-    "protocolVersion": "1.0.0",
-    "url": "https://well.arif-fazil.com",
-    "provider": {
-        "organization": "arifOS Federation",
-        "url": "https://arif-fazil.com"
-    },
-    "capabilities": {
-        "streaming": false,
-        "pushNotifications": false,
-        "stateTransitionHistory": true
-    },
-    "owned_mcp": [
-        "well_assess_homeostasis", "well_assess_livelihood", "well_assess_metabolism",
-        "well_assess_reliability", "well_assess_sovereign_entropy", "well_check_repair",
-        "well_classify_substrate", "well_compute_metabolic_flux", "well_detect_boundary",
-        "well_guard_dignity", "well_measure_gradient", "well_registry_status",
-        "well_trace_lineage", "well_validate_vitality", "well_medical_boundary",
-        "well_handoff_dignity_to_arifos", "well_handoff_livelihood_to_wealth"
-    ],
-    "skills": [
-        {"id": "well-classify-substrate", "name": "Classify Substrate", "description": "Chemistry-level substrate classification — sense and classify the raw biological and machine substrate.", "tags": ["substrate","sense","chemistry"], "floor_scope": ["F2","F6","F9"]},
-        {"id": "well-trace-lineage", "name": "Trace Lineage", "description": "Biology-level lineage tracing — recall memory and audit history across substrate events.", "tags": ["memory","lineage","biology"], "floor_scope": ["F2","F11"]},
-        {"id": "well-detect-boundary", "name": "Detect Boundary", "description": "Boundary detection — identify thresholds, limits, and edge conditions in substrate readiness.", "tags": ["boundary","threshold","gateway"], "floor_scope": ["F1","F8"]},
-        {"id": "well-measure-gradient", "name": "Measure Gradient", "description": "Energy gradient measurement — assess deltas, pressures, and directional changes in substrate state.", "tags": ["gradient","energy","delta"], "floor_scope": ["F2","F4"]},
-        {"id": "well-assess-metabolism", "name": "Assess Metabolism", "description": "Metabolism assessment — evaluate how substrate resources are being consumed and transformed.", "tags": ["metabolism","mind","cognitive-load"], "floor_scope": ["F2","F6"]},
-        {"id": "well-assess-homeostasis", "name": "Assess Homeostasis", "description": "Homeostasis check — evaluate regulatory balance across biological and machine systems.", "tags": ["homeostasis","regulation","heart"], "floor_scope": ["F2","F6"]},
-        {"id": "well-check-repair", "name": "Check Repair", "description": "Repair and resilience check — assess recovery capacity and repair mechanisms.", "tags": ["repair","resilience","forge"], "floor_scope": ["F1","F4"]},
-        {"id": "well-validate-vitality", "name": "Validate Vitality", "description": "Vitality validation — judge whether substrate vitality meets thresholds for safe operation.", "tags": ["vitality","judge","validation"], "floor_scope": ["F2","F6","F13"]},
-        {"id": "well-assess-livelihood", "name": "Assess Livelihood", "description": "Livelihood assessment — evaluate long-term sustainability and thriving capacity.", "tags": ["livelihood","thriving","prosperity"], "floor_scope": ["F2","F6"]},
-        {"id": "well-assess-reliability", "name": "Assess Reliability", "description": "Reliability assessment — measure machine and infrastructure reliability metrics.", "tags": ["reliability","machine","ops"], "floor_scope": ["F2","F4"]},
-        {"id": "well-guard-dignity", "name": "Guard Dignity", "description": "Dignity guard — ensure human dignity and meaning are preserved in substrate assessments.", "tags": ["dignity","meaning","human"], "floor_scope": ["F6","F9","F10"]},
-        {"id": "well-anchor-evidence", "name": "Anchor Evidence", "description": "Evidence anchoring — immutably record substrate state to VAULT999 for audit and constitutional review.", "tags": ["evidence","vault","anchor","audit"], "floor_scope": ["F1","F11"]}
-    ],
-    "governance": {
-        "constitutional_floors": ["F1","F2","F4","F6","F7","F9","F11","F13"],
-        "verdict_authority": "888_JUDGE",
-        "vault": "VAULT999",
-        "irreversible_requires_human": true,
-        "self_approval_forbidden": true,
-        "federation_trust_model": "untrusted_peers",
-        "authority_class": "specialist"
-    },
-    "a2a_endpoints": {
-        "health": "GET /health",
-        "mcp": "POST /mcp",
-        "packet": "GET /mcp (tool: well_get_packet)"
-    },
-    "metadata": {
-        "consolidated": "2026-07-01T20:00:00Z",
-        "consolidated_by": "FORGE (000Ω) — Phase 2 entropy reduction",
-        "source": "merged from static/agent-card.json (owned_mcp) + .well-known/agent-card.json",
-        "deprecation_notice": "Ω-WELL v2 canonical surface active. Legacy tools are deprecated aliases retained for compatibility."
-    }
+  "name": "WELL Vitality Intelligence",
+  "description": "Human readiness mirror. REFLECT_ONLY — never diagnostic authority. Homeostasis, fatigue, dignity.",
+  "url": "https://well.arif-fazil.com/mcp",
+  "version": "1.0.0",
+  "protocolVersion": "0.3.0",
+  "capabilities": {
+    "streaming": true,
+    "pushNotifications": false
+  },
+  "defaultInputModes": ["text"],
+  "defaultOutputModes": ["text"],
+  "skills": []
 }
