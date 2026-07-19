@@ -31,3 +31,4 @@ rollback:
 
 boundary_tests:
   - test_medical_boundary.py  # MUST NOT emit diagnosis — hard block
+# Federation CI test — 2026-07-19T18:18:51Z
