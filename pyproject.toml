@@ -4,7 +4,7 @@ version = "2026.06.06"
 description = "WELL — Human Substrate Governance Layer MCP Server"
 requires-python = ">=3.12"
 dependencies = [
-    "fastmcp[tasks]==3.4.3",
+    "fastmcp[tasks]==3.4.4",
     "pydantic>=2.13.4",
     "httpx>=0.28.0",
 ]
