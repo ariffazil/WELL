@@ -161,3 +161,49 @@ curl -s http://localhost:18083/health | python3 -m json.tool
 WELL · Port 18083 · 8 tools · REFLECT_ONLY · AGPL-3.0
 Reflects, never diagnoses. DITEMPA BUKAN DIBERI.
 ```
+
+---
+
+## 🛡️ Federation Governance
+
+This organ operates under the [arifOS Federation Contract](FEDERATION_CONTRACT.md). All 13 constitutional floors (F1-F13) apply. REFLECT_ONLY — never diagnose, never adjudicate. All outputs labeled OBS/DER/INT/SPEC per F2 TRUTH.
+
+### Constitutional Compliance
+- **F1 AMANAH:** All mutations reversible or backed up
+- **F2 TRUTH:** Epistemic labels on all substantive claims
+- **F3 WITNESS:** Tri-witness required for SEAL-grade outputs
+- **F4 CLARITY:** ΔS ≤ 0 — every output reduces entropy
+- **F9 ANTI-HANTU:** No medical claims. No diagnostic authority.
+- **F11 AUDIT:** Every tool call logged to VAULT999
+
+### Quick Links
+- [Federation Landing](/root/AGENTS.md)
+- [Organ Map](/root/AAA/docs/ORGAN.md)
+- [VAULT999](/root/VAULT999/)
+- [Secrets Vault](/root/.secrets/INDEX.md)
+
+---
+
+## 🔧 Tool Registry
+
+This organ exposes MCP tools discoverable via `tools/list` on port 18083. REFLECT_ONLY — no diagnostic authority.
+
+### Epistemic Standards (F2 TRUTH)
+All tool outputs follow the epistemic labeling convention:
+- **OBS** — Direct observation from biometric probe or measurement
+- **DER** — Derived from OBS via deterministic computation
+- **INT** — Interpretation requiring wellness/vitality expertise
+- **SPEC** — Speculative, forward-looking, or hypothetical
+
+### Medical Boundary (F9)
+WELL is REFLECT_ONLY. It must NEVER emit a medical claim, diagnosis, or treatment recommendation. All outputs route through `well_medical_boundary` before emission.
+
+### Connection
+```bash
+curl -s http://localhost:18083/health | python3 -m json.tool
+```
+
+---
+
+*Maintained under F13 SOVEREIGN by Muhammad Arif bin Fazil.*
+*DITEMPA BUKAN DIBERI — Forged, Not Given.*
