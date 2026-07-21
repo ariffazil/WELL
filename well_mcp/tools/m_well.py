@@ -169,15 +169,114 @@ async def well_check_repair(
     intensity: Optional[float] = None,
     outcome: Optional[str] = None,
 ) -> dict:
-    """Check repair, recovery, resilience, and forge cycle integrity."""
+    """Check repair, recovery, resilience, and forge cycle integrity.
+
+    P4 WIRED (2026-07-21): When task_description is provided, checks against
+    the repair allowlist. Returns matched repair options with autonomy bands.
+    Precheck/postcheck/recovery modes without task_description return the
+    full allowlist for reference.
+    """
+    try:
+        from repair_allowlist import (
+            get_repair_options,
+            get_allowlisted_services,
+            get_allowlisted_containers,
+            ALLOWLIST,
+        )
+
+        if task_description:
+            # Match task description against allowlist symptoms
+            options = get_repair_options([task_description])
+            if options:
+                result = build_unknown_result(
+                    "well_check_repair",
+                    missing=["arifos_judgment", "aforge_lease"],
+                    note=None,
+                )
+                result.update(
+                    {
+                        "verdict": "MATCHED",
+                        "confidence": 0.70,
+                        "truth_class": "INFERRED",
+                        "evidence_label": "DER",
+                        "mode": mode,
+                        "task_description": task_description,
+                        "repair_options": options,
+                        "recommendation": (
+                            f"Found {len(options)} matching repair option(s). "
+                            "All require arifOS judgment + A-FORGE lease before execution."
+                        ),
+                        "allowlisted_services": get_allowlisted_services(),
+                        "allowlisted_containers": get_allowlisted_containers(),
+                    }
+                )
+            else:
+                result = build_unknown_result(
+                    "well_check_repair",
+                    missing=["matching_allowlist_entry"],
+                    note=f"No allowlist entry matches: '{task_description}'. "
+                    "Propose the repair action for allowlist review.",
+                )
+                result["verdict"] = "NO_MATCH"
+                result["full_allowlist_size"] = len(ALLOWLIST)
+        else:
+            # No task — return full allowlist for reference
+            result = build_unknown_result(
+                "well_check_repair",
+                missing=["task_description"],
+                note="Provide task_description to check against the repair allowlist.",
+            )
+            result.update(
+                {
+                    "verdict": "ALLOWLIST_REFERENCE",
+                    "total_entries": len(ALLOWLIST),
+                    "entries_by_band": {
+                        "A1_diagnosis": len(
+                            [e for e in ALLOWLIST if e["band"] == "A1"]
+                        ),
+                        "A2_allowlisted": len(
+                            [e for e in ALLOWLIST if e["band"] == "A2"]
+                        ),
+                        "A3_judgment_gated": len(
+                            [e for e in ALLOWLIST if e["band"] == "A3"]
+                        ),
+                        "A4_prohibited": len(
+                            [e for e in ALLOWLIST if e["band"] == "A4"]
+                        ),
+                    },
+                    "allowlisted_services": get_allowlisted_services(),
+                    "allowlisted_containers": get_allowlisted_containers(),
+                    "phase": "P4_BOUNDED_REPAIR",
+                    "note": "Phase 1: diagnosis only. Phase 2: allowlisted reversible repair. "
+                    "All repairs require arifOS judgment + A-FORGE lease.",
+                }
+            )
+
+        receipt = generate_replay_receipt(
+            tool="well_check_repair",
+            session_id="UNBOUND",
+            actor_id=getattr(ctx, "actor_id", "unknown"),
+            inputs={
+                "mode": mode,
+                "task_description": task_description,
+                "decision_class": decision_class,
+                "source": source,
+                "intensity": intensity,
+                "outcome": outcome,
+            },
+            outputs=result,
+        )
+        return {**result, "replay_receipt": receipt.model_dump()}
+
+    except ImportError:
+        pass
+
+    # Fallback: allowlist module not available
     result = build_unknown_result(
         "well_check_repair",
-        missing=["repair_history", "service_state", "rollback_capability"],
-        note="No repair allowlist or recovery history available. Repair readiness is UNKNOWN until P4 bounded-repair pipeline is built.",
+        missing=["repair_allowlist", "service_state", "rollback_capability"],
+        note="Repair allowlist module not available. Repair readiness is UNKNOWN.",
     )
-    # TODO: P4 — implement repair precheck against allowlist + service state
-
-    # Generate replay receipt
     receipt = generate_replay_receipt(
         tool="well_check_repair",
         session_id="UNBOUND",
@@ -192,5 +291,4 @@ async def well_check_repair(
         },
         outputs=result,
     )
-
     return {**result, "replay_receipt": receipt.model_dump()}
