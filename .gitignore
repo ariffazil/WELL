@@ -54,3 +54,5 @@ state.test.json
 state.test.json.*
 scripts/*.bak-*
 tools_sot.yaml
+machine_state.json
+schema.json
