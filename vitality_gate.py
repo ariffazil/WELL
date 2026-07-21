@@ -143,9 +143,16 @@ def _assess_machine_telemetry(ms: dict[str, Any]) -> tuple[int, list[str], float
     else:
         ranks.append(4)
 
-    # 2. Memory PSI (Pressure Stall Information) — the wall predictor
-    mem_psi = pressure.get("memory_avg10", 0)
-    evidence.append(f"mem_psi10={mem_psi:.1f}")
+    # 2. Memory PSI (Pressure Stall Information) — the wall predictor.
+    # Linux PSI has two lines: 'some' (partial stall) and 'full' (total stall).
+    # 'some' means at least some tasks stalled; 'full' means ALL non-idle tasks stalled.
+    # Use explicit fields: memory_some_avg10, memory_full_avg10, etc.
+    mem_psi_some = pressure.get("memory_some_avg10", 0)
+    mem_psi_full = pressure.get("memory_full_avg10", 0)
+    evidence.append(f"mem_psi_some10={mem_psi_some:.1f} full10={mem_psi_full:.1f}")
+
+    # Assess the worse of 'some' and 'full' for floor dominance
+    mem_psi = max(mem_psi_some, mem_psi_full)
     if mem_psi > 50:
         ranks.append(1)
     elif mem_psi > 25:
