@@ -1,0 +1,39 @@
+organ: WELL
+version: 2026.07.21
+sot_source: SOMATIC_TOOLS (canonical public surface)
+live_port: 18083
+registry_note: Single source of truth. Both manifests and live server derive from
+  this.
+tools:
+- name: well_classify_substrate
+  access: public
+  substrate: G-WELL
+  description: Classify human/machine/coupled substrate type and boundary sensing
+- name: well_trace_lineage
+  access: public
+  substrate: C-WELL
+  description: Memory, trend, ledger, and vault chain tracing
+- name: well_assess_homeostasis
+  access: public
+  substrate: H-WELL
+  description: Assess regulation, stability, sleep, fatigue, and empathic balance
+- name: well_check_repair
+  access: public
+  substrate: M-WELL
+  description: Check repair, recovery, resilience, and forge cycle integrity
+- name: well_validate_vitality
+  access: public
+  substrate: H-WELL
+  description: Validate vitality, readiness, and NIAT before irreversible action
+- name: well_assess_reliability
+  access: public
+  substrate: M-WELL
+  description: Assess machine, tool, institution, and operational reliability
+- name: well_guard_dignity
+  access: public
+  substrate: H-WELL
+  description: Guard soul, personhood, meaning, and symbolic boundaries
+- name: well_registry_status
+  access: public
+  substrate: Federation
+  description: WELL registry truth diagnostic — blueprint canonical format

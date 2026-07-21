@@ -1,44 +1,68 @@
 {
   "name": "well-mcp",
   "version": "1.0.0",
-  "description": "WELL — Human Readiness Organ for arifOS Federation",
+  "description": "WELL \u2014 Human Readiness Organ for arifOS Federation",
   "author": "Muhammad Arif bin Fazil",
   "license": "AGPL-3.0",
   "port": 18083,
   "transport": "streamable-http",
   "domain_law": "SUBSTRATE_LAW",
   "authority": "REFLECT_ONLY",
-  "sovereign": "F13",
+  "sovereign": {
+    "name": "Muhammad Arif bin Fazil",
+    "role": "F13 SOVEREIGN",
+    "veto": true,
+    "final_authority": true
+  },
   "organ_id": "well",
   "organ_class": "domain",
   "federation_position": {
     "kernel": "arifos",
     "control_plane": "aaa",
     "executor": "aforge",
-    "siblings": ["geox", "wealth"],
+    "siblings": [
+      "geox",
+      "wealth"
+    ],
     "vault": "vault999"
   },
   "invariants": {
-    "W0": "OPERATOR_VETO_INTACT — WELL holds a mirror, not a veto",
+    "W0": "OPERATOR_VETO_INTACT \u2014 WELL holds a mirror, not a veto",
     "REFLECT_ONLY": "WELL can reflect, classify, detect, protect, warn. NEVER judge, block, diagnose, prescribe, or seal.",
-    "DOMAIN_LAW": "SUBSTRATE_LAW — not constitutional law, not natural law, not capital law",
+    "DOMAIN_LAW": "SUBSTRATE_LAW \u2014 not constitutional law, not natural law, not capital law",
     "SIGNAL_NOT_VERDICT": "WELL outputs signal, never verdict. SEAL/HOLD/SABAR/VOID belong to arifOS alone.",
     "MEDICAL_BOUNDARY": "WELL does not diagnose, treat, or predict. Not a medical device.",
     "PERSONA_NOT_SELF": "Pathology begins when the mask is mistaken for the being.",
     "FLOOR_DOMINANCE": "Weakest substrate determines vitality gate response."
   },
   "apex": {
-    "formula": "G = A · P · E · X · Φ",
-    "dark_formula": "C_dark = A · (1-P) · (1-X)",
-    "witness": "W³ = ∛(H × AI × Ext)",
-    "entropy": "ΔS ≤ 0",
-    "clarity": "Δ",
-    "humility": "Ω",
-    "vitality": "Ψ"
+    "formula": "G = A \u00b7 P \u00b7 E \u00b7 X \u00b7 \u03a6",
+    "dark_formula": "C_dark = A \u00b7 (1-P) \u00b7 (1-X)",
+    "witness": "W\u00b3 = \u221b(H \u00d7 AI \u00d7 Ext)",
+    "entropy": "\u0394S \u2264 0",
+    "clarity": "\u0394",
+    "humility": "\u03a9",
+    "vitality": "\u03a8"
   },
   "metabolic_loop": {
-    "stages": ["000_init", "111_observe", "333_reason", "444_route", "555_critique", "666_judge", "777_cool", "888_hold", "999_seal"],
-    "outputs_per_stage": ["friction_score", "truth_class", "cost_estimate", "reversibility_class", "novelty_tags"]
+    "stages": [
+      "000_init",
+      "111_observe",
+      "333_reason",
+      "444_route",
+      "555_critique",
+      "666_judge",
+      "777_cool",
+      "888_hold",
+      "999_seal"
+    ],
+    "outputs_per_stage": [
+      "friction_score",
+      "truth_class",
+      "cost_estimate",
+      "reversibility_class",
+      "novelty_tags"
+    ]
   },
   "tools": {
     "total": 27,
@@ -73,7 +97,41 @@
       "well_trace_lineage",
       "well_trust_compression",
       "well_validate_vitality"
-    ]
+    ],
+    "public": 8,
+    "internal": 19,
+    "public_tools": [
+      "well_assess_homeostasis",
+      "well_assess_reliability",
+      "well_check_repair",
+      "well_classify_substrate",
+      "well_guard_dignity",
+      "well_registry_status",
+      "well_trace_lineage",
+      "well_validate_vitality"
+    ],
+    "internal_tools": [
+      "well_assess_livelihood",
+      "well_assess_metabolism",
+      "well_assess_sovereign_entropy",
+      "well_attest_to_kernel",
+      "well_classify_state",
+      "well_compute_metabolic_flux",
+      "well_correction_capacity",
+      "well_dark_geometry_mirror",
+      "well_detect_boundary",
+      "well_handoff_dignity_to_arifos",
+      "well_handoff_livelihood_to_wealth",
+      "well_health_check",
+      "well_measure_gradient",
+      "well_medical_boundary",
+      "well_niat_impact_mirror",
+      "well_regulation_recovery",
+      "well_sabar_latency",
+      "well_signal_coverage",
+      "well_trust_compression"
+    ],
+    "note": "Only public tools are exposed on MCP wire. Internal tools are callable but not listed in tools/discover."
   },
   "resources": {
     "total": 29,
@@ -124,10 +182,31 @@
     "COUPLED": "human-machine system"
   },
   "substrate_states": {
-    "HUMAN": ["READY", "BELOW_BASELINE", "DEGRADED", "CRITICAL", "UNKNOWN"],
-    "MACHINE": ["STABLE", "STRAINED", "DEGRADED", "CRITICAL"],
-    "GOVERNANCE": ["COHERENT", "UNCERTAIN", "DRIFTING", "COMPROMISED"],
-    "COUPLED": ["LOW_RISK", "MEDIUM_RISK", "HIGH_RISK", "RECOVERY"]
+    "HUMAN": [
+      "READY",
+      "BELOW_BASELINE",
+      "DEGRADED",
+      "CRITICAL",
+      "UNKNOWN"
+    ],
+    "MACHINE": [
+      "STABLE",
+      "STRAINED",
+      "DEGRADED",
+      "CRITICAL"
+    ],
+    "GOVERNANCE": [
+      "COHERENT",
+      "UNCERTAIN",
+      "DRIFTING",
+      "COMPROMISED"
+    ],
+    "COUPLED": [
+      "LOW_RISK",
+      "MEDIUM_RISK",
+      "HIGH_RISK",
+      "RECOVERY"
+    ]
   },
   "federation_bridges": {
     "arifos": "well_handoff_dignity_to_arifos",
@@ -137,7 +216,7 @@
   "a2a": {
     "agent_card": {
       "name": "well-organ",
-      "description": "Human readiness organ — vitality, dignity, coupling",
+      "description": "Human readiness organ \u2014 vitality, dignity, coupling",
       "url": "http://localhost:18083",
       "version": "1.0.0",
       "capabilities": {
@@ -166,16 +245,35 @@
   "replay_receipts": {
     "enabled": true,
     "format": "json",
-    "fields": ["tool", "timestamp", "session_id", "actor_id", "inputs", "outputs", "truth_class", "evidence_label", "friction_score", "cost_estimate", "reversibility_class", "novelty_tags"],
+    "fields": [
+      "tool",
+      "timestamp",
+      "session_id",
+      "actor_id",
+      "inputs",
+      "outputs",
+      "truth_class",
+      "evidence_label",
+      "friction_score",
+      "cost_estimate",
+      "reversibility_class",
+      "novelty_tags"
+    ],
     "storage": "vault999"
   },
   "contradiction_handling": {
-    "types": ["semantic", "outdated_physics", "duplicated_logic", "drifted_invariants", "missing_governance"],
+    "types": [
+      "semantic",
+      "outdated_physics",
+      "duplicated_logic",
+      "drifted_invariants",
+      "missing_governance"
+    ],
     "action": "surface_to_arifos_never_resolve"
   },
   "entropy_reduction": {
     "rules": [
-      "ΔS ≤ 0 on every output",
+      "\u0394S \u2264 0 on every output",
       "No phantom tools",
       "No UNKNOWN tools",
       "No legacy adapters",
@@ -200,17 +298,11 @@
     "deploy": "systemctl restart well",
     "health": "curl -s :18083/health | python3 -m json.tool"
   },
-  "sovereign": {
-    "name": "Muhammad Arif bin Fazil",
-    "role": "F13 SOVEREIGN",
-    "veto": true,
-    "final_authority": true
-  },
   "meta": {
     "generated": "2026-07-16",
     "session": "SEAL-ae2825cd07564a64",
     "actor": "ARIF",
-    "apex_formula": "G = A·P·E·X·Φ",
+    "apex_formula": "G = A\u00b7P\u00b7E\u00b7X\u00b7\u03a6",
     "constitutional_floors": "F1-F13",
     "mcp_spec": "v2025-11-25"
   }
