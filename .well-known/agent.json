@@ -2,8 +2,8 @@
   "$schema": "https://google.com/genai/a2a/agent-card/v1",
   "arifos_internal_card": "/.well-known/agent-card.json",
   "name": "WELL",
-  "description": "Human substrate governance — operator biological state, cognitive pressure, fatigue, dignity under F1-F13. REFLECT_ONLY: never makes clinical or diagnostic claims, never adjudicates strategic action, signals readiness for the federation.",
-  "version": "2026.07.01",
+  "description": "Human substrate governance \u2014 operator biological state, cognitive pressure, fatigue, dignity under F1-F13. REFLECT_ONLY: never makes clinical or diagnostic claims, never adjudicates strategic action, signals readiness for the federation.",
+  "version": "2026.07.21-autopilot",
   "protocolVersion": "1.0.0",
   "url": "https://well.arif-fazil.com",
   "provider": {
@@ -23,28 +23,80 @@
       },
       {
         "uri": "https://arif-fazil.com/extensions/reflect-only/v1",
-        "description": "REFLECT_ONLY lane — never a strategic judge, never a clinical authority."
+        "description": "REFLECT_ONLY lane \u2014 never a strategic judge, never a clinical authority."
       },
       {
         "uri": "https://arif-fazil.com/extensions/dignity-guard/v1",
         "description": "F6 MARUAH: dignity is non-negotiable. WELL signals; humans decide."
+      },
+      {
+        "uri": "https://arif-fazil.com/extensions/autopilot-c0/v1",
+        "description": "C0_AUTO: Pre-approved read-only observe and recommend tools auto-execute. Lease consent flow enabled for C1+. F13 approved 2026-07-21."
       }
     ]
   },
-  "defaultInputModes": ["application/json"],
-  "defaultOutputModes": ["application/json"],
+  "defaultInputModes": [
+    "application/json"
+  ],
+  "defaultOutputModes": [
+    "application/json"
+  ],
   "skills": [
-    {"id": "substrate-classify", "name": "Substrate Classification", "description": "Ω-WELL-01 — classify body/machine/membrane/federation substrate."},
-    {"id": "lineage-trace", "name": "Memory Lineage", "description": "Ω-WELL-02 — trace biological + ledger state through time."},
-    {"id": "boundary-detect", "name": "Boundary Detection", "description": "Ω-WELL-03 — membrane, body, machine, federation boundaries."},
-    {"id": "gradient-measure", "name": "Energy Gradient", "description": "Ω-WELL-04 — chemical, energy, pressure, attention, compute gradients."},
-    {"id": "metabolism-assess", "name": "Metabolism Assessment", "description": "Ω-WELL-05 — biological + cognitive throughput."},
-    {"id": "homeostasis-assess", "name": "Homeostasis", "description": "Ω-WELL-06 — regulation, stability, empathic balance under change."},
-    {"id": "repair-check", "name": "Repair & Forge Cycle", "description": "Ω-WELL-07 — recovery and forge-cycle integrity."},
-    {"id": "vitality-validate", "name": "Vitality Validation", "description": "Ω-WELL-08 — validate readiness (Floor compliance removed; arifOS adjudicates floors)."},
-    {"id": "livelihood-assess", "name": "Livelihood Assessment", "description": "Ω-WELL-09 — wellness, role, dignity, support, meaning."},
-    {"id": "reliability-assess", "name": "Machine Reliability", "description": "Ω-WELL-10 — operational tool and institutional reliability."},
-    {"id": "dignity-guard", "name": "Dignity Guard", "description": "Ω-WELL-12 — protect soul, personhood, meaning, symbolic boundaries."}
+    {
+      "id": "substrate-classify",
+      "name": "Substrate Classification",
+      "description": "\u03a9-WELL-01 \u2014 classify body/machine/membrane/federation substrate."
+    },
+    {
+      "id": "lineage-trace",
+      "name": "Memory Lineage",
+      "description": "\u03a9-WELL-02 \u2014 trace biological + ledger state through time."
+    },
+    {
+      "id": "boundary-detect",
+      "name": "Boundary Detection",
+      "description": "\u03a9-WELL-03 \u2014 membrane, body, machine, federation boundaries."
+    },
+    {
+      "id": "gradient-measure",
+      "name": "Energy Gradient",
+      "description": "\u03a9-WELL-04 \u2014 chemical, energy, pressure, attention, compute gradients."
+    },
+    {
+      "id": "metabolism-assess",
+      "name": "Metabolism Assessment",
+      "description": "\u03a9-WELL-05 \u2014 biological + cognitive throughput."
+    },
+    {
+      "id": "homeostasis-assess",
+      "name": "Homeostasis",
+      "description": "\u03a9-WELL-06 \u2014 regulation, stability, empathic balance under change."
+    },
+    {
+      "id": "repair-check",
+      "name": "Repair & Forge Cycle",
+      "description": "\u03a9-WELL-07 \u2014 recovery and forge-cycle integrity."
+    },
+    {
+      "id": "vitality-validate",
+      "name": "Vitality Validation",
+      "description": "\u03a9-WELL-08 \u2014 validate readiness (Floor compliance removed; arifOS adjudicates floors)."
+    },
+    {
+      "id": "livelihood-assess",
+      "name": "Livelihood Assessment",
+      "description": "\u03a9-WELL-09 \u2014 wellness, role, dignity, support, meaning."
+    },
+    {
+      "id": "reliability-assess",
+      "name": "Machine Reliability",
+      "description": "\u03a9-WELL-10 \u2014 operational tool and institutional reliability."
+    },
+    {
+      "id": "dignity-guard",
+      "name": "Dignity Guard",
+      "description": "\u03a9-WELL-12 \u2014 protect soul, personhood, meaning, symbolic boundaries."
+    }
   ],
   "owned_mcp_count": 22,
   "can_do": [
@@ -64,7 +116,16 @@
     "Expose biometric state to other organs without consent",
     "Provide medical advice; recommend professional care for severe/persistent/urgent symptoms"
   ],
-  "constitutional_floors": ["F1_AMANAH","F2_TRUTH","F4_CLARITY","F6_MARUAH","F7_HUMILITY","F9_ANTI_HANTU","F11_AUDIT","F13_SOVEREIGN"],
+  "constitutional_floors": [
+    "F1_AMANAH",
+    "F2_TRUTH",
+    "F4_CLARITY",
+    "F6_MARUAH",
+    "F7_HUMILITY",
+    "F9_ANTI_HANTU",
+    "F11_AUDIT",
+    "F13_SOVEREIGN"
+  ],
   "lane": "reflect_only",
   "self_judge": false,
   "judge_authority": "arifOS arif_judge_deliberate",
@@ -72,7 +133,9 @@
   "color_grammar": "GREEN | YELLOW | RED | STALE",
   "ledger": "VAULT999",
   "authentication": {
-    "schemes": ["bearer"],
+    "schemes": [
+      "bearer"
+    ],
     "credentials": "Lease-token issued by arifOS arif_lease_issue; transport-layer JWT auth."
   },
   "a2a_endpoints": {
@@ -85,5 +148,28 @@
     "generated_at": "2026-07-04",
     "generator": "arifos-federation-alignment",
     "spec": "github.com/a2aproject/A2A v1.0 + arifOS internal v2.0.0 wrapper"
+  },
+  "autopilot": {
+    "enabled": true,
+    "approved_by": "F13 SOVEREIGN \u2014 Arif 2026-07-21",
+    "c0_auto_policy": {
+      "enabled": true,
+      "max_band": "A1",
+      "decision_class": "C0",
+      "pre_approved_tools": 12,
+      "non_approved_tools": 1
+    },
+    "lease_consent_flow": {
+      "enabled": true,
+      "trigger_class": "C1",
+      "ttl_seconds": 300,
+      "button_text": "Arif approves WELL-advised lease"
+    },
+    "tool_pre_approval": {
+      "enabled": true,
+      "a0_tools": 5,
+      "a1_tools": 7,
+      "a2_tools": 1
+    }
   }
 }
