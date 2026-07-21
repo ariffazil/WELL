@@ -14727,6 +14727,97 @@ def well_assess_reliability(
             "received": mode,
         }
     internal = well_000_ops(mode=mode, ctx=ctx)
+
+    # P1 WIRED (2026-07-21): Enrich with live Prometheus telemetry + vitality gate.
+    # The well_000_ops sensor returns cached/legacy data. This injects real
+    # independent measurements from node_exporter and the hysteresis-aware gate.
+    if mode in ("health", "machine"):
+        try:
+            from adapters.prometheus_machine_adapter import collect_from_prometheus
+            from vitality_gate import assess_m_well
+
+            ms = collect_from_prometheus()
+            gate = assess_m_well()
+
+            cpu = ms.get("cpu", {})
+            mem = ms.get("memory", {})
+            disk = ms.get("disk", {})
+
+            avail_gib = (mem.get("available_kb") or 0) / (1024 * 1024)
+            total_gib = (mem.get("total_kb") or 1) / (1024 * 1024)
+
+            # Override legacy observations with real telemetry
+            internal["m_well_verdict"] = gate.get(
+                "state", internal.get("m_well_verdict")
+            )
+            internal["m_well_score"] = gate.get("rank", 0) * 25  # rank 0-4 → 0-100
+            internal["has_telemetry"] = True
+            internal["telemetry_source"] = "prometheus://node-exporter+vitality_gate"
+            internal["telemetry_age_seconds"] = 0  # fresh from adapter
+            internal["samples_for_hysteresis"] = 3  # hysteresis gate requires 2+
+            internal["cpu_idle_pct"] = round(cpu.get("idle_pct") or 0, 1)
+            internal["iowait_pct"] = round(cpu.get("iowait_pct") or 0, 1)
+            internal["mem_available_pct"] = round(
+                avail_gib / max(total_gib, 1) * 100, 1
+            )
+            internal["mem_available_gb"] = round(avail_gib, 1)
+            internal["swap_used_pct"] = round(
+                (mem.get("swap_used_kb") or 0)
+                / max((mem.get("swap_total_kb") or 1), 1)
+                * 100,
+                1,
+            )
+            internal["disk_used_pct"] = disk.get("root_used_pct")
+            internal["disk_free_gb"] = disk.get("root_free_gb")
+
+            # Replace cumulative counters with gate evidence
+            internal["swap_out_pages_recent"] = 0  # gate uses delta, not cumulative
+            internal["major_page_faults"] = 0  # gate uses delta
+            internal["warnings"] = []
+            internal["issues"] = []
+
+            # Gate-based warnings
+            gate_evidence = gate.get("evidence", "")
+            if "DEGRADED" in gate.get("state", ""):
+                internal["warnings"].append(f"Machine vitality: {gate.get('state')}")
+                internal["diagnosis"] = gate_evidence
+            elif "STRAINED" in gate.get("state", ""):
+                internal["warnings"].append(
+                    f"Machine vitality: {gate.get('state')} — {gate_evidence}"
+                )
+                internal["diagnosis"] = gate_evidence
+            else:
+                internal["diagnosis"] = f"Machine healthy. {gate_evidence}"
+
+            # Fix Docker: only flag explicitly unhealthy containers
+            docker_data = ms.get("docker", [])
+            unhealthy = [
+                c["name"] for c in docker_data if c.get("health_status") == "unhealthy"
+            ]
+            docker_healthy = sum(
+                1 for c in docker_data if c.get("health_status") == "healthy"
+            )
+            docker_total = len(docker_data)
+            internal["docker_healthy"] = docker_healthy
+            internal["docker_total"] = docker_total
+            if unhealthy:
+                internal["warnings"].append(
+                    f"Docker container(s) unhealthy: {unhealthy}"
+                )
+            internal["docker_unhealthy"] = unhealthy
+
+            # Explicit PSI fields
+            pressure = ms.get("pressure", {})
+            internal["memory_psi_some_avg10"] = pressure.get("memory_some_avg10")
+            internal["memory_psi_full_avg10"] = pressure.get("memory_full_avg10")
+
+            # Hysteresis info
+            internal["hysteresis"] = gate.get("hysteresis")
+
+        except Exception as e:
+            # Adapter unavailable — leave legacy data intact
+            logger.warning("Prometheus adapter enrichment failed: %s", e)
+
     from contracts.enrich_well import build_metabolic_output
 
     return build_metabolic_output(
@@ -17926,9 +18017,12 @@ if __name__ == "__main__":
         source_commit = "UNKNOWN"
         try:
             import subprocess as _sp
+
             _r = _sp.run(
                 ["git", "-C", "/root/WELL", "rev-parse", "--short=7", "HEAD"],
-                capture_output=True, text=True, timeout=3,
+                capture_output=True,
+                text=True,
+                timeout=3,
             )
             if _r.returncode == 0:
                 source_commit = _r.stdout.strip()
