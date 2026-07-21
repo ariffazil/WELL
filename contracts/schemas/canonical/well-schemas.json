@@ -1,0 +1,441 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "WELL Canonical Schema Registry v1.0.0",
+  "description": "Single source of truth for all WELL data schemas. Generated from arifOS WELL doctrine 2026-07-21.",
+  "version": "1.0.0",
+  "forged": "2026-07-21",
+  "sovereign": "Muhammad Arif bin Fazil (F13)",
+  "doctrine": "DITEMPA BUKAN DIBERI",
+
+  "schemas": {
+    "machine-state": {
+      "$id": "well://schemas/machine-state",
+      "title": "M-WELL Machine State",
+      "description": "Live machine substrate telemetry from /proc, systemd, Docker. Written by machine_telemetry.py collector via cron.",
+      "type": "object",
+      "required": ["schema", "timestamp", "hostname", "cpu", "memory", "disk"],
+      "properties": {
+        "schema": { "type": "string", "const": "machine_state.json v1.0" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "hostname": { "type": "string" },
+        "uptime_seconds": { "type": "number" },
+        "cpu": {
+          "type": "object",
+          "required": ["load_1m", "idle_pct", "iowait_pct", "steal_pct"],
+          "properties": {
+            "load_1m": { "type": "number" },
+            "load_5m": { "type": "number" },
+            "load_15m": { "type": "number" },
+            "user_pct": { "type": "number" },
+            "system_pct": { "type": "number" },
+            "idle_pct": { "type": "number" },
+            "iowait_pct": { "type": "number" },
+            "steal_pct": { "type": "number" }
+          }
+        },
+        "memory": {
+          "type": "object",
+          "required": ["total_kb", "available_kb"],
+          "properties": {
+            "total_kb": { "type": "integer" },
+            "available_kb": { "type": "integer", "description": "THE metric that matters — MemAvailable, not MemFree" },
+            "free_kb": { "type": "integer" },
+            "used_kb": { "type": "integer" },
+            "buffers_kb": { "type": "integer" },
+            "cached_kb": { "type": "integer" },
+            "swap_total_kb": { "type": "integer" },
+            "swap_used_kb": { "type": "integer" },
+            "swap_in_pages": { "type": "integer", "description": "CUMULATIVE since boot — use delta for rate" },
+            "swap_out_pages": { "type": "integer", "description": "CUMULATIVE since boot — use delta for rate" },
+            "major_faults": { "type": "integer" }
+          }
+        },
+        "pressure": {
+          "type": "object",
+          "description": "Linux PSI (Pressure Stall Information) from /proc/pressure/*",
+          "properties": {
+            "cpu_avg10": { "type": "number" },
+            "cpu_avg60": { "type": "number" },
+            "cpu_avg300": { "type": "number" },
+            "io_avg10": { "type": "number" },
+            "io_avg60": { "type": "number" },
+            "memory_avg10": { "type": "number", "description": "Memory pressure — the wall predictor" },
+            "memory_avg60": { "type": "number" },
+            "memory_avg300": { "type": "number" }
+          }
+        },
+        "disk": {
+          "type": "object",
+          "required": ["root_used_pct", "root_free_gb"],
+          "properties": {
+            "root_used_pct": { "type": "number" },
+            "root_free_gb": { "type": "number" },
+            "inode_used_pct": { "type": "number" }
+          }
+        },
+        "services": {
+          "type": "object",
+          "description": "systemd service states with NRestarts",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "active": { "type": "boolean" },
+              "restart_count": { "type": "integer" },
+              "pid": { "type": "integer" }
+            }
+          }
+        },
+        "docker": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "status": { "type": "string" },
+              "healthy": { "type": "boolean" },
+              "health_status": { "type": "string", "enum": ["healthy", "unhealthy", "unknown"], "description": "Only 'unhealthy' is a real problem; 'unknown' means no HEALTHCHECK configured" },
+              "up": { "type": "boolean" }
+            }
+          }
+        },
+        "zombies": { "type": "integer" },
+        "history": {
+          "type": "array",
+          "maxItems": 288,
+          "description": "24h ring buffer at 5-min intervals for hysteresis",
+          "items": {
+            "type": "object",
+            "properties": {
+              "ts": { "type": "string", "format": "date-time" },
+              "cpu_load_1m": { "type": "number" },
+              "mem_used_pct": { "type": "number" },
+              "mem_available_kb": { "type": "integer" },
+              "swap_used_kb": { "type": "integer" },
+              "swap_out_pages": { "type": "integer" },
+              "disk_used_pct": { "type": "number" },
+              "docker_healthy": { "type": "integer" },
+              "docker_total": { "type": "integer" },
+              "services_active": { "type": "integer" },
+              "services_total": { "type": "integer" },
+              "zombies": { "type": "integer" }
+            }
+          }
+        },
+        "source": { "type": "string", "const": "/proc + systemctl + docker ps" },
+        "truth_status": { "type": "string", "const": "OBSERVED" },
+        "confidence": { "type": "number", "const": 0.95 }
+      }
+    },
+
+    "evidence-envelope": {
+      "$id": "well://schemas/evidence-envelope",
+      "title": "WELL Evidence Envelope",
+      "description": "Every WELL output wraps in this envelope. Enforces epistemic labeling and evidence provenance.",
+      "type": "object",
+      "required": ["tool", "timestamp", "verdict", "confidence", "evidence_label", "missing_evidence"],
+      "properties": {
+        "tool": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "verdict": { "type": "string", "enum": ["UNKNOWN", "PROCEED", "REDUCE_LOAD", "RECOVER", "HOLD"] },
+        "confidence": {
+          "anyOf": [
+            { "type": "number", "minimum": 0.0, "maximum": 0.90 },
+            { "type": "null" }
+          ],
+          "description": "Capped at 0.90 (F7 HUMILITY). null = no evidence at all."
+        },
+        "evidence_label": { "type": "string", "enum": ["NONE", "OBS", "DER", "INT", "SPEC"] },
+        "truth_class": { "type": "string", "enum": ["LIVE", "CACHED", "INFERRED", "STALE"] },
+        "missing_evidence": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "What evidence would be needed to raise confidence"
+        },
+        "evidence_age_hours": { "anyOf": [{ "type": "number" }, { "type": "null" }] },
+        "note": { "type": "string", "description": "Why UNKNOWN or why limited confidence" },
+        "boundary_notice": { "type": "string" },
+        "recommended_next_organ": { "type": "string", "enum": ["arifOS", "A-FORGE", "GEOX", "WEALTH", "AAA", "none"] }
+      }
+    },
+
+    "readiness-advisory": {
+      "$id": "well://schemas/readiness-advisory",
+      "title": "WELL Readiness Advisory",
+      "description": "Output of well_validate_vitality / vitality_gate. Advisory only — does not authorize action.",
+      "type": "object",
+      "required": ["timestamp", "verdict", "weakest_substrate", "H_WELL", "M_WELL", "G_WELL", "C_WELL", "tool_routing"],
+      "properties": {
+        "timestamp": { "type": "string", "format": "date-time" },
+        "verdict": { "type": "string", "enum": ["PROCEED", "REDUCE_LOAD", "RECOVER", "HOLD", "INSUFFICIENT_DATA"] },
+        "weakest_substrate": { "type": "string", "enum": ["H_WELL", "M_WELL", "G_WELL", "C_WELL"] },
+        "weakest_rank": { "type": "integer", "minimum": 0, "maximum": 4 },
+        "peace_condition": { "type": "boolean" },
+        "phase": { "type": "string" },
+        "H_WELL": { "$ref": "#/schemas/substrate-assessment" },
+        "M_WELL": { "$ref": "#/schemas/substrate-assessment" },
+        "G_WELL": { "$ref": "#/schemas/substrate-assessment" },
+        "C_WELL": { "$ref": "#/schemas/substrate-assessment" },
+        "tool_routing": {
+          "type": "object",
+          "properties": {
+            "allowed": { "type": "string" },
+            "blocked": { "type": "string" }
+          }
+        },
+        "gate_rule": { "type": "string", "const": "Weakest substrate determines response. Floor dominance." }
+      }
+    },
+
+    "substrate-assessment": {
+      "$id": "well://schemas/substrate-assessment",
+      "title": "Single Substrate Assessment",
+      "type": "object",
+      "required": ["state", "rank", "evidence", "uncertainty", "source"],
+      "properties": {
+        "state": { "type": "string" },
+        "rank": { "type": "integer", "minimum": 0, "maximum": 4 },
+        "evidence": { "type": "string" },
+        "uncertainty": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+        "source": { "type": "string" },
+        "note": { "type": "string" },
+        "hysteresis": { "type": "string" }
+      }
+    },
+
+    "repair-advisory": {
+      "$id": "well://schemas/repair-advisory",
+      "title": "WELL Repair Advisory",
+      "description": "M-WELL repair recommendation. Advisory only — A-FORGE executes under arifOS judgment.",
+      "type": "object",
+      "required": ["symptom", "probable_cause", "confidence", "proposed_action", "reversibility", "blast_radius"],
+      "properties": {
+        "symptom": { "type": "string" },
+        "probable_cause": { "type": "string" },
+        "supporting_evidence": { "type": "array", "items": { "type": "string" } },
+        "contradicting_evidence": { "type": "array", "items": { "type": "string" } },
+        "confidence": { "type": "number", "minimum": 0.0, "maximum": 0.90 },
+        "affected_capabilities": { "type": "array", "items": { "type": "string" } },
+        "proposed_action": { "type": "string" },
+        "reversibility": { "type": "string", "enum": ["REVERSIBLE", "IRREVERSIBLE", "UNKNOWN"] },
+        "blast_radius": { "type": "string", "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"] },
+        "verification_test": { "type": "string" },
+        "rollback": { "type": "string" },
+        "required_authority": { "type": "string", "enum": ["A0_OBSERVE", "A1_ADVISORY", "A2_ALLOWLISTED", "A3_EXPLICIT_JUDGMENT", "A4_PROHIBITED"] }
+      }
+    },
+
+    "repair-result": {
+      "$id": "well://schemas/repair-result",
+      "title": "WELL Repair Result",
+      "description": "Post-repair verification result.",
+      "type": "object",
+      "required": ["repair_id", "timestamp", "action_taken", "pre_state", "post_state", "verdict"],
+      "properties": {
+        "repair_id": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "action_taken": { "type": "string" },
+        "pre_state": { "type": "object" },
+        "post_state": { "type": "object" },
+        "verdict": { "type": "string", "enum": ["RECOVERED", "IMPROVED", "UNCHANGED", "DEGRADED", "UNKNOWN"] },
+        "metric_delta": { "type": "object" },
+        "rollback_needed": { "type": "boolean" },
+        "vault_receipt_ref": { "type": "string" }
+      }
+    },
+
+    "consent-grant": {
+      "$id": "well://schemas/consent-grant",
+      "title": "WELL Consent Grant",
+      "description": "Human consent record for biometric telemetry collection.",
+      "type": "object",
+      "required": ["consent_id", "granted_at", "scope", "purpose", "retention_days"],
+      "properties": {
+        "consent_id": { "type": "string" },
+        "granted_at": { "type": "string", "format": "date-time" },
+        "revoked_at": { "anyOf": [{ "type": "string", "format": "date-time" }, { "type": "null" }] },
+        "scope": {
+          "type": "array",
+          "items": { "type": "string", "enum": ["sleep", "activity", "heart_rate", "hrv", "self_report", "circadian", "all"] }
+        },
+        "purpose": { "type": "string" },
+        "retention_days": { "type": "integer" },
+        "data_sources": { "type": "array", "items": { "type": "string" } },
+        "status": { "type": "string", "enum": ["valid", "revoked", "expired", "absent"] }
+      }
+    },
+
+    "human-state": {
+      "$id": "well://schemas/human-state",
+      "title": "H-WELL Human State",
+      "description": "Human biological and cognitive readiness state. Self-report + optional Health Connect telemetry.",
+      "type": "object",
+      "required": ["timestamp", "status", "consent_state", "evidence_label"],
+      "properties": {
+        "timestamp": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["READY", "LIMITED", "RECOVERY_NEEDED", "UNKNOWN"] },
+        "consent_state": { "type": "string", "enum": ["valid", "revoked", "expired", "absent"] },
+        "biological_evidence": {
+          "type": "object",
+          "properties": {
+            "sleep_hours": { "type": "number" },
+            "sleep_debt_days": { "type": "integer" },
+            "resting_hr": { "type": "integer" },
+            "hrv_trend": { "type": "string", "enum": ["improving", "stable", "declining", "unknown"] },
+            "activity_level": { "type": "string", "enum": ["low", "moderate", "high", "unknown"] }
+          }
+        },
+        "self_reported_state": {
+          "type": "object",
+          "properties": {
+            "fatigue_level": { "type": "string", "enum": ["LOW", "MODERATE", "HIGH", "unknown"] },
+            "cognitive_clarity": { "type": "number", "minimum": 0, "maximum": 10 },
+            "decision_fatigue": { "type": "number", "minimum": 0, "maximum": 10 },
+            "emotional_state": { "type": "string" },
+            "stress_level": { "type": "number", "minimum": 0, "maximum": 10 }
+          }
+        },
+        "sleep_debt": {},
+        "cognitive_load": {},
+        "decision_fatigue": {},
+        "dignity_risk": {},
+        "data_freshness": {},
+        "confidence": { "type": "number", "minimum": 0.0, "maximum": 0.90 },
+        "evidence_label": { "type": "string", "enum": ["NONE", "OBS", "DER", "INT", "SPEC"] },
+        "recommended_decision_band": { "type": "string", "enum": ["C1", "C2", "C3", "C4", "C5"] },
+        "note": { "type": "string" }
+      }
+    },
+
+    "agent-state": {
+      "$id": "well://schemas/agent-state",
+      "title": "C-WELL Agent Intelligence State",
+      "description": "Agent cognitive, tool, and execution telemetry for coupled intelligence assessment.",
+      "type": "object",
+      "required": ["timestamp", "agent_id", "session_id"],
+      "properties": {
+        "timestamp": { "type": "string", "format": "date-time" },
+        "agent_id": { "type": "string" },
+        "session_id": { "type": "string" },
+        "model": {
+          "type": "object",
+          "properties": {
+            "error_rate": { "type": "number" },
+            "calibration": { "type": "number" },
+            "refusal_quality": { "type": "string" }
+          }
+        },
+        "tools": {
+          "type": "object",
+          "properties": {
+            "success_rate": { "type": "number" },
+            "latency_ms": { "type": "number" },
+            "malformed_rate": { "type": "number" }
+          }
+        },
+        "context": {
+          "type": "object",
+          "properties": {
+            "utilization_pct": { "type": "number" },
+            "compression_loss": { "type": "number" },
+            "missing_evidence_count": { "type": "integer" }
+          }
+        },
+        "memory": {
+          "type": "object",
+          "properties": {
+            "contradictions": { "type": "integer" },
+            "stale_records": { "type": "integer" },
+            "identity_bleed": { "type": "boolean" }
+          }
+        },
+        "planning": {
+          "type": "object",
+          "properties": {
+            "replanning_frequency": { "type": "number" },
+            "looping_detected": { "type": "boolean" },
+            "abandoned_plans": { "type": "integer" }
+          }
+        },
+        "execution": {
+          "type": "object",
+          "properties": {
+            "failed_actions": { "type": "integer" },
+            "rollback_frequency": { "type": "number" },
+            "partial_completions": { "type": "integer" }
+          }
+        },
+        "epistemic": {
+          "type": "object",
+          "properties": {
+            "unsupported_claims": { "type": "integer" },
+            "confidence_inflation": { "type": "number" }
+          }
+        },
+        "compute": {
+          "type": "object",
+          "properties": {
+            "tokens_consumed": { "type": "integer" },
+            "latency_ms": { "type": "number" },
+            "cpu_pressure": { "type": "number" },
+            "api_quota_remaining": { "type": "number" }
+          }
+        },
+        "surprise": {
+          "type": "object",
+          "properties": {
+            "unexpected_results": { "type": "integer" },
+            "model_environment_disagreement": { "type": "integer" }
+          }
+        }
+      }
+    },
+
+    "coupled-state": {
+      "$id": "well://schemas/coupled-state",
+      "title": "C-WELL Coupled State",
+      "description": "Combined human-machine-agent-governance readiness assessment.",
+      "type": "object",
+      "required": ["timestamp", "human_state_ref", "machine_state_ref", "agent_state_ref", "governance_state_ref"],
+      "properties": {
+        "timestamp": { "type": "string", "format": "date-time" },
+        "human_state_ref": { "type": "string", "format": "uri" },
+        "machine_state_ref": { "type": "string", "format": "uri" },
+        "agent_state_ref": { "type": "string", "format": "uri" },
+        "governance_state_ref": { "type": "string", "format": "uri" },
+        "bottleneck": {
+          "type": "object",
+          "properties": {
+            "substrate": { "type": "string", "enum": ["human", "machine", "agent", "governance", "evidence"] },
+            "severity": { "type": "string", "enum": ["low", "medium", "high"] }
+          }
+        },
+        "decision_bandwidth": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+        "safe_autonomy_band": { "type": "string", "enum": ["A0", "A1", "A2", "A3", "A4"] },
+        "recommended_workload": {},
+        "recommended_handoff": {},
+        "unresolved_conflicts": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+
+    "lineage-event": {
+      "$id": "well://schemas/lineage-event",
+      "title": "WELL Lineage Event",
+      "description": "Immutable event for trace_lineage / history.",
+      "type": "object",
+      "required": ["event_id", "timestamp", "event_type", "substrate"],
+      "properties": {
+        "event_id": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "event_type": { "type": "string", "enum": ["state_transition", "repair", "advisory", "override", "incident", "calibration"] },
+        "substrate": { "type": "string", "enum": ["H_WELL", "M_WELL", "G_WELL", "C_WELL"] },
+        "from_state": { "type": "string" },
+        "to_state": { "type": "string" },
+        "trigger": { "type": "string" },
+        "evidence_refs": { "type": "array", "items": { "type": "string" } },
+        "vault_receipt_ref": { "type": "string" },
+        "actor_id": { "type": "string" },
+        "session_id": { "type": "string" }
+      }
+    }
+  }
+}
