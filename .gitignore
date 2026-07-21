@@ -56,3 +56,4 @@ scripts/*.bak-*
 
 machine_state.json
 schema.json
+agent_telemetry.json
