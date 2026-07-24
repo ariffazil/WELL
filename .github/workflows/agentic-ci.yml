@@ -51,6 +51,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Protocol alignment gate
+        run: |
           if [ -f scripts/check_protocol_alignment.sh ]; then
             bash scripts/check_protocol_alignment.sh
           elif [ -f AAA/scripts/check_protocol_alignment.sh ]; then
