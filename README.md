@@ -1,5 +1,5 @@
 <!-- SOT-MANIFEST
-federation_release: v2026.07.24
+federation_release: v2026.07.25
 last_verified: 2026-07-24T16:00Z
 live_commit: 7bd53cf
 port: 18083
