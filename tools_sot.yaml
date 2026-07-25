@@ -1,39 +1,109 @@
 organ: WELL
-version: 2026.07.21
-sot_source: SOMATIC_TOOLS (canonical public surface)
+version: 2026.07.25
+sot_source: SOMATIC_TOOLS (canonical public surface) + AUTONOMIC_TOOLS (internal)
 live_port: 18083
-registry_note: Single source of truth. Both manifests and live server derive from
-  this.
-tools:
+registry_note: Single source of truth. Both manifests and live server derive from this.
+audit_2026_07_25:
+  tested: 15 tools (8 public + 7 internal)
+  all_respond: true
+  public_ok: 8
+  internal_callable: true
+  note: "Internal tools require correct mode args — not all accept generic 'status' mode"
+
+public_tools:  # discoverable via tools/list (somatic boundary enforced)
 - name: well_classify_substrate
-  access: public
-  substrate: G-WELL
+  domain: G-WELL
+  omega: Ω-WELL-01
+  valid_modes: [substrate, boundary, classification, init, assert, bootstrap, classify, medical]
   description: Classify human/machine/coupled substrate type and boundary sensing
+
 - name: well_trace_lineage
-  access: public
-  substrate: C-WELL
+  domain: C-WELL
+  omega: Ω-WELL-02
+  valid_modes: [decision, evidence, memory, recall, trend, context, ledger, chain]
   description: Memory, trend, ledger, and vault chain tracing
+
 - name: well_assess_homeostasis
-  access: public
-  substrate: H-WELL
+  domain: H-WELL
+  omega: Ω-WELL-06
+  valid_modes: [sleep, cognitive, stress, vitality, circadian, fatigue, empathize, critique, dignity, redteam, maruah, medical_query]
   description: Assess regulation, stability, sleep, fatigue, and empathic balance
+
 - name: well_check_repair
-  access: public
-  substrate: M-WELL
+  domain: M-WELL
+  omega: Ω-WELL-07
+  valid_modes: [precheck]
   description: Check repair, recovery, resilience, and forge cycle integrity
+
 - name: well_validate_vitality
-  access: public
-  substrate: H-WELL
+  domain: H-WELL
+  omega: Ω-WELL-08
+  valid_modes: [readiness, classify]
   description: Validate vitality, readiness, and NIAT before irreversible action
+
 - name: well_assess_reliability
-  access: public
-  substrate: M-WELL
+  domain: M-WELL
+  omega: Ω-WELL-10
+  valid_modes: [health, vitals, machine, model]
   description: Assess machine, tool, institution, and operational reliability
+
 - name: well_guard_dignity
-  access: public
-  substrate: H-WELL
+  domain: H-WELL
+  omega: Ω-WELL-12
+  valid_modes: [consent, boundary, shadow]
   description: Guard soul, personhood, meaning, and symbolic boundaries
+
 - name: well_registry_status
-  access: public
-  substrate: Federation
+  domain: Federation
+  valid_modes: [status, full]
   description: WELL registry truth diagnostic — blueprint canonical format
+  test_result:
+    ok: true
+    intended_tools: 8
+    registered_tools: 8
+    exported_tools: 8
+    callable_tools: 14
+    phantom_tools_count: 0
+    verdict: REGISTRY_PASS
+
+internal_tools:  # callable via tools/call, hidden from tools/list
+  h_well:
+  - well_assess_sovereign_entropy  # modes: current, assess, protect, baseline
+  - well_measure_gradient          # reflect-only
+  - well_niat_impact_mirror        # requires niat-specific args
+  - well_regulation_recovery
+  - well_medical_boundary          # modes: boundary, query
+  - well_correction_capacity
+  - well_detect_boundary
+  - well_sabar_latency
+  - well_dark_geometry_mirror      # requires text_or_events arg
+  - well_trust_compression
+  - well_classify_state
+  m_well:
+  - well_assess_metabolism         # modes: gradient, flux, coupled, etc.
+  - well_compute_metabolic_flux
+  - well_signal_coverage           # no mode param — direct call
+  - well_health_check              # no mode param — direct call
+  g_well:
+  - well_assess_livelihood
+  federation:
+  - well_attest_to_kernel
+  - well_handoff_dignity_to_arifos
+  - well_handoff_livelihood_to_wealth
+
+resources:
+  exposed: 10
+  canonical: 29
+  gap_note: "19 resources defined in refactored server_fastmcp.py but not exposed in production server.py"
+
+prompts:
+  exposed: 9
+  names: [prompt_daily_reflection, prompt_recovery_protocol, prompt_readiness_brief,
+          prompt_substrate_classify, prompt_niat_check, prompt_fatigue_boundary_review,
+          prompt_energy_assessment, prompt_shadow_check, prompt_individuation_readiness]
+
+telemetry:
+  machine_state: "live — machine_telemetry.py every 5min via cron"
+  agent_telemetry: "live — agent_telemetry.py every 5min via cron"
+  state_json: "PROD — BEHAVIORAL honesty, INSUFFICIENT data quality"
+  biometric_sensors: "NONE — awaiting sovereign inject or wearable sync"

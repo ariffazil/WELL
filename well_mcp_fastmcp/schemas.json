@@ -1,5 +1,5 @@
 {
-  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$schema": "https://json-schema.org/draft/2020-12/schema#",
   "title": "WELL MCP Typed Tool Schemas",
   "description": "Canonical typed schemas for all 27 WELL tools",
   "version": "1.0.0",

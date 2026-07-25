@@ -1,6 +1,6 @@
 {
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "AFWELL State Schema v2026.05.12",
+  "$schema": "https://json-schema.org/draft/2020-12/schema#",
+  "title": "AFWELL State Schema v2026.07.25",
   "description": "Unified substrate state for Human, Machine, and Universal governance. SOT: /root/WELL/schema.json",
   "type": "object",
   "required": ["timestamp", "identity", "role", "authority", "delta_s", "peace2", "kappa_r", "rasa", "amanah"],

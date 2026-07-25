@@ -135,6 +135,8 @@
   },
   "resources": {
     "total": 29,
+    "exposed_production": 10,
+    "note": "29 canonical resources defined. Only 10 exposed in production server.py. All 29 exposed in refactored server_fastmcp.py (lines 158-195).",
     "canonical": [
       "well://identity",
       "well://doctrine",
@@ -168,12 +170,27 @@
     ]
   },
   "prompts": {
-    "total": 3,
+    "total": 9,
+    "production_count": 9,
+    "refactored_count": 3,
+    "note": "Production server.py exposes 9 prompts. Refactored server_fastmcp.py exposes 3 (well_sense, well_qc, well_interpret). Production is canonical.",
     "canonical": [
+      "prompt_daily_reflection",
+      "prompt_recovery_protocol",
+      "prompt_readiness_brief",
+      "prompt_substrate_classify",
+      "prompt_niat_check",
+      "prompt_fatigue_boundary_review",
+      "prompt_energy_assessment",
+      "prompt_shadow_check",
+      "prompt_individuation_readiness"
+    ],
+    "refactored_only": [
       "well_sense",
       "well_qc",
       "well_interpret"
-    ]
+    ],
+    "merge_target": "Refactored server should absorb producton prompts before deployment"
   },
   "substrate_classes": {
     "HUMAN": "biological, metabolic, conscious, sovereign",
@@ -300,10 +317,25 @@
   },
   "meta": {
     "generated": "2026-07-16",
-    "session": "SEAL-ae2825cd07564a64",
-    "actor": "ARIF",
-    "apex_formula": "G = A\u00b7P\u00b7E\u00b7X\u00b7\u03a6",
+    "updated": "2026-07-25",
+    "session": "SEAL-audit-2026-07-25",
+    "actor": "ARIF (via OpenCode/333-AGI)",
+    "apex_formula": "G = A·P·E·X·Φ",
     "constitutional_floors": "F1-F13",
-    "mcp_spec": "v2025-11-25"
+    "mcp_spec": "v2025-11-25",
+    "implementation_note": "TWO implementations exist: (1) Production: /root/WELL/server.py (18,731 lines, monolithic, systemd active). (2) Refactored: well_mcp_fastmcp/server_fastmcp.py (210 lines, modular, NOT deployed). Production is canonical. Refactored should absorb production's 9 prompts + somatic boundary before deployment.",
+    "audit_2026_07_25": {
+      "tools_tested": 15,
+      "tools_all_respond": true,
+      "public_tools_ok": 8,
+      "internal_tools_callable": true,
+      "resources_readable": 10,
+      "prompts_functional": 9,
+      "data_crisis": "state.json is 86-day-old MOCK data from 2026-04-30",
+      "protocol_negotiation": "2025-11-25 OK",
+      "json_schema_draft": "draft-07 (needs 2020-12 per SEP-1613)",
+      "outputSchema_coverage": "0 of 8 public tools",
+      "tool_annotations": "empty _meta on all resources"
+    }
   }
 }

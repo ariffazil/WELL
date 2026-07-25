@@ -1,11 +1,12 @@
 # WELL — Human Readiness (arifOS Federation)
 ## Machine & Agent Interface Specification
 
-**Version:** 2026.07.24  
+**Version:** 2026.07.25 (audited)  
 **URL:** https://well.arif-fazil.com  
 **MCP:** https://well.arif-fazil.com/mcp  
 **Source:** https://github.com/ariffazil/well  
-**Port (local):** 18083 · **Tools:** 8 public · **License:** BSL  
+**Port (local):** 18083 · **Tools:** 8 public (+19 internal callable) · **Resources:** 10 exposed · **Prompts:** 9 · **License:** AGPL-3.0  
+**Honesty:** INSUFFICIENT — behavioral telemetry only, no biometric sensors · **Data:** PROD baseline, live timestamp
 
 > **WELL reflects. arifOS judges. Arif decides.**  
 > Authority ceiling: **REFLECT_ONLY** — holds a mirror, not a veto. Never diagnoses.
@@ -57,10 +58,30 @@ Contract: https://arifos.arif-fazil.com · `/root/FEDERATION_CONTRACT.md`
 | **C-WELL** | Coupled human–machine risk |
 | **U-WELL** | Universal substrate vitality (no category error) |
 
-## Public MCP Surface (8)
+## Public MCP Surface (8 tools + 19 internal + 9 prompts + 10 resources)
 
-Tools are reflection / report primitives only. Exact names: live `tools/list` on `/mcp`.
-Typical surface: vitality report, readiness band, substrate classify, forge intensity advice (advisory to A-FORGE — never a veto).
+**Tools (discoverable via `tools/list`):**
+- `well_classify_substrate` — Ω-WELL-01: Substrate classification (8 modes: substrate, boundary, classify, medical, etc.)
+- `well_trace_lineage` — Ω-WELL-02: Memory/trend/ledger/vault tracing (8 modes)
+- `well_assess_homeostasis` — Ω-WELL-06: Sleep, fatigue, stress, emotional (12 modes)
+- `well_check_repair` — Ω-WELL-07: Recovery/resilience/forge cycle integrity
+- `well_validate_vitality` — Ω-WELL-08: Vitality/NIAT before irreversible action
+- `well_assess_reliability` — Ω-WELL-10: Machine/tool/institutional reliability (4 modes)
+- `well_guard_dignity` — Ω-WELL-12: Dignity, coercion, shadow detection (3 modes)
+- `well_registry_status` — Federation diagnostic: intended vs registered vs callable
+
+**Internal tools (callable, hidden from discovery — 19 tools):**
+H-WELL (11): sovereign_entropy, measure_gradient, niat_impact_mirror, regulation_recovery, medical_boundary, correction_capacity, detect_boundary, sabar_latency, dark_geometry_mirror, trust_compression, classify_state
+M-WELL (4): assess_metabolism, compute_metabolic_flux, signal_coverage, health_check
+G-WELL (1): assess_livelihood
+Federation (3): attest_to_kernel, handoff_dignity_to_arifos, handoff_livelihood_to_wealth
+
+**Prompts (9):** daily_reflection, recovery_protocol, readiness_brief, substrate_classify, niat_check, fatigue_boundary_review, energy_assessment, shadow_check, individuation_readiness
+
+**Resources (10):** readiness/arif, sovereign_entropy/arif, state/arif, telemetry/arif, floors/well_floors, schema, substrate/registry, vitals/arif, causal_dag, events/recent
+
+**Full manifest:** `/root/WELL/well_mcp_fastmcp/manifest.json`
+**SOT YAML:** `/root/WELL/tools_sot.yaml`
 
 ## Boundaries (hard)
 
