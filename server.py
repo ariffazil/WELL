@@ -13552,6 +13552,35 @@ def well_assess_metabolism(
     )
 
 
+# ── G-fold helper: fetch live G from arifOS kernel ──────────────────────
+# Called at the top of well_assess_homeostasis; caches per call via local var.
+# G < 0.50 (SABAR threshold) downgrades C4/C5 PROCEED → DEFER.
+# Unreachable kernel → G=UNMEASURED (non-blocking, lower criticality).
+_G_FOLD_SABAR_THRESHOLD = 0.50
+
+
+def _get_live_G() -> tuple[float | str | None, str | None]:
+    """Fetch G from arifOS kernel health endpoint.
+
+    Returns:
+        (G_value_or_UNMEASURED, note_or_None)
+    """
+    try:
+        import httpx as _httpx
+
+        resp = _httpx.get("http://localhost:8088/health", timeout=5.0)
+        resp.raise_for_status()
+        body = resp.json()
+        apex_g = body.get("apex_scalars", {}).get("G", {})
+        g_val = apex_g.get("value")
+        if g_val is not None:
+            return float(g_val), None
+        # G present but value is None → UNMEASURED
+        return "UNMEASURED", "G exists in apex_scalars but value is None."
+    except Exception as exc:
+        return "UNMEASURED", f"arifOS kernel unreachable: {exc}"
+
+
 @mcp.tool()
 def well_assess_homeostasis(
     mode: str = "sleep",  # CHAOS FIX: "empathize" not in VALID_MODES ["sleep","cognitive","stress","vitality","circadian","fatigue"]; sleep is implemented
@@ -13645,6 +13674,11 @@ def well_assess_homeostasis(
             "tool": "well_assess_homeostasis",
         }
 
+    # ── G-fold: live governance scalar from arifOS ──────────────────────────
+    # Cached once per call. G < SABAR threshold downgrades C4/C5 PROCEED → DEFER.
+    # Unreachable kernel → UNMEASURED (informational, not blocking).
+    _live_g_value, _live_g_note = _get_live_G()
+
     # 1C-B: fatigue is a direct computation — implement here, do not delegate to well_666_heart
     # 2026-06-06: sleep is also direct (was falling through to well_666_heart which
     # doesn't accept it). Sleep is one of WELL-13 Tier 2 (recovery/metabolic).
@@ -13669,6 +13703,7 @@ def well_assess_homeostasis(
                         "decision_class": decision_class_upper,
                         "route_signal": "HOLD",
                         "routing_note": "No verified body telemetry. Cannot assess sleep recovery. Provide biometric data or confirm readiness manually.",
+                        "live_G": _live_g_value,
                     },
                     constitutional_compliance={"W2_SLEEP_RECOVERY": "UNKNOWN"},
                 ),
@@ -13761,6 +13796,21 @@ def well_assess_homeostasis(
             route_signal = "PROCEED"
             routing_note = f"OPTIMAL sleep clears {decision_class_upper}."
 
+        # ── G-fold override: downgrade C4/C5 PROCEED → DEFER when G < SABAR threshold ──
+        if (
+            isinstance(_live_g_value, (int, float))
+            and float(_live_g_value) < _G_FOLD_SABAR_THRESHOLD
+            and route_signal == "PROCEED"
+            and decision_class_upper in ("C4", "C5")
+        ):
+            route_signal = "DEFER"
+            g_float = float(_live_g_value)
+            routing_note = (
+                f"PROCEED downgraded to DEFER: live G={g_float:.3f} < "
+                f"SABAR threshold ({_G_FOLD_SABAR_THRESHOLD}). "
+                f"Insufficient governance capacity for {decision_class_upper} sleep-critical task."
+            )
+
         # Optional SAF statistical rigor on sleep vector
         _saf_summary = None
         try:
@@ -13805,7 +13855,10 @@ def well_assess_homeostasis(
             "decision_class": decision_class_upper,
             "route_signal": route_signal,
             "routing_note": routing_note,
+            "live_G": _live_g_value,
         }
+        if _live_g_note is not None:
+            _data_payload["live_G_note"] = _live_g_note
         if _saf_summary is not None:
             _data_payload["_saf_assumptions"] = _saf_summary
 
@@ -13925,6 +13978,7 @@ def well_assess_homeostasis(
                             "No verified telemetry and no biometric overrides. "
                             "Cannot assess fatigue reliably. Status is LIMITED, not OPTIMAL."
                         ),
+                        "live_G": _live_g_value,
                     },
                     constitutional_compliance={"W2_FATIGUE": "UNKNOWN"},
                 ),
@@ -14096,6 +14150,21 @@ def well_assess_homeostasis(
             routing_note = (
                 f"Telemetry status is '{telemetry_status}'; readiness claim capped to CAUTION. "
                 f"Score-based signal without cap would have been {_original_route_signal}."
+            )
+
+        # ── G-fold override: downgrade C4/C5 PROCEED → DEFER when G < SABAR threshold ──
+        if (
+            isinstance(_live_g_value, (int, float))
+            and float(_live_g_value) < _G_FOLD_SABAR_THRESHOLD
+            and route_signal == "PROCEED"
+            and decision_class_upper in ("C4", "C5")
+        ):
+            route_signal = "DEFER"
+            g_float = float(_live_g_value)
+            routing_note = (
+                f"PROCEED downgraded to DEFER: live G={g_float:.3f} < "
+                f"SABAR threshold ({_G_FOLD_SABAR_THRESHOLD}). "
+                f"Insufficient governance capacity for {decision_class_upper} fatigue-sensitive task."
             )
 
         # EUREKA FORGE (2026-06-02): distill the SAF statistical-rigor pattern
@@ -14382,6 +14451,7 @@ def well_assess_homeostasis(
             "decision_class": decision_class_upper,
             "route_signal": route_signal,
             "routing_note": routing_note,
+            "live_G": _live_g_value,
             # ZEN: Epistemic honesty — what the score is actually made of
             "_epistemic": {
                 "class": _epistemic_class,
@@ -14396,6 +14466,8 @@ def well_assess_homeostasis(
                 ),
             },
         }
+        if _live_g_note is not None:
+            _data_payload["live_G_note"] = _live_g_note
         if _saf_summary is not None:
             _data_payload["_saf_assumptions"] = _saf_summary
         if _saf_descriptives is not None:
