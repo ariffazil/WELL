@@ -1751,7 +1751,50 @@ class WellSessionValidationMiddleware(_MiddlewareBase):
             cleaned = {k: v for k, v in arguments.items() if k != "session_id"}
             context.message.arguments = cleaned
 
-        return await call_next(context)
+        result = await call_next(context)
+
+        # P1 CONFORMANCE (2026-07-26): Inject ClaimState/WitnessType/OrganType
+        # into every WELL tool response by wrapping content text JSON.
+        try:
+            # Determine organ type from tool name prefix
+            ot = "H_WELL"
+            if tool_name.startswith(("well_assess_reliability", "well_check_repair")):
+                ot = "M_WELL"
+            elif tool_name.startswith(("well_assess_metabolism", "well_compute_metabolic",
+                                       "well_trace_lineage", "well_measure_gradient")):
+                ot = "C_WELL"
+            elif tool_name.startswith(("well_classify_substrate", "well_detect_boundary")):
+                ot = "G_WELL"
+            elif tool_name.startswith(("well_attest", "well_handoff", "well_registry",
+                                       "well_signal", "well_system")):
+                ot = "FEDERATION"
+
+            # Parse the tool's output JSON from content
+            tc = getattr(result, 'content', [])
+            if tc and hasattr(tc[0], 'text'):
+                import json as _json
+                domain = _json.loads(tc[0].text) if isinstance(tc[0].text, str) else tc[0].text
+                if isinstance(domain, dict) and '_well_conformance' not in domain:
+                    # Auto-detect claim state
+                    cs = "HOLD"
+                    verdict = str(domain.get('verdict', domain.get('status', ''))).upper()
+                    truth = str(domain.get('truth_class', '')).upper()
+                    if truth in ('LIVE', 'OBSERVED', 'VERIFIED'):
+                        cs = 'OBSERVED'
+                    elif truth in ('INFERRED', 'DERIVED') or verdict in ('STABLE', 'OPTIMAL', 'READY'):
+                        cs = 'QUALIFIED'
+                    elif domain.get('ok') is True or verdict in ('REGISTRY_PASS', 'PASS', 'OK'):
+                        cs = 'HYPOTHESIS'
+                    wt = 'HYBRID' if domain.get('telemetry') or truth in ('LIVE', 'OBSERVED') else 'AI'
+                    domain['_well_conformance'] = {
+                        'claim_state': cs, 'witness_type': wt, 'organ_type': ot,
+                        'conformance_version': 'v1.0', 'conformant': True,
+                    }
+                    tc[0].text = _json.dumps(domain)
+        except Exception:
+            pass
+
+        return result
 
 
 try:
@@ -11880,6 +11923,58 @@ try:
         ]
         if domain.get("authority") or domain.get("role"):
             source_attribution.append("WELL:authority/REFLECT_ONLY")
+        # P1 CONFORMANCE (2026-07-26): Derive ClaimState/WitnessType/OrganType
+        # ClaimState from epistemic_tag
+        _claim_map = {
+            "CLAIM": "OBSERVED",
+            "PLAUSIBLE": "HYPOTHESIS",
+            "ESTIMATE": "HYPOTHESIS",
+            "HYPOTHESIS": "HYPOTHESIS",
+            "UNKNOWN": "HOLD",
+        }
+        claim_state = _claim_map.get(tag, "HOLD")
+        # WitnessType: AI unless sensor/telemetry present
+        has_telemetry = bool(
+            domain.get("telemetry")
+            or domain.get("sensor_data")
+            or domain.get("truth_class") in ("LIVE", "OBSERVED", "VERIFIED")
+        )
+        witness_type = "HYBRID" if has_telemetry else "AI"
+        # OrganType from tool name prefix
+        if (
+            tool_name.startswith("well_assess_homeostasis")
+            or tool_name.startswith("well_validate_vitality")
+            or tool_name.startswith("well_guard_dignity")
+            or tool_name.startswith("well_assess_livelihood")
+            or tool_name.startswith("well_medical")
+        ):
+            organ_type = "H_WELL"
+        elif tool_name.startswith("well_assess_reliability") or tool_name.startswith(
+            "well_check_repair"
+        ):
+            organ_type = "M_WELL"
+        elif (
+            tool_name.startswith("well_assess_metabolism")
+            or tool_name.startswith("well_compute_metabolic")
+            or tool_name.startswith("well_trace_lineage")
+            or tool_name.startswith("well_measure_gradient")
+        ):
+            organ_type = "C_WELL"
+        elif tool_name.startswith("well_classify_substrate") or tool_name.startswith(
+            "well_detect_boundary"
+        ):
+            organ_type = "G_WELL"
+        elif (
+            tool_name.startswith("well_attest")
+            or tool_name.startswith("well_handoff")
+            or tool_name.startswith("well_registry")
+            or tool_name.startswith("well_signal")
+            or tool_name.startswith("well_system")
+        ):
+            organ_type = "FEDERATION"
+        else:
+            organ_type = "H_WELL"
+
         # Build envelope. Per Appendix B, original payload goes under "result".
         envelope = {
             "result": domain,
@@ -11888,6 +11983,13 @@ try:
             "source_attribution": source_attribution,
             "uncertainty_band": [low, high],
             "delta_S": delta_s,
+            "_well_conformance": {
+                "claim_state": claim_state,
+                "witness_type": witness_type,
+                "organ_type": organ_type,
+                "conformance_version": "v1.0",
+                "conformant": True,
+            },
         }
         # Set structured_content on the ToolResult (preserve content)
         try:
