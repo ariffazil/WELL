@@ -55,7 +55,7 @@ class MetabolicFlux(BaseModel):
 
 
 class ReplayReceipt(BaseModel):
-    """Typed replay receipt for audit trail."""
+    """Typed replay receipt for audit trail — canonical claim-state format."""
 
     tool: str
     timestamp: datetime
@@ -63,9 +63,15 @@ class ReplayReceipt(BaseModel):
     actor_id: str
     inputs: dict
     outputs: dict
-    truth_class: Literal["LIVE", "CACHED", "INFERRED"]
-    evidence_label: Literal["OBS", "DER", "INT", "SPEC"]
-    friction_score: float
-    cost_estimate: float
-    reversibility_class: Literal["REVERSIBLE", "IRREVERSIBLE"]
-    novelty_tags: list[str]
+    # Canonical metabolic progression (WELL: never emits SEAL/HOLD — arifOS adjudicates)
+    claim_state: Literal["OBSERVED", "HYPOTHESIS", "QUALIFIED", "VERIFIED"] = "OBSERVED"
+    witness_type: Literal["SENSOR", "CROSS_WITNESS", "HUMAN", "AI", "EARTH"] = "SENSOR"
+    organ_type: Literal["WELL"] = "WELL"
+    # Legacy provenance fields (retained for backward compatibility)
+    truth_class: Literal["LIVE", "CACHED", "INFERRED"] = "LIVE"
+    evidence_label: Literal["OBS", "DER", "INT", "SPEC"] = "OBS"
+    # Metadata
+    friction_score: float = 0.0
+    cost_estimate: float = 0.0
+    reversibility_class: Literal["REVERSIBLE", "IRREVERSIBLE"] = "REVERSIBLE"
+    novelty_tags: list[str] = []
