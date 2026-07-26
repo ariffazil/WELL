@@ -51,7 +51,7 @@ async def well_assess_homeostasis(
     # Generate replay receipt
     receipt = generate_replay_receipt(
         tool="well_assess_homeostasis",
-        session_id="test-session",
+        session_id=getattr(ctx, "session_id", None) or "unknown",
         actor_id=getattr(ctx, "actor_id", "unknown"),
         inputs={
             "mode": mode,
@@ -100,7 +100,7 @@ async def well_assess_livelihood(
     # Generate replay receipt
     receipt = generate_replay_receipt(
         tool="well_assess_livelihood",
-        session_id="test-session",
+        session_id=getattr(ctx, "session_id", None) or "unknown",
         actor_id=getattr(ctx, "actor_id", "unknown"),
         inputs={
             "mode": mode,
@@ -145,7 +145,7 @@ async def well_assess_sovereign_entropy(
     # Generate replay receipt
     receipt = generate_replay_receipt(
         tool="well_assess_sovereign_entropy",
-        session_id="test-session",
+        session_id=getattr(ctx, "session_id", None) or "unknown",
         actor_id=getattr(ctx, "actor_id", "unknown"),
         inputs={
             "mode": mode,
@@ -186,7 +186,7 @@ async def well_guard_dignity(
     # Generate replay receipt
     receipt = generate_replay_receipt(
         tool="well_guard_dignity",
-        session_id="test-session",
+        session_id=getattr(ctx, "session_id", None) or "unknown",
         actor_id=getattr(ctx, "actor_id", "unknown"),
         inputs={
             "mode": mode,
@@ -226,7 +226,7 @@ async def well_validate_vitality(
     # Generate replay receipt
     receipt = generate_replay_receipt(
         tool="well_validate_vitality",
-        session_id="test-session",
+        session_id=getattr(ctx, "session_id", None) or "unknown",
         actor_id=getattr(ctx, "actor_id", "unknown"),
         inputs={
             "mode": mode,
@@ -273,7 +273,7 @@ async def well_classify_state(
     # Generate replay receipt
     receipt = generate_replay_receipt(
         tool="well_classify_state",
-        session_id="test-session",
+        session_id=getattr(ctx, "session_id", None) or "unknown",
         actor_id=getattr(ctx, "actor_id", "unknown"),
         inputs={
             "message": message,
@@ -306,7 +306,7 @@ async def well_dark_geometry_mirror(
     # Generate replay receipt
     receipt = generate_replay_receipt(
         tool="well_dark_geometry_mirror",
-        session_id="test-session",
+        session_id=getattr(ctx, "session_id", None) or "unknown",
         actor_id=getattr(ctx, "actor_id", "unknown"),
         inputs={
             "text_or_events": text_or_events,
@@ -338,7 +338,7 @@ async def well_sabar_latency(
     # Generate replay receipt
     receipt = generate_replay_receipt(
         tool="well_sabar_latency",
-        session_id="test-session",
+        session_id=getattr(ctx, "session_id", None) or "unknown",
         actor_id=getattr(ctx, "actor_id", "unknown"),
         inputs={
             "events": events,
@@ -369,7 +369,7 @@ async def well_trust_compression(
     # Generate replay receipt
     receipt = generate_replay_receipt(
         tool="well_trust_compression",
-        session_id="test-session",
+        session_id=getattr(ctx, "session_id", None) or "unknown",
         actor_id=getattr(ctx, "actor_id", "unknown"),
         inputs={
             "text": text,
@@ -401,7 +401,7 @@ async def well_niat_impact_mirror(
     # Generate replay receipt
     receipt = generate_replay_receipt(
         tool="well_niat_impact_mirror",
-        session_id="test-session",
+        session_id=getattr(ctx, "session_id", None) or "unknown",
         actor_id=getattr(ctx, "actor_id", "unknown"),
         inputs={
             "declared_niat": declared_niat,
@@ -432,7 +432,7 @@ async def well_correction_capacity(
     # Generate replay receipt
     receipt = generate_replay_receipt(
         tool="well_correction_capacity",
-        session_id="test-session",
+        session_id=getattr(ctx, "session_id", None) or "unknown",
         actor_id=getattr(ctx, "actor_id", "unknown"),
         inputs={
             "correction_events": correction_events,
@@ -447,7 +447,7 @@ async def well_correction_capacity(
     # Generate replay receipt
     receipt = generate_replay_receipt(
         tool="well_regulation_recovery",
-        session_id="test-session",
+        session_id=getattr(ctx, "session_id", None) or "unknown",
         actor_id=getattr(ctx, "actor_id", "unknown"),
         inputs={
             "activation_events": activation_events,

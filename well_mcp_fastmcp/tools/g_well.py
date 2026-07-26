@@ -38,7 +38,7 @@ async def well_classify_substrate(
     # Generate replay receipt
     receipt = generate_replay_receipt(
         tool="well_classify_substrate",
-        session_id="test-session",
+        session_id=getattr(ctx, "session_id", None) or "unknown",
         actor_id=actor_id,
         inputs={
             "mode": mode,
@@ -76,7 +76,7 @@ async def well_detect_boundary(
     # Generate replay receipt
     receipt = generate_replay_receipt(
         tool="well_detect_boundary",
-        session_id="test-session",
+        session_id=getattr(ctx, "session_id", None) or "unknown",
         actor_id=getattr(ctx, "actor_id", "unknown"),
         inputs={
             "mode": mode,

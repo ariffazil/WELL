@@ -42,7 +42,7 @@ async def well_assess_metabolism(
     # Generate replay receipt
     receipt = generate_replay_receipt(
         tool="well_assess_metabolism",
-        session_id="test-session",
+        session_id=getattr(ctx, "session_id", None) or "unknown",
         actor_id=getattr(ctx, "actor_id", "unknown"),
         inputs={
             "mode": mode,
@@ -81,7 +81,7 @@ async def well_compute_metabolic_flux(
     # Generate replay receipt
     receipt = generate_replay_receipt(
         tool="well_compute_metabolic_flux",
-        session_id="test-session",
+        session_id=getattr(ctx, "session_id", None) or "unknown",
         actor_id=getattr(ctx, "actor_id", "unknown"),
         inputs={"mode": mode, "force_recompute": force_recompute},
         outputs=result,
@@ -108,7 +108,7 @@ async def well_trace_lineage(
     # Generate replay receipt
     receipt = generate_replay_receipt(
         tool="well_trace_lineage",
-        session_id="test-session",
+        session_id=getattr(ctx, "session_id", None) or "unknown",
         actor_id=getattr(ctx, "actor_id", "unknown"),
         inputs={
             "mode": mode,
@@ -141,7 +141,7 @@ async def well_measure_gradient(
     # Generate replay receipt
     receipt = generate_replay_receipt(
         tool="well_measure_gradient",
-        session_id="test-session",
+        session_id=getattr(ctx, "session_id", None) or "unknown",
         actor_id=getattr(ctx, "actor_id", "unknown"),
         inputs={
             "mode": mode,

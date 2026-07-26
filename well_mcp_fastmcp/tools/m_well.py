@@ -37,7 +37,7 @@ async def well_assess_reliability(
     # Generate replay receipt
     receipt = generate_replay_receipt(
         tool="well_assess_reliability",
-        session_id="test-session",
+        session_id=getattr(ctx, "session_id", None) or "unknown",
         actor_id=getattr(ctx, "actor_id", "unknown"),
         inputs={"mode": mode},
         outputs=result,
@@ -71,7 +71,7 @@ async def well_check_repair(
     # Generate replay receipt
     receipt = generate_replay_receipt(
         tool="well_check_repair",
-        session_id="test-session",
+        session_id=getattr(ctx, "session_id", None) or "unknown",
         actor_id=getattr(ctx, "actor_id", "unknown"),
         inputs={
             "mode": mode,
@@ -90,7 +90,7 @@ async def well_check_repair(
     # Generate replay receipt
     receipt = generate_replay_receipt(
         tool="well_health_check",
-        session_id="test-session",
+        session_id=getattr(ctx, "session_id", None) or "unknown",
         actor_id=getattr(ctx, "actor_id", "unknown"),
         inputs={"include_federation": include_federation},
         outputs=result,

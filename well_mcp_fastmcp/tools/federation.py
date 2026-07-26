@@ -33,7 +33,7 @@ async def well_attest_to_kernel(
     # Generate replay receipt
     receipt = generate_replay_receipt(
         tool="well_attest_to_kernel",
-        session_id="test-session",
+        session_id=getattr(ctx, "session_id", None) or "unknown",
         actor_id=actor_id,
         inputs={"actor_id": actor_id},
         outputs=result,
@@ -60,7 +60,7 @@ async def well_handoff_dignity_to_arifos(
     # Generate replay receipt
     receipt = generate_replay_receipt(
         tool="well_handoff_dignity_to_arifos",
-        session_id="test-session",
+        session_id=getattr(ctx, "session_id", None) or "unknown",
         actor_id=getattr(ctx, "actor_id", "unknown"),
         inputs={
             "signal": signal,
@@ -90,7 +90,7 @@ async def well_handoff_livelihood_to_wealth(
     # Generate replay receipt
     receipt = generate_replay_receipt(
         tool="well_handoff_livelihood_to_wealth",
-        session_id="test-session",
+        session_id=getattr(ctx, "session_id", None) or "unknown",
         actor_id=getattr(ctx, "actor_id", "unknown"),
         inputs={
             "duty_load": duty_load,
@@ -118,7 +118,7 @@ async def well_registry_status(
     # Generate replay receipt
     receipt = generate_replay_receipt(
         tool="well_registry_status",
-        session_id="test-session",
+        session_id=getattr(ctx, "session_id", None) or "unknown",
         actor_id=getattr(ctx, "actor_id", "unknown"),
         inputs={"mode": mode},
         outputs=result,
@@ -144,7 +144,7 @@ async def well_signal_coverage(
     # Generate replay receipt
     receipt = generate_replay_receipt(
         tool="well_signal_coverage",
-        session_id="test-session",
+        session_id=getattr(ctx, "session_id", None) or "unknown",
         actor_id=getattr(ctx, "actor_id", "unknown"),
         inputs={"operator_id": operator_id},
         outputs=result,
