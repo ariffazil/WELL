@@ -1,26 +1,2 @@
-[identity]
-canonical_name = "WELL Substrate & Vitality"
-short_name = "WELL"
-service_id = "well-mcp"
-version = "kanon-1.0.0"
-authority = "F13_SOVEREIGN"
-
-[network]
-default_port = 18083
-caddy_domain = "well.arif-fazil.com"
-a2a_enabled = true
-
-[capabilities]
-roles = ["Substrate", "Reliability", "Wellness"]
-floors_enforced = ["F1", "F13"]
-
-[security]
-vault999_attestation_required = true
-openclaw_routed = true
-
-
-[identity_hash]
-algorithm = "BLAKE3"
-source = "identity.toml"
-embedded_in_health = true
-chain_upstream = "arifOS"
+# This file is superseded by: /root/AAA/identity.toml
+# Status: DERIVED — do not update this copy.
