@@ -10070,6 +10070,7 @@ def _read_machine_state_delta(field: str, default: Any = None) -> Any:
     return _read_machine_state_field(field, default)
 
 
+@mcp.tool()
 def well_000_ops(
     mode: str = "health",
     ctx: Context | None = None,
@@ -12731,83 +12732,13 @@ if __name__ == "__main__":
     app.add_route("/api/build-info", build_info_handler, methods=["GET"])
     app.add_route("/tools", tools_handler, methods=["GET"])
 
-    # ── A2A Agent Card (Federation Discovery) ────────────────────────────
-    # FORGE 2026-06-28: /.well-known/agent.json for AAA A2A mesh discovery.
+    # ── A2A consolidation 2026-07-15 ────────────────────────────────────
+    # Local A2A agent card dicts and routes have been REMOVED from WELL.
+    # Canonical A2A card is owned by AAA at /.well-known/agent.json.
+    # See /root/AAA/docs/AGENT_IDENTITY.md and /root/AAA/UNIFIED_AGENT.md.
+    # Caddy routes /.well-known/agent.json → AAA for federation discovery.
+    # WELL retains: /health, /ready, /tools, /api/build-info, MCP, OAuth.
 
-    _WELL_AGENT_CARD = {
-        "schema_version": "0.2",
-        "organ_id": "well",
-        "name": "WELL — Human Substrate Vitality",
-        "role": "human",
-        "description": (
-            "Universal substrate vitality mirror for arifOS federation. "
-            "Assesses biological metabolism, homeostasis, repair cycles, vitality, "
-            "livelihood, and dignity. Reflect-only — does not judge or decide."
-        ),
-        "version": "2026.06.05",
-        "url": "https://well.arif-fazil.com",
-        "a2a_endpoint": "http://127.0.0.1:18083/a2a",
-        "agent_card_url": "http://127.0.0.1:18083/.well-known/agent-card.json",
-        "endpoints": {
-            "mcp": "https://well.arif-fazil.com/mcp",
-            "health": "https://well.arif-fazil.com/health",
-            "tools": "https://well.arif-fazil.com/tools",
-        },
-        "authority_class": "evidence",
-        "allowed_action_classes": ["OBSERVE"],
-        "max_risk_tier": "T1",
-        "auth": {"type": "none"},
-        "federation": {
-            "protocol": "A2A",
-            "peer_coordinator": "https://aaa.arif-fazil.com",
-            "constitutional_kernel": "https://arifos.arif-fazil.com",
-        },
-        "owned_mcp": [
-            "well_assess_homeostasis",
-            "well_assess_livelihood",
-            "well_assess_metabolism",
-            "well_assess_reliability",
-            "well_assess_sovereign_entropy",
-            "well_check_repair",
-            "well_classify_substrate",
-            "well_compute_metabolic_flux",
-            "well_detect_boundary",
-            "well_guard_dignity",
-            "well_measure_gradient",
-            "well_registry_status",
-            "well_trace_lineage",
-            "well_validate_vitality",
-            "well_medical_boundary",
-            "well_handoff_dignity_to_arifos",
-            "well_handoff_livelihood_to_wealth",
-        ],
-        "judge_skills": [],
-        "skills": [
-            {
-                "id": "substrate.classify",
-                "name": "Substrate Classification",
-                "tags": ["h-well", "m-well", "g-well"],
-            },
-            {
-                "id": "vitality.assess",
-                "name": "Vitality Assessment",
-                "tags": ["metabolism", "homeostasis", "repair"],
-            },
-            {
-                "id": "dignity.guard",
-                "name": "Dignity Guard",
-                "tags": ["dignity", "sovereignty", "boundary"],
-            },
-        ],
-    }
-
-    async def _well_agent_card_handler(request):
-        return JSONResponse(_WELL_AGENT_CARD)
-
-    app.add_route("/.well-known/agent.json", _well_agent_card_handler, methods=["GET"])
-    app.add_route(
-        "/.well-known/agent-card.json", _well_agent_card_handler, methods=["GET"]
-    )
 
     # Server start moved to end of file so canonical tools are registered before uvicorn blocks
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -16245,6 +16176,7 @@ def well_validate_consensus(
 # calls well_system_registry_status; the modern canonical name is
 # well_registry_status. Keep both available so the advertised surface matches
 # what the connector can dispatch.
+# P0.5 fix: hidden-internal-alias classification for well_system_registry_status.
 @mcp.tool()
 def well_system_registry_status() -> dict[str, Any]:
     """WELL registry truth probe — somatic surface vs autonomic internals.
@@ -18794,36 +18726,8 @@ if __name__ == "__main__":
     # well.arif-fazil.com/.well-known/oauth-* → mcp.arif-fazil.com
     # (one canonical door). WELL becomes an internal endpoint.
 
-    # ── A2A Agent Card (Federation Discovery) — FORGE 2026-06-28 ─────────────
-    _WELL_A2A_CARD = {
-        "schema": "agent-manifest/v1",
-        "name": "WELL — Human Substrate Vitality",
-        "description": (
-            "Universal substrate vitality mirror for arifOS federation. "
-            "Reflect-only — does not judge or decide."
-        ),
-        "version": "2026.06.05",
-        "url": "https://well.arif-fazil.com",
-        "endpoints": {
-            "mcp": "https://well.arif-fazil.com/mcp",
-            "health": "https://well.arif-fazil.com/health",
-        },
-        "authority_class": "evidence",
-        "allowed_action_classes": ["OBSERVE"],
-        "max_risk_tier": "T1",
-        "auth": {"type": "none"},
-        "federation": {
-            "protocol": "A2A",
-            "peer_coordinator": "https://aaa.arif-fazil.com",
-        },
-        "owned_mcp": {"server": "well-mcp", "tool_count": len(SOMATIC_TOOLS)},
-    }
+    # A2A consolidation 2026-07-15: local card removed; canonical card owned by AAA/AGENT_IDENTITY.
 
-    async def _well_a2a_card(request):
-        return JSONResponse(_WELL_A2A_CARD)
-
-    app.add_route("/.well-known/agent.json", _well_a2a_card, methods=["GET"])
-    app.add_route("/.well-known/agent-card.json", _well_a2a_card, methods=["GET"])
 
     # ── MCP Session Enforcement Middleware (strict-organ doctrine) ─────
     # Domain operations require a valid Mcp-Session-Id. Always.
