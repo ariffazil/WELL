@@ -1,6 +1,6 @@
 <!-- SOT-MANIFEST
-federation_release: v2026.07.25
-last_verified: 2026-07-24T16:00Z
+federation_release: v2026.07.28
+last_verified: 2026-07-28T18:00Z
 live_commit: 7bd53cf
 port: 18083
 mcp_tools_live: 8
@@ -9,11 +9,11 @@ health_status: DEGRADED (apex_scalars UNMEASURED — known, non-blocking)
 truth_rule: tools/list + /health beat any static count in prose
 -->
 
-**SOT:** 2026-07-24 | **seal_seq:** `7bd53cf`
+**SOT:** 2026-07-28 | **seal_seq:** `7bd53cf`
 
 [![Agentic CI](https://github.com/ariffazil/well/actions/workflows/agentic-ci.yml/badge.svg?branch=main)](https://github.com/ariffazil/well/actions/workflows/agentic-ci.yml)
 [![🫀 REFLECT](https://img.shields.io/badge/%F0%9F%AB%80%20REFLECT-8%20tools-purple)](https://well.arif-fazil.com/mcp)
-[![Federation](https://img.shields.io/badge/Federation-v2026.07.24-0a7b83)](https://arifos.arif-fazil.com)
+[![Federation](https://img.shields.io/badge/Federation-v2026.07.28-0a7b83)](https://arifos.arif-fazil.com)
 [![License](https://img.shields.io/github/license/ariffazil/well?label=License)](LICENSE)
 
 # 🫀 WELL — Substrate Readiness Intelligence
@@ -244,7 +244,7 @@ curl -s http://localhost:18083/health | python3 -m json.tool
 | **HERMES** | Multi-modal bridge | [repo](https://github.com/ariffazil/HERMES) | — | — | — |
 
 **Public:** [arif-fazil.com](https://arif-fazil.com) · **Federation root:** [arifos.arif-fazil.com](https://arifos.arif-fazil.com)
-**SOT:** 2026-07-24
+**SOT:** 2026-07-28
 
 ## 11. License & Sovereignty
 
