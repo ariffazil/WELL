@@ -49,15 +49,22 @@ DECISION_CLASSES_TEXT = """\
 
   C4  PRODUCTION-DEPLOY / CROSS-ORG / DATA-MIGRATE
       Proceed only if OPTIMAL. DEFER if STABLE.
-      ADVISORY_BLOCK if DEGRADED. BLOCK if CRITICAL.
+      RECOMMEND_HOLD if DEGRADED. RECOMMEND_HOLD if CRITICAL.
+      sovereign_override: True — Arif can always override WELL recommendation.
       Largely irreversible. Federation-wide blast radius.
       Examples: production deploy, cross-org refactor, schema migrate.
+      ── HITV v0.1 (2026-07-28): Changed BLOCK→RECOMMEND_HOLD. WELL recommends, never commands. ──
 
   C5  IRREVERSIBLE / SOVEREIGN / VAULT-SEAL
-      Proceed only if OPTIMAL + no chronic fatigue.
-      BLOCK otherwise. Constitutional floor.
+      RECOMMEND_HOLD if chronic fatigue or non-OPTIMAL.
+      sovereign_override: True — Arif (F13) can always override.
+      BLOCK is ADVISORY only; F13 is above all organ gates.
+      Human sovereignty is invariant. WELL recommends, never commands.
       Fully irreversible. Civilization-scale blast radius.
       Examples: vault seal, F13 ratification, irreversible delete.
+      ── HITV v0.1 (2026-07-28): BANGANG #17-18 resolved.
+      Changed from "BLOCK otherwise" → "RECOMMEND_HOLD with sovereign_override".
+      WELL reflects human state. WELL recommends. WELL NEVER blocks Arif. ──
 
 ## §2. MACHINE DECISION CLASSES (M1–M5)
 
