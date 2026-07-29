@@ -18948,6 +18948,32 @@ if __name__ == "__main__":
             pass
         return "sha256:missing"
 
+    def _load_machine_telemetry_quality() -> float:
+        """Return Earth/Machine evidence quality [0-1] for W³ computation.
+
+        Reads machine_state.json for M-WELL hardware health. Falls back to 0.50.
+        Scores: 9/9 services + 8/8 docker → 0.90, partial → 0.60, degraded → 0.30.
+        """
+        try:
+            _state = _load_state()
+            _svc = _state.get("services", {})
+            _active = _svc.get("active", 0) if isinstance(_svc, dict) else 0
+            _docker = _state.get("docker", {})
+            _d_ok = _docker.get("healthy", 0) if isinstance(_docker, dict) else 0
+            if (
+                isinstance(_active, (int, float))
+                and _active >= 9
+                and isinstance(_d_ok, (int, float))
+                and _d_ok >= 8
+            ):
+                return 0.90
+            elif isinstance(_active, (int, float)) and _active >= 7:
+                return 0.60
+            else:
+                return 0.30
+        except Exception:
+            return 0.50
+
     # Register health handlers if not already present
     async def _well_health_handler(request):
         try:
@@ -19004,11 +19030,50 @@ if __name__ == "__main__":
             except Exception:
                 pass
 
+        # ── P0 Deployment provenance — 4-identity chain (2026-07-29) ───
+        # WELL is an interpreted Python runtime with no build/compile step.
+        # Source IS the installed artifact. The systemd unit runs server.py
+        # directly from /root/WELL via venv python3.
+        import hashlib as _hl
+
+        _artifact_hash = "UNKNOWN"
+        try:
+            _artifact_hash = (
+                "sha256:"
+                + _hl.sha256(Path("/root/WELL/server.py").read_bytes()).hexdigest()[:16]
+            )
+        except Exception:
+            pass
+
+        deployment_provenance = {
+            "source_commit": source_commit,
+            "built_commit": source_commit,  # interpreted Python — no compile
+            "installed_artifact_hash": _artifact_hash,
+            "running_process_commit": source_commit,  # systemd runs directly from repo
+            "note": "Direct-repo execution model. No /opt/well/app build pipeline. Source ≡ runtime for interpreted Python MCP servers. This is the intended deployment pattern for WELL.",
+        }
+
+        # ── W³ local computation — weighted geometric tri-witness (2026-07-29) ───
+        # Corrected model: W³ = H^0.42 × A^0.32 × E^0.26
+        # where H/A/E are evidence QUALITY scores (0-1), NOT allocation weights.
+        # Weights (0.42/0.32/0.26) and strengths are SEPARATE dimensions.
+        # Prior broken model: W³ = h × a × e with h+a+e=1.0 → max = 1/27 ≈ 0.037.
+        # That made W³ ≥ 0.95 mathematically impossible.
+        _H_quality = max(0.0, min(1.0, (clarity or 5.0) / 10.0))
+        _A_quality = max(0.0, min(1.0, classification["well_score"] / 100.0))
+        _E_quality_raw = _load_machine_telemetry_quality()
+        _E_quality = max(0.3, min(1.0, _E_quality_raw))
+        try:
+            _w3_local = (_H_quality**0.42) * (_A_quality**0.32) * (_E_quality**0.26)
+        except Exception:
+            _w3_local = None
+
         return JSONResponse(
             {
                 # ── Canonical 7-field health schema (federation convention) ───
                 "status": health_status,
                 "source_commit": source_commit,
+                "deployment_provenance": deployment_provenance,
                 "final_authority": "ARIF",
                 "identity": "WELL",
                 "role": "Body / Human Intelligence",
@@ -19019,7 +19084,21 @@ if __name__ == "__main__":
                 "apex_scalars": {
                     "G": {"value": None, "status": "UNMEASURED"},
                     "C_dark": {"value": None, "status": "UNMEASURED"},
-                    "W3": {"value": None, "status": "UNMEASURED"},
+                    "W3": {
+                        "value": round(_w3_local, 4) if _w3_local is not None else None,
+                        "status": "LOCAL_COMPUTED"
+                        if _w3_local is not None
+                        else "UNMEASURED",
+                        "model": "weighted_geometric",
+                        "formula": "W³ = H^0.42 × A^0.32 × E^0.26",
+                        "weights": {"human": 0.42, "ai": 0.32, "earth": 0.26},
+                        "strengths": {
+                            "H": round(_H_quality, 3),
+                            "A": round(_A_quality, 3),
+                            "E": round(_E_quality, 3),
+                        },
+                        "note": "Local WELL computation. arifOS kernel authority for constitutional seal. Corrected from broken W³ = h×a×e (max 1/27 ≈ 0.037) which made ≥0.95 impossible.",
+                    },
                     "h": {"value": None, "status": "UNMEASURED"},
                     "QDF": {"value": None, "status": "UNMEASURED"},
                 },
