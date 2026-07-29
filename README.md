@@ -1,6 +1,6 @@
 <!-- SOT-MANIFEST
-federation_release: v2026.07.28
-last_verified: 2026-07-28T18:00Z
+federation_release: v2026.07.29
+last_verified: 2026-07-29T18:00Z
 live_commit: 7bd53cf
 port: 18083
 mcp_tools_live: 8
