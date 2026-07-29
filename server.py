@@ -12032,7 +12032,9 @@ Sleep → Fatigue → psi_SE → Authority → Verdict
 ## Recommendation
 """
     if risk_tier in ("T4", "T5") and (score < 75 or fatigue > 5 or clarity < 7):
-        prompt += "🛑 HOLD -- High-risk task with degraded substrate. Delay or delegate."
+        prompt += (
+            "🛑 HOLD -- High-risk task with degraded substrate. Delay or delegate."
+        )
     elif risk_tier == "T3" and (score < 60 or fatigue > 6):
         prompt += (
             "⚠️ CAUTION -- Elevated risk. Proceed only with explicit human confirmation."
@@ -16973,6 +16975,8 @@ def well_registry_status(
         "well_guard_dignity",
         "well_trace_lineage",
         "well_registry_status",
+        "well_machine_diagnose",
+        "well_machine_recommend",
     }
     # Legacy aliases: still callable, NEVER listed as canonical
     LEGACY_ALIASES = {
