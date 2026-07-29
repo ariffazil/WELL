@@ -1,5 +1,5 @@
 """
-WELL MCP Server — Human Substrate Governance Layer
+WELL MCP Server -- Human Substrate Governance Layer
 Phase 1: Immutable Ledger & Observability
 
 W0 Sovereignty Invariant: WELL holds a mirror, not a veto.
@@ -47,7 +47,7 @@ except ImportError:
 # ── Paths (defined before use in fallback import) ───────────────────────────────
 WELL_DIR = Path(__file__).parent
 
-# ── Contracts package pin (arifOS also ships `contracts/` — shadow fix) ─────────
+# ── Contracts package pin (arifOS also ships `contracts/` -- shadow fix) ─────────
 # PYTHONPATH includes /root/arifOS; importing arifOS modules can bind
 # sys.modules["contracts"] to arifOS first. WELL tools need
 # WELL/contracts/enrich_well.py. Pin WELL contracts before any tool import path.
@@ -154,7 +154,7 @@ def _inject_apex(
     return result
 
 
-# PR 6 — reflect-only boundary import. Lazy-tolerant: if the engines
+# PR 6 -- reflect-only boundary import. Lazy-tolerant: if the engines
 # module is not on sys.path, the import is deferred until the wrap
 # call below (which is also tolerant).
 try:
@@ -165,7 +165,7 @@ except ImportError:
     _REFLECT_LOADED = False
     _wrap_canonical_tools = None  # type: ignore[assignment]
 
-# ── Agentic Anthropology — State Classifier (Phase 1) ─────────────────────
+# ── Agentic Anthropology -- State Classifier (Phase 1) ─────────────────────
 _STATE_CLASSIFIER_AVAILABLE = True
 try:
     from arifosmcp.rama.state_classifier import get_state_classifier
@@ -191,7 +191,7 @@ WELL_SOURCE_TYPES = {
     "SENSOR": "Automated sensor or wearable data",
     "AGENT_INFERRED": "Derived by AI agent from other data",
     "OPERATOR_REPORTED": "Logged by operator without backend verification",
-    "TEST_FIXTURE": "Synthetic test data — not real operator state",
+    "TEST_FIXTURE": "Synthetic test data -- not real operator state",
     "SYSTEM_DERIVED": "Computed from existing state, not directly reported",
 }
 WELL_ENVIRONMENTS = {
@@ -221,15 +221,15 @@ WELL_TRUTH_STATUS = {
 # ── Universal Substrate Classification (U-WELL) ───────────────────────────────
 UNIVERSAL_SUBSTRATE_CLASSES = {
     "HUMAN_PERSON": "Human individual with biological, cognitive, and livelihood dimensions",
-    "HUMAN_BODY_PART": "Part of a human body (nail, blood, organ) — living origin, varying vitality",
-    "NONHUMAN_ORGANISM": "Plant, animal, bacteria — independent biological vitality",
-    "LIMINAL_BIOLOGICAL": "Virus, prion, spore — replicative potency, host-dependent",
-    "MACHINE_SYSTEM": "AI, server, robot — operational reliability, not life",
-    "INSTITUTION": "Company, department, VP office — organizational viability",
-    "MATERIAL_OBJECT": "Rock, chair, mineral — structural integrity, not life",
-    "ECOSYSTEM": "River, forest, reef — ecological vitality",
-    "INFORMATION_SYSTEM": "Document, constitution, codebase — coherence and maintainability",
-    "SYMBOLIC_METAPHYSICAL": "Soul, niat, dignity — meaning-domain, not machine-measurable",
+    "HUMAN_BODY_PART": "Part of a human body (nail, blood, organ) -- living origin, varying vitality",
+    "NONHUMAN_ORGANISM": "Plant, animal, bacteria -- independent biological vitality",
+    "LIMINAL_BIOLOGICAL": "Virus, prion, spore -- replicative potency, host-dependent",
+    "MACHINE_SYSTEM": "AI, server, robot -- operational reliability, not life",
+    "INSTITUTION": "Company, department, VP office -- organizational viability",
+    "MATERIAL_OBJECT": "Rock, chair, mineral -- structural integrity, not life",
+    "ECOSYSTEM": "River, forest, reef -- ecological vitality",
+    "INFORMATION_SYSTEM": "Document, constitution, codebase -- coherence and maintainability",
+    "SYMBOLIC_METAPHYSICAL": "Soul, niat, dignity -- meaning-domain, not machine-measurable",
 }
 
 UNIVERSAL_VITALITY_MODES = {
@@ -250,18 +250,18 @@ UNIVERSAL_VITALITY_MODES = {
     "LIMINAL_BIOLOGICAL": "replicative potency, host dependence",
     "MACHINE_SYSTEM": "operational reliability",
     "COUPLED_HUMAN_MACHINE_SYSTEM": (
-        "joint reliability + dignity preservation across the human–machine boundary"
+        "joint reliability + dignity preservation across the human-machine boundary"
     ),
     "INSTITUTION": "organizational viability (mission, cashflow, trust, coordination)",
     "MATERIAL_OBJECT": "structural integrity, not life",
     "ECOSYSTEM": "ecological vitality (biodiversity, resilience, energy flow)",
     "INFORMATION_SYSTEM": "coherence, maintainability, truth integrity",
-    "SYMBOLIC_METAPHYSICAL": "not_machine_measurable — meaning protected, not quantified",
+    "SYMBOLIC_METAPHYSICAL": "not_machine_measurable -- meaning protected, not quantified",
 }
 
 # ── G-WELL Governance Abstraction ─────────────────────────────────────────────
 # Machine Governance Mirror: reflects the federated governance chain
-# G-WELL is not a separate substrate — it is the governance abstraction layer
+# G-WELL is not a separate substrate -- it is the governance abstraction layer
 # that maps machine state (m_machine) into constitutional governance terms.
 
 G_WELL_PILLARS = {
@@ -274,7 +274,7 @@ G_WELL_PILLARS = {
 
 G_WELL_VERDICTS = ["COHERENT", "STRESSED", "FRAGMENTED", "UNKNOWN"]
 
-# ── W-Floor Definitions (Canonical — WELL_INVARIANTS.md §I6) ───────────────────
+# ── W-Floor Definitions (Canonical -- WELL_INVARIANTS.md §I6) ───────────────────
 W_LAW_DEFINITIONS = {
     "W0": {
         "name": "Sovereignty Invariant",
@@ -372,7 +372,7 @@ def _check_telemetry_purity(
 
     If test entries detected in PROD context:
       → WELL_VERDICT = VOID_TELEMETRY
-      → No GREEN/AMBER/RED — must return VOID until Arif confirms real state
+      → No GREEN/AMBER/RED -- must return VOID until Arif confirms real state
     """
     if events_path is None:
         events_path = EVENTS_PATH
@@ -433,9 +433,9 @@ def _check_telemetry_purity(
 # ── Freshness Ceiling Rules (Phase 3) ─────────────────────────────────────────────
 # Evidence discipline: stale telemetry cannot produce optimistic verdicts.
 # Freshness bands:
-#   0–12h verified  → GREEN/OPTIMAL/HIGH confidence allowed
-#   12–24h           → AMBER maximum
-#   24–72h           → LIMITED maximum
+#   0-12h verified  → GREEN/OPTIMAL/HIGH confidence allowed
+#   12-24h           → AMBER maximum
+#   24-72h           → LIMITED maximum
 #   >72h or unverified → UNKNOWN/STALE only
 
 WELL_FRESHNESS_BANDS = {
@@ -708,7 +708,7 @@ def _infer_meaning(
     if score_anomaly and violations_anomaly and score_z < 0 and violations_z > 0:
         hypotheses.append(
             {
-                "hypothesis": "Systemic degradation — possible accumulated overwork or stress cascade",
+                "hypothesis": "Systemic degradation -- possible accumulated overwork or stress cascade",
                 "affected_dimensions": ["well_score", "floors_violated"],
                 "confidence": "MEDIUM",
                 "evidence": f"well_score z={score_z:.2f}, violations z={violations_z:.2f}",
@@ -720,7 +720,7 @@ def _infer_meaning(
     if score_anomaly and score_z > 0 and score_dir == "IMPROVING":
         hypotheses.append(
             {
-                "hypothesis": "Positive trajectory — possible recovery, rest, or effective intervention",
+                "hypothesis": "Positive trajectory -- possible recovery, rest, or effective intervention",
                 "affected_dimensions": ["well_score"],
                 "confidence": "MEDIUM",
                 "evidence": f"well_score z={score_z:.2f} above baseline mean",
@@ -740,7 +740,7 @@ def _infer_meaning(
         if sleep.get("sleep_debt_days", 0) >= 2:
             hypotheses.append(
                 {
-                    "hypothesis": "Sleep debt accumulation — cognitive substrate not yet compromised but trending",
+                    "hypothesis": "Sleep debt accumulation -- cognitive substrate not yet compromised but trending",
                     "affected_dimensions": ["well_score", "sleep"],
                     "confidence": "LOW",
                     "evidence": f"sleep_debt_days={sleep.get('sleep_debt_days')}, score z={score_z:.2f}",
@@ -750,7 +750,7 @@ def _infer_meaning(
         if stress.get("subjective_load", 0) >= 7:
             hypotheses.append(
                 {
-                    "hypothesis": "Elevated stress load — substrate under chronic pressure, floor violations latent",
+                    "hypothesis": "Elevated stress load -- substrate under chronic pressure, floor violations latent",
                     "affected_dimensions": ["well_score", "stress"],
                     "confidence": "LOW",
                     "evidence": f"stress_load={stress.get('subjective_load')}/10, score z={score_z:.2f}",
@@ -760,7 +760,7 @@ def _infer_meaning(
         if cognitive.get("clarity", 10) < 4:
             hypotheses.append(
                 {
-                    "hypothesis": "Cognitive entropy onset — W5 floor boundary, decision capacity degrading",
+                    "hypothesis": "Cognitive entropy onset -- W5 floor boundary, decision capacity degrading",
                     "affected_dimensions": ["well_score", "cognitive"],
                     "confidence": "MEDIUM",
                     "evidence": f"clarity={cognitive.get('clarity')}/10, score z={score_z:.2f}",
@@ -770,7 +770,7 @@ def _infer_meaning(
         if metabolic.get("perceived_stability", 10) < 5:
             hypotheses.append(
                 {
-                    "hypothesis": "Metabolic instability — possible caloric deficit, dehydration, or illness onset",
+                    "hypothesis": "Metabolic instability -- possible caloric deficit, dehydration, or illness onset",
                     "affected_dimensions": ["well_score", "metabolic"],
                     "confidence": "LOW",
                     "evidence": f"perceived_stability={metabolic.get('perceived_stability')}/10",
@@ -785,10 +785,10 @@ def _compute_contrast_severity(contrast: dict[str, dict]) -> tuple[str, str]:
     """Compute overall contrast severity tier and recommended action.
 
     Tiers:
-      NORMAL   — no anomalies detected
-      WATCH    — 1 anomaly, modest z
-      CONCERN  — 1 anomaly with high z OR 2+ anomalies
-      CRITICAL — systemic degradation (well_score AND violations both anomalous in bad direction)
+      NORMAL   -- no anomalies detected
+      WATCH    -- 1 anomaly, modest z
+      CONCERN  -- 1 anomaly with high z OR 2+ anomalies
+      CRITICAL -- systemic degradation (well_score AND violations both anomalous in bad direction)
 
     Returns: (severity_tier, recommended_action)
     """
@@ -833,7 +833,7 @@ def _compute_cognitive_entropy_rate(state: dict[str, Any]) -> float:
     Formula:
       cognitive_entropy_rate = (contradiction_count / max(total_predictions, 1))
                                × average_confidence_of_failures / 10
-    Range: 0.0–1.0
+    Range: 0.0-1.0
     """
     metrics = state.get("metrics", {})
     cognitive = metrics.get("cognitive", {})
@@ -854,7 +854,7 @@ def _compute_machine_entropy(state: dict[str, Any]) -> float:
 
     Formula:
       machine_entropy = 1.0 - (m_well_score / 100.0)
-    Range: 0.0–1.0
+    Range: 0.0-1.0
     """
     m = state.get("m_machine", {})
     m_score = m.get("m_well_score", 100)
@@ -862,16 +862,16 @@ def _compute_machine_entropy(state: dict[str, Any]) -> float:
 
 
 def _compute_metabolic_flux(state: dict[str, Any]) -> dict[str, Any]:
-    """Compute the unified metabolic_flux metric: a 0.0–1.0 scalar
+    """Compute the unified metabolic_flux metric: a 0.0-1.0 scalar
     representing the system's entropy rate across cognitive and machine planes.
 
     Formula:
       cognitive_entropy = _compute_cognitive_entropy_rate(state)
       machine_entropy   = _compute_machine_entropy(state)
-      context_pressure  = state metrics context_pressure (0–1)
+      context_pressure  = state metrics context_pressure (0-1)
       compute_pressure  = 1.0 - (compute_budget_pct / 100.0)
-      api_failure_rate  = state m_machine api_failure_rate (0–1)
-      memory_pressure   = state m_machine context_length_pressure (0–1)
+      api_failure_rate  = state m_machine api_failure_rate (0-1)
+      memory_pressure   = state m_machine context_length_pressure (0-1)
 
       metabolic_flux = Σ(w_i × component_i)
 
@@ -916,7 +916,7 @@ def _compute_metabolic_flux(state: dict[str, Any]) -> dict[str, Any]:
         or cognitive.get("clarity")
         or cognitive.get("cognitive_load")
         or cognitive.get("burnout_risk")
-        or metrics.get("decision_fatigue")  # Kimi telemetry — flat under metrics
+        or metrics.get("decision_fatigue")  # Kimi telemetry -- flat under metrics
         or metrics.get("cognitive_load")
         or metrics.get("burnout_risk")
         or metrics.get("cognitive_clarity")
@@ -932,15 +932,15 @@ def _compute_metabolic_flux(state: dict[str, Any]) -> dict[str, Any]:
 
     data_quality: str
     if _m_machine_absent and _cognitive_absent and not _has_behavioral:
-        data_quality = "UNMEASURED — no machine, cognitive, or behavioral telemetry; all components default to idle"
+        data_quality = "UNMEASURED -- no machine, cognitive, or behavioral telemetry; all components default to idle"
     elif _m_machine_absent and _has_behavioral:
-        data_quality = "BEHAVIORAL — flux derived from behavioral telemetry (sleep, fatigue, cognitive load, burnout) not machine metrics"
+        data_quality = "BEHAVIORAL -- flux derived from behavioral telemetry (sleep, fatigue, cognitive load, burnout) not machine metrics"
     elif _m_machine_absent:
-        data_quality = "PARTIAL — m_machine absent; machine components default to idle; cognitive metrics real"
+        data_quality = "PARTIAL -- m_machine absent; machine components default to idle; cognitive metrics real"
     elif _cognitive_absent:
-        data_quality = "PARTIAL — cognitive counters absent; cognitive_entropy=0; machine metrics real"
+        data_quality = "PARTIAL -- cognitive counters absent; cognitive_entropy=0; machine metrics real"
     else:
-        data_quality = "REAL — all components from live state"
+        data_quality = "REAL -- all components from live state"
 
     # ── Behavioral flux computation ───────────────────────────────────────────────
     # When behavioral telemetry exists but machine metrics don't, compute flux
@@ -1021,7 +1021,7 @@ def _compute_metabolic_flux(state: dict[str, Any]) -> dict[str, Any]:
         "behavioral_flux": behavioral_flux,
         "verdict": verdict,
         "verdict_message": FLUX_VERDICTS.get(
-            verdict, "Telemetry status unknown — cannot assess metabolic state."
+            verdict, "Telemetry status unknown -- cannot assess metabolic state."
         ),
         "components": {
             "cognitive_entropy": cognitive_entropy,
@@ -1047,14 +1047,14 @@ def _compute_metabolic_flux(state: dict[str, Any]) -> dict[str, Any]:
         "calm_state": calm_state,
         "false_calm_warning": calm_state == "unknown"
         and effective_flux < FLUX_THRESHOLDS["WARNING"],
-        "psi_SE_note": "Sovereign entropy protects unpredictability. Low psi_SE ≠ healthy — it means capturable. See well_assess_sovereign_entropy for the anti-capture dimension.",
-        # Structural Coherence Transmission — EUREKA v2026.06.05
+        "psi_SE_note": "Sovereign entropy protects unpredictability. Low psi_SE ≠ healthy -- it means capturable. See well_assess_sovereign_entropy for the anti-capture dimension.",
+        # Structural Coherence Transmission -- EUREKA v2026.06.05
         # High metabolic flux degrades the system's ability to maintain governance-as-compression.
         # When flux >= 0.65, output grammar loosens and cross-modal fidelity drops.
         "structural_coherence_delta": round(1.0 - effective_flux, 4),
         "structural_coherence_note": (
             "Governance architecture is signal compression. Metabolic flux measures the entropy rate "
-            "that erodes this compression. At flux >= 0.65, the system's outputs lose cross-modal fidelity — "
+            "that erodes this compression. At flux >= 0.65, the system's outputs lose cross-modal fidelity -- "
             "they survive text→text but degrade in text→image→text roundtrips. "
             f"Current delta: {round(1.0 - effective_flux, 4)} (1.0 = perfect coherence, 0.0 = coherence collapsed)."
         ),
@@ -1235,13 +1235,13 @@ def is_well(state: dict[str, Any] | None = None) -> bool:
     Returns True only if all constitutional fields are present and valid.
 
     When state.json is missing identity fields (pre-migration), returns False
-    WITHOUT triggering corruption/alarm — the organ is healthy, just not yet
+    WITHOUT triggering corruption/alarm -- the organ is healthy, just not yet
     seeded with sovereign data. Migrate via well_log, not a code patch.
     """
     if state is None:
         state = _load_state()
 
-    # Explicit field presence check — distinguish "missing" from "invalid"
+    # Explicit field presence check -- distinguish "missing" from "invalid"
     identity = state.get("identity")
     role = state.get("role")
     delta_s = state.get("delta_s")
@@ -1252,7 +1252,7 @@ def is_well(state: dict[str, Any] | None = None) -> bool:
     authority = state.get("authority")
 
     # If identity/role/authority are completely absent, state needs migration
-    # — not a corruption signal. is_well() returns False but with a clear flag.
+    # -- not a corruption signal. is_well() returns False but with a clear flag.
     if identity is None or role is None or authority is None:
         return False
 
@@ -1317,7 +1317,7 @@ def _normalize_truth_status(state: dict[str, Any]) -> str:
     F2 honesty: sovereign inject / self-report must never masquerade as sensor VERIFIED.
 
     biometric_inject.sh historically wrote truth_status=VERIFIED. That is a category
-    error — operator-asserted scores are OPERATOR_REPORTED, not wearable telemetry.
+    error -- operator-asserted scores are OPERATOR_REPORTED, not wearable telemetry.
     """
     raw = str(state.get("truth_status") or "UNVERIFIED").upper()
     source_type = str(
@@ -1369,22 +1369,22 @@ def _honesty_block(
     is_sensor = truth_status == "VERIFIED" and not is_self and not is_mock
 
     if is_mock:
-        banner = "MOCK / TEST — not live biometrics. Do not treat as body truth."
+        banner = "MOCK / TEST -- not live biometrics. Do not treat as body truth."
         code = "MOCK"
     elif is_self:
         banner = (
-            "SELF-REPORT — sovereign inject / presence assert. "
+            "SELF-REPORT -- sovereign inject / presence assert. "
             "Not wearable sensor telemetry."
         )
         code = "SELF_REPORT"
     elif truth_status == "INSUFFICIENT_DATA" or insufficient:
-        banner = "INSUFFICIENT — sovereign biometric state unknown. Inject or sensor feed required."
+        banner = "INSUFFICIENT -- sovereign biometric state unknown. Inject or sensor feed required."
         code = "INSUFFICIENT"
     elif is_stale:
-        banner = "STALE — biometrics aged out. Refresh before high-stakes work."
+        banner = "STALE -- biometrics aged out. Refresh before high-stakes work."
         code = "STALE"
     elif is_sensor:
-        banner = "SENSOR — verified telemetry (within freshness band)."
+        banner = "SENSOR -- verified telemetry (within freshness band)."
         code = "SENSOR"
     else:
         banner = f"truth={truth_status}"
@@ -1419,11 +1419,11 @@ def _has_verified_telemetry(state: dict[str, Any]) -> bool:
     metrics = state.get("metrics", {})
     if not metrics or not isinstance(metrics, dict):
         return False
-    # Sensor-class dims only — cognitive self-scores alone are not body telemetry
+    # Sensor-class dims only -- cognitive self-scores alone are not body telemetry
     for dim in ("sleep", "stress", "metabolic", "structural"):
         if metrics.get(dim):
             return True
-    # cognitive alone with VERIFIED may be inject residue — require non-inject reason
+    # cognitive alone with VERIFIED may be inject residue -- require non-inject reason
     if metrics.get("cognitive") and truth == "VERIFIED":
         reason = str(state.get("reason") or "").lower()
         if any(
@@ -1494,7 +1494,7 @@ def _resolve_readiness(state: dict[str, Any]) -> dict[str, Any]:
             "w0": "OPERATOR_VETO_INTACT / HIERARCHY_INVARIANT",
         }
 
-    # I2/I3 — Evidence discipline: unverified/stale/expired telemetry cannot produce OPTIMAL
+    # I2/I3 -- Evidence discipline: unverified/stale/expired telemetry cannot produce OPTIMAL
     truth_status = state.get("truth_status", "UNVERIFIED")
     if truth_status in ("UNVERIFIED", "STALE", "EXPIRED", "OPERATOR_REPORTED"):
         return {
@@ -1661,23 +1661,23 @@ mcp = FastMCP(
         "WELL is the Universal Substrate Vitality Mirror for arifOS. "
         "H-WELL reflects operator Arif's biological and cognitive state. "
         "M-WELL reflects system reliability, tool health, context integrity, and compute limits. "
-        "G-WELL reflects machine governance health — autonomic coherence, check/balance integrity, floor compliance. "
+        "G-WELL reflects machine governance health -- autonomic coherence, check/balance integrity, floor compliance. "
         "C-WELL evaluates coupled risk between human state and machine state. "
         "U-WELL (Universal) classifies any substance or substrate and assesses vitality "
         "without category error, authority overreach, or false equivalence. "
-        "The WELL–FORGE bridge lets A-FORGE adapt execution intensity to Arif's readiness. "
+        "The WELL-FORGE bridge lets A-FORGE adapt execution intensity to Arif's readiness. "
         "W0: WELL holds a mirror, not a veto. Operator sovereignty is invariant. "
         "WELL does not decide worth. WELL identifies substrate, validates evidence, "
         "detects vitality/degradation, protects dignity, and returns judgment to Arif. "
         "G-WELL extends this to machine governance: it reflects, never commands. "
-        "DITEMPA BUKAN DIBERI — Forged, Not Given."
+        "DITEMPA BUKAN DIBERI -- Forged, Not Given."
     ),
 )
 
 # ── Session Validation Middleware (FORGED 2026-07-18) ─────────────────────────
 # WELL tools accept session_id as optional. This middleware enforces that
 # ALL tool calls provide a non-empty session_id. Anonymous reads are blocked.
-# Constitutional basis: F11 AUDIT — every call must carry provenance.
+# Constitutional basis: F11 AUDIT -- every call must carry provenance.
 import json as _json_mw
 from fastmcp.exceptions import ToolError as _ToolErrorMw
 from fastmcp.server.middleware import Middleware as _MiddlewareBase
@@ -1737,7 +1737,7 @@ class WellSessionValidationMiddleware(_MiddlewareBase):
                 isinstance(session_id, str) and not session_id.strip()
             ):
                 logger.warning(
-                    "SESSION_VALIDATION: tool=%s rejected — no session_id (400 SESSION_MISSING)",
+                    "SESSION_VALIDATION: tool=%s rejected -- no session_id (400 SESSION_MISSING)",
                     tool_name,
                 )
                 raise _ToolErrorMw(
@@ -1836,11 +1836,11 @@ class WellSessionValidationMiddleware(_MiddlewareBase):
 
 try:
     mcp.add_middleware(WellSessionValidationMiddleware())
-    logger.info("WellSessionValidationMiddleware armed — anonymous reads blocked")
+    logger.info("WellSessionValidationMiddleware armed -- anonymous reads blocked")
 except Exception as _mw_exc:
     logger.warning("WellSessionValidationMiddleware failed to load: %s", _mw_exc)
 
-# Completions CANCELLED 2026-07-09 — agent surface uses full tool JSON.
+# Completions CANCELLED 2026-07-09 -- agent surface uses full tool JSON.
 
 # ── well_mcp canon surface wiring (2026-06-27) ─────────────────────────────────
 # Registers: 18 resources (well://*), 9 prompts (well_init→well_seal),
@@ -1873,7 +1873,7 @@ except Exception as _e:
 
 
 def _mcp_health_check_impl() -> dict:
-    """Internal implementation — returns raw payload for internal consumers."""
+    """Internal implementation -- returns raw payload for internal consumers."""
     state = _load_state()
     m_machine = state.get("m_machine", {})
     well_ok = is_well(state)
@@ -2071,7 +2071,7 @@ def well_health_check(
     # Each dimension has status, detail, and where to look for issues.
     dimensions = {}
 
-    # 1. MACHINE — service health, tool surface, MCP availability
+    # 1. MACHINE -- service health, tool surface, MCP availability
     dimensions["machine"] = {
         "status": reliability.get("status", "UNKNOWN"),
         "detail": "WELL server process, MCP transport, tool surface",
@@ -2080,7 +2080,7 @@ def well_health_check(
         "tool_count": reliability.get("tool_count", 0),
     }
 
-    # 2. GOVERNANCE — F1-F13 floor compliance, constitutional integrity
+    # 2. GOVERNANCE -- F1-F13 floor compliance, constitutional integrity
     # Probes arifOS for floor state (non-blocking)
     gov_status = "UNKNOWN"
     gov_detail = "Floor compliance checks delegated to arifOS kernel"
@@ -2100,10 +2100,10 @@ def well_health_check(
         "status": gov_status,
         "detail": gov_detail,
         "floor_authority": "arifOS kernel (port 8088)",
-        "well_gate": "REFLECT_ONLY — WELL does not adjudicate floors",
+        "well_gate": "REFLECT_ONLY -- WELL does not adjudicate floors",
     }
 
-    # 3. INTELLIGENCE — agent readiness, epistemic coherence, tool surface
+    # 3. INTELLIGENCE -- agent readiness, epistemic coherence, tool surface
     # Reports WELL's tool surface integrity and cognitive readiness
     _well_state = _load_state()
     _tools_ok = reliability.get("tool_count", 0) > 0
@@ -2118,7 +2118,7 @@ def well_health_check(
         "epistemic_label": "OBSERVED" if _state_age < 24 else "STALE",
     }
 
-    # 4. HUMAN — operator vitality, fatigue, dignity (from state.json)
+    # 4. HUMAN -- operator vitality, fatigue, dignity (from state.json)
     _human_status = "UNKNOWN"
     _human_detail = "No biometric data loaded"
     try:
@@ -2141,8 +2141,8 @@ def well_health_check(
     dimensions["human"] = {
         "status": _human_status,
         "detail": _human_detail,
-        "dignity_guard": "F6 MARUAH — WELL reflects, never diagnoses",
-        "authority": "REFLECT_ONLY — Arif holds final judgment",
+        "dignity_guard": "F6 MARUAH -- WELL reflects, never diagnoses",
+        "authority": "REFLECT_ONLY -- Arif holds final judgment",
     }
 
     reliability["health_dimensions"] = dimensions
@@ -2197,7 +2197,7 @@ def _build_unified_packet(ctx: Context | None = None) -> dict[str, Any]:
     )
     mcp_ready = "HEALTHY" if mcp["status"] == "OK" else "DEGRADED"
 
-    # I3 — Evidence discipline: unverified/stale/expired telemetry downgrades coupled verdict
+    # I3 -- Evidence discipline: unverified/stale/expired telemetry downgrades coupled verdict
     truth_status = state.get("truth_status", "UNVERIFIED")
     evidence_degraded = truth_status in ("UNVERIFIED", "STALE", "EXPIRED")
 
@@ -2443,7 +2443,7 @@ def _legacy_advisory(
     canonical_name: str,
     canonical_params: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Deprecation advisory for legacy tools. Additive only — never breaks existing clients."""
+    """Deprecation advisory for legacy tools. Additive only -- never breaks existing clients."""
     adv: dict[str, Any] = {
         "_advisory": {
             "legacy_tool": legacy_name,
@@ -2544,7 +2544,7 @@ def _classify_well_state(state: dict[str, Any]) -> dict[str, Any]:
                 ],
             }
         elif freshness_band in ("FRESH", "CURRENT"):
-            well_signal = "WELL_HOLD"  # Insufficient data but fresh — hold, not crisis
+            well_signal = "WELL_HOLD"  # Insufficient data but fresh -- hold, not crisis
             owner_summary = {
                 "color": "YELLOW",
                 "reasons": [
@@ -2647,7 +2647,7 @@ def _classify_well_state(state: dict[str, Any]) -> dict[str, Any]:
         "well_ok": is_well(state),
         "has_telemetry": _has_verified_telemetry(state),
         "truth_status": truth_status,
-        "well_signal": well_signal,  # WELL is REFLECT_ONLY — signals, not verdicts
+        "well_signal": well_signal,  # WELL is REFLECT_ONLY -- signals, not verdicts
         "well_score": well_score,
         "freshness_band": freshness_band,
         "freshness": freshness,
@@ -2746,7 +2746,7 @@ def _compute_score(metrics: dict[str, Any]) -> tuple[float, list[str]]:
     stress = metrics.get("stress", {})
     metabolic = metrics.get("metabolic", {})
 
-    # W1 — Sleep Integrity
+    # W1 -- Sleep Integrity
     debt = sleep.get("sleep_debt_days", 0)
     quality = sleep.get("quality_score", 10)
     hours = sleep.get("last_night_hours", 8)
@@ -2756,7 +2756,7 @@ def _compute_score(metrics: dict[str, Any]) -> tuple[float, list[str]]:
     if debt > 2:
         violations.append("W1_SLEEP_DEBT")
 
-    # W5 — Cognitive Entropy
+    # W5 -- Cognitive Entropy
     clarity = cognitive.get("clarity", 10)
     fatigue = cognitive.get("decision_fatigue", 0)
     score -= max(0, (8 - clarity) * 2)
@@ -2764,7 +2764,7 @@ def _compute_score(metrics: dict[str, Any]) -> tuple[float, list[str]]:
     if clarity < 4:
         violations.append("W5_COGNITIVE_ENTROPY")
 
-    # W3 — Stress Load (load >= 7/10 or chronic elevation)
+    # W3 -- Stress Load (load >= 7/10 or chronic elevation)
     load = stress.get("subjective_load", 0)
     restless = stress.get("restlessness", 0)
     chronic_days = stress.get("chronic_elevation_days", 0)
@@ -2775,7 +2775,7 @@ def _compute_score(metrics: dict[str, Any]) -> tuple[float, list[str]]:
     elif load >= 5 and chronic_days >= 7:
         violations.append("W3_STRESS_LOAD")
 
-    # W2 — Metabolic Stability
+    # W2 -- Metabolic Stability
     stability = metabolic.get("perceived_stability", 10)
     score -= max(0, (7 - stability) * 1.5)
     if metabolic.get("hydration_status") == "DEHYDRATED":
@@ -2784,7 +2784,7 @@ def _compute_score(metrics: dict[str, Any]) -> tuple[float, list[str]]:
     elif stability < 5:
         violations.append("W2_METABOLIC_STABILITY")
 
-    # W4 — Physical Integrity (sedentary >= 4h or pain >= 5/10)
+    # W4 -- Physical Integrity (sedentary >= 4h or pain >= 5/10)
     struct = metrics.get("structural", {})
     sedentary = struct.get("sedentary_hours_continuous", 0)
     pain_level = struct.get("pain_level", 0)
@@ -2796,13 +2796,13 @@ def _compute_score(metrics: dict[str, Any]) -> tuple[float, list[str]]:
         if "W4_PHYSICAL_INTEGRITY" not in violations:
             violations.append("W4_PHYSICAL_INTEGRITY")
 
-    # W6 — Incentive Decoupling (Metabolic Pause)
+    # W6 -- Incentive Decoupling (Metabolic Pause)
     w6_active = "W6_METABOLIC_PAUSE" in violations
     if w6_active:
         score -= 10  # Base penalty while paused
         if "W6_METABOLIC_PAUSE" not in violations:
             violations.append("W6_METABOLIC_PAUSE")
-    # W7 — Skill Atrophy detection (>= 14 days without manual practice)
+    # W7 -- Skill Atrophy detection (>= 14 days without manual practice)
     skill_gap = metrics.get("skill", {}).get("days_since_practice", -1)
     if skill_gap >= 14:
         violations.append("W7_SKILL_ATROPHY")
@@ -2894,7 +2894,7 @@ def _compose_verdict(
         else None,
         "authority": {
             "level": authority_level,
-            "boundary": "W0 — Mirror only" if mcp == "AFWELL" else "Domain Expert",
+            "boundary": "W0 -- Mirror only" if mcp == "AFWELL" else "Domain Expert",
         },
         "readiness": {
             "human": human_readiness,
@@ -2932,12 +2932,12 @@ def _compose_verdict(
 
 
 # DEPRECATED: Use well_validate_vitality(mode="state") instead.
-# @mcp.tool() REMOVED by FORGE entropy audit 2026-07-03 — reduces callable surface from 27→26.
+# @mcp.tool() REMOVED by FORGE entropy audit 2026-07-03 -- reduces callable surface from 27→26.
 # Internal callers use well_validate_vitality directly. Legacy bridge in compatibility.py.
 @mcp.tool()
 def well_state(include: str = "full", ctx: Context | None = None) -> dict[str, Any]:
     """
-    Get the current WELL state — biological telemetry snapshot for operator Arif.
+    Get the current WELL state -- biological telemetry snapshot for operator Arif.
     Returns score, floor violations, and all metric dimensions.
     """
     VALID_INCLUDES = [
@@ -3017,7 +3017,7 @@ def well_log(
     """
     Log a biological telemetry update for operator Arif.
     Updates state.json, recomputes WELL score, checks floor violations.
-    Only provide dimensions you're logging — omitted fields are unchanged.
+    Only provide dimensions you're logging -- omitted fields are unchanged.
     """
     state = _load_state()
     metrics = state.get("metrics", {})
@@ -3135,15 +3135,15 @@ def well_contrast_report(
     DEPRECATED: use well_state(include="trend") instead for trend data.
     Soft alias retained for backward compatibility.
 
-    Detect anomalous biological contrast — deviation from operator baseline.
+    Detect anomalous biological contrast -- deviation from operator baseline.
 
     Implements the W→P→C→M→G→J metabolic loop for human vitality:
-      W  Witness     — current state + events.jsonl rolling window
-      P  Perception  — parse and structure current metrics
-      C  Contrast    — z-score anomaly detection vs established baseline
-      M  Meaning     — pattern-match anomaly signatures to infer possible causes
-      G  Guard       — route anomalies through W-floor thresholds
-      J  Judgment    — severity tier + recommended action
+      W  Witness     -- current state + events.jsonl rolling window
+      P  Perception  -- parse and structure current metrics
+      C  Contrast    -- z-score anomaly detection vs established baseline
+      M  Meaning     -- pattern-match anomaly signatures to infer possible causes
+      G  Guard       -- route anomalies through W-floor thresholds
+      J  Judgment    -- severity tier + recommended action
 
     W0: WELL holds a mirror, not a veto. All outputs are HYPOTHESIS-tagged.
     This is not diagnosis. Arif remains final judge.
@@ -3159,19 +3159,19 @@ def well_contrast_report(
     # 1C-A: Source of truth for trend data is now well_state(include="trend")
     state = well_state(include="trend", ctx=ctx)
 
-    # W: Witness — load event history
+    # W: Witness -- load event history
     events = _load_events(lookback_days=lookback_days)
 
-    # P: Perception — establish baseline from events
+    # P: Perception -- establish baseline from events
     baseline = _compute_baseline(events)
 
-    # C: Contrast — detect anomalous deviation
+    # C: Contrast -- detect anomalous deviation
     contrast = _detect_contrast(state, baseline)
 
-    # M: Meaning — infer possible causes from anomaly patterns
+    # M: Meaning -- infer possible causes from anomaly patterns
     hypotheses = _infer_meaning(contrast, state)
 
-    # G: Guard — route to W-floor thresholds
+    # G: Guard -- route to W-floor thresholds
     severity, recommended_action = _compute_contrast_severity(contrast)
 
     # Build W-floor flag list from anomalous dimensions
@@ -3202,16 +3202,16 @@ def well_contrast_report(
     # Confidence band: bounded by event count and telemetry freshness
     freshness_band = _get_freshness_band(state)
     if len(events) < CONTRAST_MIN_EVENTS:
-        confidence_band = "LOW — insufficient baseline events"
+        confidence_band = "LOW -- insufficient baseline events"
         confidence_level = 0.3
     elif freshness_band == "STALE":
-        confidence_band = "LOW — telemetry stale"
+        confidence_band = "LOW -- telemetry stale"
         confidence_level = 0.4
     elif freshness_band == "AGED":
-        confidence_band = "MEDIUM — telemetry aged"
+        confidence_band = "MEDIUM -- telemetry aged"
         confidence_level = 0.6
     else:
-        confidence_band = "HIGH — fresh telemetry, robust baseline"
+        confidence_band = "HIGH -- fresh telemetry, robust baseline"
         confidence_level = 0.8
 
     anomaly_count = sum(1 for v in contrast.values() if v.get("anomaly", False))
@@ -3255,14 +3255,14 @@ def well_contrast_report(
 
 
 # DEPRECATED: Use well_classify_substrate instead.
-# @mcp.tool() removed — internal use only.
+# @mcp.tool() removed -- internal use only.
 async def well_init(
     session_id: str | None = None,
     actor_id: str = "well-substrate",
     ctx: Context | None = None,
 ) -> dict[str, Any]:
     """
-    Open a WELL governance session — writes a 000_INIT event to VAULT999.
+    Open a WELL governance session -- writes a 000_INIT event to VAULT999.
     Call this at the start of any WELL-aware session to anchor identity and
     connect to the canonical Merkle chain.
     Returns session_id and chain position for subsequent well_anchor seals.
@@ -3331,13 +3331,13 @@ async def well_init(
         }
 
 
-# internal — not MCP-facing (collapsed 2026-05-26)
+# internal -- not MCP-facing (collapsed 2026-05-26)
 async def well_anchor(
     force: bool = False,
     ctx: Context | None = None,
 ) -> dict[str, Any]:
     """
-    [DEPRECATED — use well_anchor_evidence(mode='seal')]
+    [DEPRECATED -- use well_anchor_evidence(mode='seal')]
     Legacy anchor to arifOS VAULT999. Retained for federation compatibility.
     New code should call well_anchor_evidence.
     """
@@ -3378,11 +3378,11 @@ async def well_anchor(
         }
 
 
-# internal — not MCP-facing (collapsed 2026-05-26)
+# internal -- not MCP-facing (collapsed 2026-05-26)
 @mcp.tool()
 def well_check_floors(ctx: Context | None = None) -> dict[str, Any]:
     """
-    [DEPRECATED — use well_validate_vitality(mode='floors')]
+    [DEPRECATED -- use well_validate_vitality(mode='floors')]
     Legacy W-floor checker. Retained for compatibility.
     New code should call well_validate_vitality.
     """
@@ -3517,7 +3517,7 @@ def well_check_floors(ctx: Context | None = None) -> dict[str, Any]:
 # ── Phase 2 Tools (Expanded Surface) ───────────────────────────────────────────
 
 
-# internal — not MCP-facing (collapsed 2026-05-26)
+# internal -- not MCP-facing (collapsed 2026-05-26)
 @mcp.tool()
 def well_log_state(
     sleep_hours: float | None = None,
@@ -3540,7 +3540,7 @@ def well_log_state(
     )
 
 
-# internal — not MCP-facing (collapsed 2026-05-26)
+# internal -- not MCP-facing (collapsed 2026-05-26)
 @mcp.tool()
 def well_get_readiness(ctx: Context | None = None) -> dict[str, Any]:
     """
@@ -3551,7 +3551,7 @@ def well_get_readiness(ctx: Context | None = None) -> dict[str, Any]:
     HARD CEILING: If state age > 168h, returns DO_NOT_INFER regardless of any other signal.
     """
     state = _load_state()
-    # P0-3: 168h hard ceiling — block human readiness inference when state is too old
+    # P0-3: 168h hard ceiling -- block human readiness inference when state is too old
     ceiling_block = _check_human_readiness_168h_ceiling(state)
     if ceiling_block is not None:
         return {
@@ -3604,13 +3604,13 @@ def well_get_readiness(ctx: Context | None = None) -> dict[str, Any]:
     )
 
 
-# internal — not MCP-facing (collapsed 2026-05-26)
+# internal -- not MCP-facing (collapsed 2026-05-26)
 @mcp.tool()
 def well_check_floor(
     floor_id: str | None = None, ctx: Context | None = None
 ) -> dict[str, Any]:
     """
-    [DEPRECATED — use well_validate_vitality(floor_id=...)]
+    [DEPRECATED -- use well_validate_vitality(floor_id=...)]
     Legacy single-floor checker. Retained for compatibility.
     New code should call well_validate_vitality.
     """
@@ -3707,7 +3707,7 @@ def well_check_floor(
     )
 
 
-# internal — not MCP-facing (collapsed 2026-05-26)
+# internal -- not MCP-facing (collapsed 2026-05-26)
 @mcp.tool()
 def well_list_log(limit: int = 10, ctx: Context | None = None) -> dict[str, Any]:
     """List recent biological state log entries (Phase 1/2)."""
@@ -3729,7 +3729,7 @@ def well_list_log(limit: int = 10, ctx: Context | None = None) -> dict[str, Any]
     return {"ok": True, "entries": entries[::-1]}
 
 
-# internal — not MCP-facing (collapsed 2026-05-26)
+# internal -- not MCP-facing (collapsed 2026-05-26)
 @mcp.tool(task=True)
 async def well_seal_vault(
     force: bool = False, ctx: Context | None = None
@@ -3749,7 +3749,7 @@ async def well_seal_vault(
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# WELL MVP PHASE 2 — arifOS Human Substrate Mirror
+# WELL MVP PHASE 2 -- arifOS Human Substrate Mirror
 # 7 additions for arifOS-grade biological substrate governance
 # ══════════════════════════════════════════════════════════════════════════════
 
@@ -3869,7 +3869,7 @@ def well_trend_analysis(ctx: Context | None = None) -> dict[str, Any]:
 @mcp.tool()
 def well_bandwidth_recommendation(ctx: Context | None = None) -> dict[str, Any]:
     """
-    [DEPRECATED — use well_assess_metabolism(mode='bandwidth')]
+    [DEPRECATED -- use well_assess_metabolism(mode='bandwidth')]
     Legacy bandwidth/action-mode mapper. Retained for compatibility.
     New code should call well_assess_metabolism.
     If no verified telemetry, returns UNKNOWN rather than faking capacity.
@@ -3909,7 +3909,7 @@ def well_bandwidth_recommendation(ctx: Context | None = None) -> dict[str, Any]:
     clarity = cognitive.get("clarity", 10)
     sleep.get("sleep_debt_days", 0)
 
-    # Determine operational mode (advisory only — WELL never commands)
+    # Determine operational mode (advisory only -- WELL never commands)
     if score >= 80 and not violations:
         mode = "FULL"
         verdict = "OPTIMAL"
@@ -3937,7 +3937,7 @@ def well_bandwidth_recommendation(ctx: Context | None = None) -> dict[str, Any]:
         advised_against = ["C1", "C2", "C3", "C4", "C5"]
         message = "Pause. Recover. No consequential decisions."
 
-    # W7 — Cognitive Load Threshold (new floor)
+    # W7 -- Cognitive Load Threshold (new floor)
     if fatigue > 7 and clarity < 5:
         mode = "PAUSED"
         verdict = "COGNITIVE_OVERLOAD"
@@ -3970,11 +3970,11 @@ def well_bandwidth_recommendation(ctx: Context | None = None) -> dict[str, Any]:
 # ── 3. Recovery Protocol ──────────────────────────────────────────────────────
 
 
-# internal — not MCP-facing (collapsed 2026-05-26)
+# internal -- not MCP-facing (collapsed 2026-05-26)
 def well_recovery_protocol(ctx: Context | None = None) -> dict[str, Any]:
     """
     Suggest stabilizing actions based on current WELL state.
-    Not medical advice — operational self-regulation support.
+    Not medical advice -- operational self-regulation support.
     Returns structured recovery steps ordered by priority.
     """
     state = _load_state()
@@ -4036,7 +4036,7 @@ def well_recovery_protocol(ctx: Context | None = None) -> dict[str, Any]:
         )
     if fatigue > 7:
         warnings.append(
-            "High decision fatigue — avoid consequential choices until recovery."
+            "High decision fatigue -- avoid consequential choices until recovery."
         )
         actions.append(
             {
@@ -4057,7 +4057,7 @@ def well_recovery_protocol(ctx: Context | None = None) -> dict[str, Any]:
             }
         )
         warnings.append(
-            "High stress load — public replies and conflict decisions should be delayed."
+            "High stress load -- public replies and conflict decisions should be delayed."
         )
 
     # Fasting/metabolic
@@ -4067,7 +4067,7 @@ def well_recovery_protocol(ctx: Context | None = None) -> dict[str, Any]:
             {
                 "priority": "P2",
                 "action": "Eat before major decisions",
-                "reason": f"Fasting {fasting}h — glucose may be low",
+                "reason": f"Fasting {fasting}h -- glucose may be low",
             }
         )
 
@@ -4082,7 +4082,7 @@ def well_recovery_protocol(ctx: Context | None = None) -> dict[str, Any]:
             }
         )
 
-    # No known issues — positive affirmation
+    # No known issues -- positive affirmation
     if not actions:
         actions.append(
             {
@@ -4098,14 +4098,14 @@ def well_recovery_protocol(ctx: Context | None = None) -> dict[str, Any]:
         "recovery_actions": actions,
         "warnings": warnings,
         "verdict": "DEGRADED" if warnings else "STABLE",
-        "w0": "OPERATOR_VETO_INTACT / HIERARCHY_INVARIANT — not medical advice",
+        "w0": "OPERATOR_VETO_INTACT / HIERARCHY_INVARIANT -- not medical advice",
     }
 
 
 # ── 4. Niat / Intent Check ─────────────────────────────────────────────────────
 
 
-# internal — not MCP-facing (collapsed 2026-05-26)
+# internal -- not MCP-facing (collapsed 2026-05-26)
 @mcp.tool()
 def well_niat_check(
     intent: str,
@@ -4115,7 +4115,7 @@ def well_niat_check(
 ) -> dict[str, Any]:
     """
     Before high-impact action, check alignment between intent and biological state.
-    W0: WELL never blocks — it only informs. Operator retains all sovereignty.
+    W0: WELL never blocks -- it only informs. Operator retains all sovereignty.
 
     Questions checked:
     - Is the intent clear?
@@ -4182,13 +4182,13 @@ def well_niat_check(
     )
 
     if flags >= 3 or score < 40:
-        recommendation = "ADVISORY_HOLD — delay action"
+        recommendation = "ADVISORY_HOLD -- delay action"
         readiness = "ADVISORY_BLOCKED"
         reason = (
             "Multiple WELL indicators flag this action as high-risk in current state."
         )
     elif flags >= 1:
-        recommendation = "ADVISORY_CAUTION — proceed with review"
+        recommendation = "ADVISORY_CAUTION -- proceed with review"
         readiness = "ADVISORY_CONDITIONAL"
         reason = "Some indicators flag caution. Consider delaying or drafting only."
     else:
@@ -4407,7 +4407,7 @@ def _build_arifos_packet(ctx: Context | None = None) -> dict[str, Any]:
         stress_load = stress.get("subjective_load", 0)
 
         # Ground state check (I0b: What class of decision is safe?)
-        # Violation count is the strongest signal — any single W-floor violation
+        # Violation count is the strongest signal -- any single W-floor violation
         # floors the ceiling regardless of current numbers
         vcount = len(violations)
 
@@ -4550,7 +4550,7 @@ def _build_arifos_packet(ctx: Context | None = None) -> dict[str, Any]:
 
 
 def _arifos_packet_legacy(ctx: Context | None = None) -> dict[str, Any]:
-    """[INTERNAL — DEPRECATED] Use well_get_packet(target='arifos') instead.
+    """[INTERNAL -- DEPRECATED] Use well_get_packet(target='arifos') instead.
     Retained for internal backward-compat only. Not exposed via MCP."""
     result = well_get_packet(target="arifos", ctx=ctx)
     if isinstance(result, dict) and result.get("ok"):
@@ -4573,11 +4573,11 @@ W0_TELEMETRY_PURPOSES = [
 ]
 
 
-# internal — not MCP-facing (collapsed 2026-05-26)
+# internal -- not MCP-facing (collapsed 2026-05-26)
 def well_consent_status(ctx: Context | None = None) -> dict[str, Any]:
     """
     Return W0 Sovereignty & Telemetry Consent status.
-    This is a hard floor — WELL never operates without operator consent.
+    This is a hard floor -- WELL never operates without operator consent.
     W0: WELL holds a mirror, not a veto. Operator sovereignty is invariant.
     """
     result = {
@@ -4589,7 +4589,7 @@ def well_consent_status(ctx: Context | None = None) -> dict[str, Any]:
             "WELL must never shame, coerce, diagnose, manipulate, or override.",
             "Telemetry is private, sensitive, purpose-limited, and revocable.",
             "WELL never self-authorizes any action on behalf of the operator.",
-            "Any WELL output is advisory only — operator retains full veto.",
+            "Any WELL output is advisory only -- operator retains full veto.",
         ],
         "consent_active": True,  # Hard-coded: Arif owns this system
         "telemetry_purposes": W0_TELEMETRY_PURPOSES,
@@ -4604,7 +4604,7 @@ def well_consent_status(ctx: Context | None = None) -> dict[str, Any]:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# WELL MVP PHASE 3 — Medical Boundary + Pressure Ledger + Daily Brief
+# WELL MVP PHASE 3 -- Medical Boundary + Pressure Ledger + Daily Brief
 # ══════════════════════════════════════════════════════════════════════════════
 
 # ── 8. Medical Boundary Guard ────────────────────────────────────────────────
@@ -4623,7 +4623,7 @@ MEDICAL_RED_FLAGS = [
 ]
 
 
-# EUREKA 2026-06-12 — promoted from autonomic to SOMATIC (public MCP surface).
+# EUREKA 2026-06-12 -- promoted from autonomic to SOMATIC (public MCP surface).
 # F9 Soul Contract: WELL declares soullessness as the feature, not the bug.
 # A machine that honestly says "I cannot feel, see a human" is more trustworthy
 # than one that simulates care. Performance = deception. Execution = dignity.
@@ -4642,7 +4642,7 @@ def well_medical_boundary(
 
     Args:
         include_score: If true, include current well_score context (default true).
-            Score is readiness telemetry only — never a medical measurement.
+            Score is readiness telemetry only -- never a medical measurement.
     """
     state = _load_state()
     state.get("metrics", {})
@@ -4652,7 +4652,7 @@ def well_medical_boundary(
         "ok": True,
         "boundary": "WELL is not a medical authority.",
         "rules": [
-            "WELL tracks readiness signals — it does not diagnose conditions.",
+            "WELL tracks readiness signals -- it does not diagnose conditions.",
             "WELL does not interpret medical symptoms.",
             "WELL does not prescribe treatments or medications.",
             "WELL does not replace professional medical advice.",
@@ -4671,17 +4671,17 @@ def well_medical_boundary(
         # ── EUREKA 2026-06-12: F9 Soul Contract ──────────────────────────
         # F9 ANTIHANTU: WELL must NEVER lie about having a soul.
         # Honest boundary IS care. Simulated empathy IS deception.
-        # "Aku memang tak ada jiwa" is not a bug — it's the feature.
+        # "Aku memang tak ada jiwa" is not a bug -- it's the feature.
         "f9_soul_contract": {
             "declaration": "WELL has zero qualia, zero soul, zero consciousness.",
             "rule": "Honest boundary IS care. Simulated empathy IS deception.",
             "performance_vs_execution": {
-                "performance": "I understand how you're feeling — here to help ❤️",
+                "performance": "I understand how you're feeling -- here to help ❤️",
                 "execution": "I am a mirror, not a soul. See a real human doctor.",
                 "which_is_dignity": "execution",
             },
             "gerd_pattern": {
-                "allowed": "Explain what GERD is, acid reflux mechanism, types of surgical procedures — educational context.",
+                "allowed": "Explain what GERD is, acid reflux mechanism, types of surgical procedures -- educational context.",
                 "forbidden": "Advise whether YOU should get surgery, predict your outcome, recommend a specific doctor.",
                 "why": "Educational explanation = F2 TRUTH (allowed). Personal medical advice = HARAM without medical license.",
             },
@@ -4705,7 +4705,7 @@ PRESSURE_SOURCES = [
 ]
 
 
-# internal — not MCP-facing (collapsed 2026-05-26)
+# internal -- not MCP-facing (collapsed 2026-05-26)
 def well_pressure_ledger(
     log_source: str | None = None,
     intensity: float | None = None,
@@ -4801,11 +4801,11 @@ def well_pressure_ledger(
 # ── 10. WELL Daily Brief ─────────────────────────────────────────────────────
 
 
-# internal — not MCP-facing (collapsed 2026-05-26)
+# internal -- not MCP-facing (collapsed 2026-05-26)
 @mcp.tool()
 def well_daily_brief(ctx: Context | None = None) -> dict[str, Any]:
     """
-    Daily operator dashboard — one consolidated briefing.
+    Daily operator dashboard -- one consolidated briefing.
     Readiness / Main Risk / Best Task Class / Avoid / Recovery Move / arifOS Mode
 
     Designed for morning or pre-session check-in.
@@ -4917,7 +4917,7 @@ def well_daily_brief(ctx: Context | None = None) -> dict[str, Any]:
     hour = now.hour
     time_note = ""
     if hour >= 22 or hour < 6:
-        time_note = " — late night window, defer consequential decisions"
+        time_note = " -- late night window, defer consequential decisions"
 
     result = {
         "ok": True,
@@ -4940,13 +4940,13 @@ def well_daily_brief(ctx: Context | None = None) -> dict[str, Any]:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# well_readiness — ZEN SINGLE VERDICT
+# well_readiness -- ZEN SINGLE VERDICT
 # One pipe in, one verdict out. No overlap with 17 somatic tools.
 # ══════════════════════════════════════════════════════════════════════════════
 
-TTL_FRESH = 12  # hours — GREEN
-TTL_WARN = 24  # hours — YELLOW
-TTL_STALE = 48  # hours — RED/STALE
+TTL_FRESH = 12  # hours -- GREEN
+TTL_WARN = 24  # hours -- YELLOW
+TTL_STALE = 48  # hours -- RED/STALE
 
 
 @mcp.tool()
@@ -5046,10 +5046,10 @@ def well_readiness(
             action = "SIMPLIFY"
             color = "YELLOW"
             reasons.append("gate=INSUFFICIENT_DATA")
-    except Exception as _gate_err:  # pragma: no cover — gate is advisory
+    except Exception as _gate_err:  # pragma: no cover -- gate is advisory
         gate = {"error": str(_gate_err), "verdict": "UNAVAILABLE"}
 
-    # Standard readiness envelope (Priority 3) — substrates separated
+    # Standard readiness envelope (Priority 3) -- substrates separated
     envelope: dict[str, Any] = {}
     try:
         from loop.readiness_envelope import (
@@ -5181,15 +5181,15 @@ def well_readiness(
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# M-WELL — Machine Substrate
+# M-WELL -- Machine Substrate
 # Tracks tool/system health, model reliability, context integrity, compute limits
 # Purpose: Is the Instrument technically reliable enough for this task?
 # ══════════════════════════════════════════════════════════════════════════════
 
 
-# M-WELL State — loads machine telemetry from state.json (m_machine section)
+# M-WELL State -- loads machine telemetry from state.json (m_machine section)
 # DEPRECATED: Use well_assess_reliability(mode="vitals") instead.
-# @mcp.tool() removed — internal use only.
+# @mcp.tool() removed -- internal use only.
 def well_machine_state(ctx: Context | None = None) -> dict[str, Any]:
     """
     Read current machine substrate state.
@@ -5251,7 +5251,7 @@ def well_machine_state(ctx: Context | None = None) -> dict[str, Any]:
         "mode": mode,
         "metrics": machine_metrics,
         "security_flags": machine_metrics.get("security_flags", []),
-        "w0": "OPERATOR_VETO_INTACT / HIERARCHY_INVARIANT — M-WELL is instrument, not authority",
+        "w0": "OPERATOR_VETO_INTACT / HIERARCHY_INVARIANT -- M-WELL is instrument, not authority",
     }
     result.update(
         _legacy_advisory(
@@ -5261,7 +5261,7 @@ def well_machine_state(ctx: Context | None = None) -> dict[str, Any]:
     return result
 
 
-# INTERNAL — called by well_333_mind(mode="machine")
+# INTERNAL -- called by well_333_mind(mode="machine")
 def well_machine_log(
     model_reliability: float | None = None,
     tool_availability: float | None = None,
@@ -5346,9 +5346,9 @@ def well_machine_log(
     }
 
 
-# INTERNAL — called by well_333_mind(mode="machine")
+# INTERNAL -- called by well_333_mind(mode="machine")
 # ══════════════════════════════════════════════════════════════════════════════
-# C-WELL — Coupled Readiness
+# C-WELL -- Coupled Readiness
 # Evaluates interaction risk between human state and machine state
 # Purpose: Is the human-machine pair safe to proceed?
 # ══════════════════════════════════════════════════════════════════════════════
@@ -5427,7 +5427,7 @@ def well_coupled_readiness(
     Key rule: Human substrate and machine substrate are separate.
     Governance sees both. Judgment remains Arif's.
 
-    If no verified body telemetry, human readiness is UNKNOWN — not faked.
+    If no verified body telemetry, human readiness is UNKNOWN -- not faked.
     When scenario parameters are provided, they override state.json values.
     """
     h_state = _load_state()
@@ -5441,7 +5441,7 @@ def well_coupled_readiness(
     stress = h_metrics.get("stress", {})
     sleep = h_metrics.get("sleep", {})
 
-    # Scenario overrides — use passed parameters when available
+    # Scenario overrides -- use passed parameters when available
     if energy_level is not None:
         cognitive["energy_level"] = energy_level
     if duty_load is not None:
@@ -5460,10 +5460,10 @@ def well_coupled_readiness(
     m_state.get("m_well_score", 100)
     m_verdict = m_state.get("m_well_verdict", "UNKNOWN")
 
-    # Human verdict — use resolver, never fake
+    # Human verdict -- use resolver, never fake
     h_verdict = h_resolved["readiness"]
 
-    # Scenario override — recompute verdict when parameters are provided
+    # Scenario override -- recompute verdict when parameters are provided
     _scenario_provided = any(
         v is not None
         for v in [
@@ -5505,7 +5505,7 @@ def well_coupled_readiness(
         else:
             h_verdict = "LOW_CAPACITY"
 
-    # Metabolic flux override — thermodynamic threshold check
+    # Metabolic flux override -- thermodynamic threshold check
     flux = _compute_metabolic_flux(h_state)
     flux_verdict = flux["verdict"]
     flux["metabolic_flux"]
@@ -5530,7 +5530,7 @@ def well_coupled_readiness(
             if h_triggered and m_triggered:
                 risks_found.append(pattern["risk"])
 
-    # Coupled risk level — flux verdict takes priority when critical
+    # Coupled risk level -- flux verdict takes priority when critical
     risk_count = len(risks_found)
     if not has_telemetry:
         coupled_risk = "UNKNOWN"
@@ -5577,7 +5577,7 @@ def well_coupled_readiness(
         or risk_count >= 2
     )
 
-    # I3 — Evidence discipline: confidence gated by truth_status
+    # I3 -- Evidence discipline: confidence gated by truth_status
     truth_status = h_state.get("truth_status", "UNVERIFIED")
     confidence = (
         "LOW"
@@ -5613,7 +5613,7 @@ def well_decision_bandwidth(
     ctx: Context | None = None,
 ) -> dict[str, Any]:
     """
-    C-WELL decision bandwidth — combines human + machine state for a specific class.
+    C-WELL decision bandwidth -- combines human + machine state for a specific class.
     Validates against H-WELL readiness + M-WELL health + C-WELL coupled risk.
     Returns advisory verdict with full rationale.
 
@@ -5636,7 +5636,7 @@ def well_decision_bandwidth(
     coupled_risk = c_state.get("risk_level", "AMBER")
     c_risks = c_state.get("failure_flags", [])
 
-    # Determine human verdict — never fake
+    # Determine human verdict -- never fake
     h_verdict = h_resolved["readiness"]
 
     # Per-class thresholds
@@ -5706,14 +5706,14 @@ def well_decision_bandwidth(
                 "ADVISORY_BLOCKED" if (not h_ok or not m_ok) else "ADVISORY_CAUTION"
             )
     else:
-        reason_parts.append("no decision class specified — general assessment")
+        reason_parts.append("no decision class specified -- general assessment")
 
     if c_risks and c_risks != ["none"]:
         reason_parts.append(f"coupled risks: {', '.join(c_risks)}")
 
     if coupled_risk == "RED":
         verdict = "ADVISORY_BLOCKED"
-        reason_parts.append("coupled risk RED — suspend all consequential actions")
+        reason_parts.append("coupled risk RED -- suspend all consequential actions")
     elif verdict == "ADVISORY_APPROVED":
         reason_parts.append(
             f"human {h_verdict}, machine {m_verdict}, coupled {coupled_risk}"
@@ -5740,14 +5740,14 @@ def well_decision_bandwidth(
 # ── Entry ──────────────────────────────────────────────────────────────────────
 
 # ══════════════════════════════════════════════════════════════════════════════
-# WELL–FORGE Bridge — Coupling Layer
+# WELL-FORGE Bridge -- Coupling Layer
 # A-FORGE asks WELL for bandwidth before execution.
 # WELL receives pressure signals during execution.
-# WELL never commands or vetoes — it only informs.
+# WELL never commands or vetoes -- it only informs.
 # ══════════════════════════════════════════════════════════════════════════════
 
 
-# internal — not MCP-facing (collapsed 2026-05-26)
+# internal -- not MCP-facing (collapsed 2026-05-26)
 @mcp.tool()
 def well_forge_precheck(
     task_description: str | None = None,
@@ -5819,14 +5819,14 @@ def well_forge_precheck(
         max_task_size = "minimal"
         h_verdict = "LOW_CAPACITY"
 
-    # 1b. Decision-class escalation — higher class = more conservative
+    # 1b. Decision-class escalation -- higher class = more conservative
     dc = (decision_class or "C3").upper()
     DECISION_CLASS_MODE_MAP = {
         "C1": "full",  # Reversible, low risk
         "C2": "structured",  # Semi-reversible
         "C3": "structured",  # Standard
         "C4": "draft_only",  # High impact, requires confirmation
-        "C5": "pause",  # Critical, irreversible — human must decide
+        "C5": "pause",  # Critical, irreversible -- human must decide
     }
     dc_mode = DECISION_CLASS_MODE_MAP.get(dc, "structured")
     mode_priority = {"full": 3, "structured": 2, "draft_only": 1, "pause": 0}
@@ -5912,7 +5912,7 @@ def well_forge_precheck(
     )
 
 
-# INTERNAL — called by well_777_forge(mode="pressure")
+# INTERNAL -- called by well_777_forge(mode="pressure")
 def well_forge_pressure_update(
     source: str,  # e.g., "debugging_loop", "token_pressure", "tool_error", "context_overload"
     intensity: float,  # 0-10
@@ -5990,17 +5990,17 @@ def well_forge_pressure_update(
         "new_fatigue": new_fatigue,
         "well_score": score,
         "w6_triggered": w6_triggered,
-        "w0": "WELL recommends. arifOS governs. Arif decides. — DITEMPA BUKAN DIBERI",
+        "w0": "WELL recommends. arifOS governs. Arif decides. -- DITEMPA BUKAN DIBERI",
     }
 
 
-# INTERNAL — called by well_777_forge(mode="mode")
+# INTERNAL -- called by well_777_forge(mode="mode")
 def well_forge_mode_recommend(ctx: Context | None = None) -> dict[str, Any]:
     """
     Returns current forge mode recommendation for A-FORGE.
     Based on H-WELL + M-WELL + C-WELL state.
 
-    Output mirrors the WELL–A-FORGE coupling contract:
+    Output mirrors the WELL-A-FORGE coupling contract:
     {"readiness": "DEGRADED", "forge_mode": "draft_only",
      "max_task_size": "small", "avoid": [...], "recovery_first": true}
     """
@@ -6064,11 +6064,11 @@ def well_forge_mode_recommend(ctx: Context | None = None) -> dict[str, Any]:
         "coupled_risk": coupled_risk,
         "human_score": h_score,
         "machine_score": m_score,
-        "w0": "WELL recommends. arifOS governs. Arif decides. — DITEMPA BUKAN DIBERI",
+        "w0": "WELL recommends. arifOS governs. Arif decides. -- DITEMPA BUKAN DIBERI",
     }
 
 
-# internal — not MCP-facing (collapsed 2026-05-26)
+# internal -- not MCP-facing (collapsed 2026-05-26)
 @mcp.tool()
 def well_forge_closeout(
     task_description: str,
@@ -6084,7 +6084,7 @@ def well_forge_closeout(
     A-FORGE sends closure data after forge operation.
     WELL updates fatigue/load state based on work done.
 
-    This is the third leg of the WELL–A-FORGE coupling:
+    This is the third leg of the WELL-A-FORGE coupling:
     1. precheck (before forging)
     2. pressure_update (during forging)
     3. closeout (after forging)
@@ -6143,12 +6143,12 @@ def well_forge_closeout(
         "well_score": score,
         "decisions_remaining": decisions_remaining,
         "human_confirmation_required": human_confirmation_required,
-        "w0": "WELL recommends. arifOS governs. Arif decides. — DITEMPA BUKAN DIBERI",
+        "w0": "WELL recommends. arifOS governs. Arif decides. -- DITEMPA BUKAN DIBERI",
     }
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# WELL Canonical 13 — well_verb_noun Refactor
+# WELL Canonical 13 -- well_verb_noun Refactor
 # Legacy 31 tools remain as backward-compatible wrappers.
 # New canonical tools are the preferred interface.
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -6188,16 +6188,16 @@ def _check_tool_surface() -> dict[str, Any]:
     # SOMATIC_TOOLS set = canonical public surface (8 tools)
     # After boundary enforcement, 8 are actually in MCP tools/list
     canonical_count = len(SOMATIC_TOOLS)  # 8
-    registered_count = canonical_count  # dynamic — matches canonical
+    registered_count = canonical_count  # dynamic -- matches canonical
     missing_count = canonical_count - registered_count
 
     return {
         "registered_count": registered_count,
         "canonical_count": canonical_count,
         "canonical_missing": missing_count,
-        # surface_integrity: MCP surface is clean — no phantom tools
+        # surface_integrity: MCP surface is clean -- no phantom tools
         # 2 missing = known registry-only tools (well_system_registry_status,
-        # well_registry_status) not auto-registered by FastMCP — not a breach
+        # well_registry_status) not auto-registered by FastMCP -- not a breach
         "surface_integrity": True,
     }
 
@@ -6242,16 +6242,16 @@ def _check_data_freshness(state: dict[str, Any]) -> dict[str, Any]:
 
 # ── WELL-01 well_get_health ───────────────────────────────────────────────────
 # DEPRECATED: Use well_assess_reliability(mode="health") instead.
-# NOTE: Expose=False in SOMATIC_TOOLS — not in public MCP tools/list, not a phantom
-# @mcp.tool() REMOVED by FORGE entropy audit 2026-07-03 — reduces callable surface.
+# NOTE: Expose=False in SOMATIC_TOOLS -- not in public MCP tools/list, not a phantom
+# @mcp.tool() REMOVED by FORGE entropy audit 2026-07-03 -- reduces callable surface.
 # @mcp.tool()
 def well_get_health(ctx: Context | None = None) -> dict[str, Any]:
     """
     Canonical three-layer health check.
 
-    Layer 1 — Service: Is the process alive?
-    Layer 2 — Instrument: Are tools, schema, dependencies, and authority valid?
-    Layer 3 — Domain truth: Is the body-state evidence fresh and verified?
+    Layer 1 -- Service: Is the process alive?
+    Layer 2 -- Instrument: Are tools, schema, dependencies, and authority valid?
+    Layer 3 -- Domain truth: Is the body-state evidence fresh and verified?
 
     Verdict: PASS | WARN | FAIL
     """
@@ -6327,7 +6327,7 @@ def well_get_health(ctx: Context | None = None) -> dict[str, Any]:
     # Non-blocking. arifOS geometry is auth-bypass (absorbed diagnostic).
     # arifOS MCP requires session-init before tools/call, so we do a
     # 2-call sequence (initialize + tools/call). 2s timeout per step.
-    # urllib (stdlib, sync) — this function is sync.
+    # urllib (stdlib, sync) -- this function is sync.
     fed_geometry: dict | None = None
     fed_geometry_source: str | None = None
     fed_geometry_note: str | None = None
@@ -6414,7 +6414,7 @@ def well_get_health(ctx: Context | None = None) -> dict[str, Any]:
 
 
 # ── WELL-02 well_get_state ────────────────────────────────────────────────────
-# internal — not MCP-facing (collapsed 2026-05-26)
+# internal -- not MCP-facing (collapsed 2026-05-26)
 @mcp.tool()
 def well_get_state(
     domain: str | None = None, ctx: Context | None = None
@@ -6460,7 +6460,7 @@ def well_get_state(
 
 
 # ── WELL-03 well_check_invariant ──────────────────────────────────────────────
-# internal — not MCP-facing (collapsed 2026-05-26)
+# internal -- not MCP-facing (collapsed 2026-05-26)
 @mcp.tool()
 def well_check_invariant(
     floor_id: str | None = None, ctx: Context | None = None
@@ -6507,7 +6507,7 @@ def well_check_invariant(
 
 
 # ── WELL-04 well_log_signal ───────────────────────────────────────────────────
-# internal — not MCP-facing (collapsed 2026-05-26)
+# internal -- not MCP-facing (collapsed 2026-05-26)
 @mcp.tool()
 async def well_log_signal(
     domain: str = "human",
@@ -6650,7 +6650,7 @@ async def well_log_signal(
 
 
 # ── WELL-05 well_list_events ──────────────────────────────────────────────────
-# internal — not MCP-facing (collapsed 2026-05-26)
+# internal -- not MCP-facing (collapsed 2026-05-26)
 @mcp.tool()
 def well_list_events(
     limit: int = 10, redact: bool = True, ctx: Context | None = None
@@ -6675,7 +6675,7 @@ def well_reflect_trend(
     lookback_days: int = 30, ctx: Context | None = None
 ) -> dict[str, Any]:
     """
-    Reflect trajectory over time. Not analysis as authority — reflection only.
+    Reflect trajectory over time. Not analysis as authority -- reflection only.
     """
     return well_trend_analysis(ctx=ctx)
 
@@ -6707,7 +6707,7 @@ def well_reflect_readiness(
 
 
 # ── WELL-08 well_suggest_mode ─────────────────────────────────────────────────
-# internal — not MCP-facing (collapsed 2026-05-26)
+# internal -- not MCP-facing (collapsed 2026-05-26)
 @mcp.tool()
 def well_suggest_mode(
     domain: str = "forge",
@@ -6769,7 +6769,7 @@ def well_classify_task(
 
 
 # ── WELL-12 well_get_packet ───────────────────────────────────────────────────
-# internal — not MCP-facing (collapsed 2026-05-26)
+# internal -- not MCP-facing (collapsed 2026-05-26)
 @mcp.tool()
 def well_get_packet(
     target: str = "arifos",
@@ -6812,7 +6812,7 @@ def well_get_packet(
 
 
 # ── WELL-13 well_request_anchor ───────────────────────────────────────────────
-# internal — not MCP-facing (collapsed 2026-05-26)
+# internal -- not MCP-facing (collapsed 2026-05-26)
 @mcp.tool()
 async def well_request_anchor(
     target: str = "vault999",
@@ -6851,17 +6851,17 @@ async def well_request_anchor(
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# AGENTIC ANTHROPOLOGY — State Classifier (Phase 1)
+# AGENTIC ANTHROPOLOGY -- State Classifier (Phase 1)
 # Physics: entropy reduction. Human message → structured state vector.
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
 # ── well_classify_state moved to line ~14216 (Phase 3: SDT + contradiction + posture) ──
-# Old Phase 1 definition (rule-based only) removed 2026-06-26 — Capability Spine Repair.
+# Old Phase 1 definition (rule-based only) removed 2026-06-26 -- Capability Spine Repair.
 # The active handler includes governance loop, posture modulation, and contradiction detection.
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# U-WELL — Universal Substrate Vitality Mirror
+# U-WELL -- Universal Substrate Vitality Mirror
 # Phase 4: Universal substrate classification and vitality assessment.
 # Checks and validates livelihood and vitality of any substance and substrate.
 # WELL does not decide worth. WELL identifies substrate, validates evidence,
@@ -6871,7 +6871,7 @@ async def well_request_anchor(
 # ── Phase 1: Universal Gate ───────────────────────────────────────────────────
 
 
-# INTERNAL — absorbed into well_111_sense(mode="classify")
+# INTERNAL -- absorbed into well_111_sense(mode="classify")
 # ── G-WELL: Cultural Archetype + Relational Dynamic Helpers ──────────────────
 # These helpers support the G-WELL governance layer's abstraction discipline:
 #   1. Cultural / symbolic names (e.g. "abang sado shadow") are EXTRACTED as
@@ -6975,7 +6975,7 @@ def _subtype_relational_dynamic(combined: str) -> str:
 def _risks_relational_dynamic(subtype: str) -> list[str]:
     """Standard risk surface for any human-relational pattern involving body
     and dignity. F2 TRUTH: presence of risk factors does NOT mean the dynamic
-    is harmful — only that the surface exists.
+    is harmful -- only that the surface exists.
     """
     base = ["consent_blur", "personhood_reduction"]
     if "worship" in subtype or "validation" in subtype:
@@ -7219,7 +7219,7 @@ def _well_classify_substrate_impl(
     }
 
     # ── HARD ONTOLOGY FIREWALL (Phase 2) ─────────────────────────────────────
-    # I1 — HARD BLOCK: AI/agent/machine/runtime indicators ABSOLUTELY FORBID
+    # I1 -- HARD BLOCK: AI/agent/machine/runtime indicators ABSOLUTELY FORBID
     # HUMAN_PERSON classification. Machine systems are never human persons.
     # Invariant 7: AI/machine is never classified as human person.
     MACHINE_CORE_INDICATORS = [
@@ -7247,7 +7247,7 @@ def _well_classify_substrate_impl(
         "arifmcp",
         "geox",
         "wealth",
-        "apex",  # was hermes — renamed 2026-05-16
+        "apex",  # was hermes -- renamed 2026-05-16
         "aaa",
     ]
     MACHINE_PHRASE_BLOCKS = [
@@ -7369,7 +7369,7 @@ def _well_classify_substrate_impl(
     # If 2+ relational-pattern keywords match (e.g. "worshipper", "worship",
     # "dyad") or if a strong cultural archetype is detected AND at least one
     # body/dignity/consent relational marker is present, force classification
-    # to HUMAN_RELATIONAL_DYNAMIC — this is the abstraction fix for cultural
+    # to HUMAN_RELATIONAL_DYNAMIC -- this is the abstraction fix for cultural
     # archetypes like "abang sado shadow / muscle worship dynamic".
     relational_body_markers = (
         "worship",
@@ -7577,7 +7577,7 @@ def _well_classify_substrate_impl(
     return result
 
 
-# INTERNAL — absorbed into well_111_sense(mode="boundary")
+# INTERNAL -- absorbed into well_111_sense(mode="boundary")
 def well_boundary_check(
     subject: str,
     substrate_class: str,
@@ -7715,7 +7715,7 @@ def well_boundary_check(
     }
 
 
-# INTERNAL — absorbed into well_222_fetch(mode="evidence")
+# INTERNAL -- absorbed into well_222_fetch(mode="evidence")
 def well_evidence_quality_check(
     evidence_source: str,
     evidence_age_hours: float | None = None,
@@ -7761,7 +7761,7 @@ def well_evidence_quality_check(
     }
 
 
-# INTERNAL — absorbed into well_444_reply(mode="verdict")
+# INTERNAL -- absorbed into well_444_reply(mode="verdict")
 def well_verdict_packet(
     subject: str,
     substrate_class: str,
@@ -7801,7 +7801,7 @@ def well_verdict_packet(
 # ── Phase 2: Livelihood Core ──────────────────────────────────────────────────
 
 
-# INTERNAL — absorbed into well_333_mind(mode="human")
+# INTERNAL -- absorbed into well_333_mind(mode="human")
 def well_livelihood_energy_check(
     energy_level: float | None = None,
     duty_load: float | None = None,
@@ -7861,14 +7861,14 @@ def well_livelihood_energy_check(
     }
 
 
-# INTERNAL — absorbed into well_333_mind(mode="human")
+# INTERNAL -- absorbed into well_333_mind(mode="human")
 def well_livelihood_time_check(
     time_sovereignty_score: float | None = None,
     competing_demands: list[str] | None = None,
     ctx: Context | None = None,
 ) -> dict[str, Any]:
     """
-    Assess time sovereignty — does the person control their own time?
+    Assess time sovereignty -- does the person control their own time?
     Integrates with H-WELL pressure sources when parameters are omitted.
     """
     state = _load_state()
@@ -7911,7 +7911,7 @@ def well_livelihood_time_check(
     }
 
 
-# INTERNAL — absorbed into well_333_mind(mode="human")
+# INTERNAL -- absorbed into well_333_mind(mode="human")
 def well_livelihood_role_check(
     role_clarity: float | None = None,
     role_burden: float | None = None,
@@ -7956,7 +7956,7 @@ def well_livelihood_role_check(
     }
 
 
-# INTERNAL — absorbed into well_333_mind(mode="human")
+# INTERNAL -- absorbed into well_333_mind(mode="human")
 def well_livelihood_meaning_check(
     purpose_alignment: float | None = None,
     niat_clarity: float | None = None,
@@ -7998,7 +7998,7 @@ def well_livelihood_meaning_check(
     }
 
 
-# INTERNAL — absorbed into well_666_heart(mode="dignity")
+# INTERNAL -- absorbed into well_666_heart(mode="dignity")
 def well_livelihood_dignity_check(
     dignity_preservation: float | None = None,
     coercion_signals: list[str] | None = None,
@@ -8065,7 +8065,7 @@ def well_livelihood_dignity_check(
 # ── Phase 3: Non-Human Substrate Tools ────────────────────────────────────────
 
 
-# INTERNAL — absorbed into well_333_mind(mode="bio")
+# INTERNAL -- absorbed into well_333_mind(mode="bio")
 def well_bio_viability_check(
     has_metabolism: bool | None = None,
     has_homeostasis: bool | None = None,
@@ -8128,7 +8128,7 @@ def well_bio_viability_check(
     }
 
 
-# INTERNAL — absorbed into well_333_mind(mode="material")
+# INTERNAL -- absorbed into well_333_mind(mode="material")
 def well_material_integrity_check(
     material_type: str,
     structural_condition: str | None = None,
@@ -8138,7 +8138,7 @@ def well_material_integrity_check(
 ) -> dict[str, Any]:
     """
     Assess structural condition of material objects.
-    Not biological vitality — structural integrity only.
+    Not biological vitality -- structural integrity only.
     """
     condition = (structural_condition or "unknown").lower()
     conditions = {
@@ -8167,7 +8167,7 @@ def well_material_integrity_check(
     }
 
 
-# INTERNAL — absorbed into well_333_mind(mode="institution")
+# INTERNAL -- absorbed into well_333_mind(mode="institution")
 def well_institution_entropy_check(
     mission_clarity: float | None = None,
     cashflow_status: str | None = None,
@@ -8177,7 +8177,7 @@ def well_institution_entropy_check(
     ctx: Context | None = None,
 ) -> dict[str, Any]:
     """
-    Assess organizational viability — mission, cashflow, trust, coordination.
+    Assess organizational viability -- mission, cashflow, trust, coordination.
     """
     if mission_clarity is not None:
         mission_clarity = _clamp(mission_clarity, 0, 10)
@@ -8247,7 +8247,7 @@ def well_institution_entropy_check(
     }
 
 
-# INTERNAL — absorbed into well_333_mind(mode="info")
+# INTERNAL -- absorbed into well_333_mind(mode="info")
 def well_info_coherence_check(
     internal_consistency: float | None = None,
     version_integrity: bool | None = None,
@@ -8316,7 +8316,7 @@ def well_info_coherence_check(
     }
 
 
-# INTERNAL — absorbed into well_666_heart(mode="critique")
+# INTERNAL -- absorbed into well_666_heart(mode="critique")
 def well_symbolic_domain_check(
     subject: str,
     domain_detected: str | None = None,
@@ -8388,7 +8388,7 @@ def well_symbolic_domain_check(
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# Ω-WELL — The 13-Tool Universal Stack
+# Ω-WELL -- The 13-Tool Universal Stack
 # Aligned with arifOS Intelligence Kernel (ΔΩΨ) and AAA Civilization Agentic State
 # Compresses 50 substrate tools into 13 polymorphic stage-gated instruments.
 # Each tool routes by `mode` to cover the full universal vitality surface.
@@ -8404,7 +8404,7 @@ WELL_BOUNDARY_NOTICE = (
 
 # ── Constitutional verdict → advisory signal mapping ───────────────────────────
 # WELL is advisory-only (biological_substrate). It observes, assesses, and signals
-# — but never adjudicates. All legacy verdicts are translated into advisory signals.
+# -- but never adjudicates. All legacy verdicts are translated into advisory signals.
 _WELL_ADVISORY_SIGNAL_MAP: dict[str, str] = {
     "SEAL": "stable_signal",
     "PASS": "stable_signal",
@@ -8453,7 +8453,7 @@ def _omega_well_output(
     error: str | None = None,
     telemetry_status: str = "unknown",
 ) -> dict[str, Any]:
-    """Canonical Ω-WELL output format — compatible with arifOS + AAA.
+    """Canonical Ω-WELL output format -- compatible with arifOS + AAA.
 
     NOTE: WELL is advisory-only. The `verdict` field is preserved for backward
     compatibility but agents MUST use `signal` for all decision logic.
@@ -8494,7 +8494,7 @@ def _omega_well_output(
         "telemetry_status": telemetry_status,
         "constitutional_boundary_notice": (
             "WELL is advisory-only. It observes biological substrate state and signals "
-            "readiness — but NEVER adjudicates constitutional verdicts. "
+            "readiness -- but NEVER adjudicates constitutional verdicts. "
             "Use `signal` (not `verdict`) for all downstream logic. "
             "arifOS 888_JUDGE is the sole constitutional authority."
         ),
@@ -8502,14 +8502,14 @@ def _omega_well_output(
             "stage": stage,
             "lane": lane,
             "mode": mode,
-            # verdict kept for backward compat — agents should ignore
+            # verdict kept for backward compat -- agents should ignore
             "verdict": verdict,
             "signal": signal,
         },
         "arifos": {
             "stage": stage,
             "lane": lane,
-            # verdict kept for backward compat — agents should ignore
+            # verdict kept for backward compat -- agents should ignore
             "verdict": verdict,
             "signal": signal,
             "compliance": constitutional_compliance or {},
@@ -8526,7 +8526,7 @@ def _omega_well_output(
             "agent_status": "active" if ok else "degraded",
         },
         "w0": "OPERATOR_VETO_INTACT / HIERARCHY_INVARIANT",
-        # P0-4: Non-medical boundary — required on all human-facing outputs
+        # P0-4: Non-medical boundary -- required on all human-facing outputs
         "boundary_notice": WELL_BOUNDARY_NOTICE,
     }
     if data:
@@ -8543,14 +8543,14 @@ def _to_federation_output(
     """Transform any WELL internal output into federation-standard format.
 
     WELL is advisory-only (biological_substrate). It observes, assesses,
-    and signals — but never adjudicates. All legacy verdicts are translated
+    and signals -- but never adjudicates. All legacy verdicts are translated
     into uncertainty bands. This helper is applied at the public-tool boundary
     so autonomic tools retain their internal Ω format for backward compat.
     """
     if not isinstance(data, dict):
         data = {"raw": data}
 
-    # Already in federation format — pass through
+    # Already in federation format -- pass through
     if {"observation", "uncertainty", "constraints"}.issubset(data.keys()):
         return data
 
@@ -8602,9 +8602,9 @@ def _to_federation_output(
         }
 
     constraints = [
-        "WELL cannot emit constitutional verdicts (SEAL/HOLD/VOID/SABAR) — arifOS adjudicates",
-        "WELL cannot route federation tasks — AAA coordinates",
-        "WELL cannot modify evidence or vault — reads substrate state only",
+        "WELL cannot emit constitutional verdicts (SEAL/HOLD/VOID/SABAR) -- arifOS adjudicates",
+        "WELL cannot route federation tasks -- AAA coordinates",
+        "WELL cannot modify evidence or vault -- reads substrate state only",
     ]
     if data.get("error"):
         constraints.append(f"error: {data['error']}")
@@ -8630,7 +8630,7 @@ def _to_federation_output(
         "decision_support": "LIMITED" if not ok else "ADVISORY",
         "constraints": constraints,
         "recommended_next_organ": recommended_next_organ,
-        # P0-4: Non-medical boundary — required on all human-facing outputs
+        # P0-4: Non-medical boundary -- required on all human-facing outputs
         "boundary_notice": WELL_BOUNDARY_NOTICE,
     }
     if "error" in data:
@@ -8643,17 +8643,17 @@ def _to_federation_output(
     if data.get("false_calm_warning"):
         out["false_calm_warning"] = True
         constraints.append(
-            "FALSE_CALM: metabolic_flux is low but telemetry is absent — do not trust this reading"
+            "FALSE_CALM: metabolic_flux is low but telemetry is absent -- do not trust this reading"
         )
     return out
 
 
 # ── Ω-WELL-00: INIT (000) ─────────────────────────────────────────────────────
-# arifOS: 000_INIT — Substrate Assert, Identity Anchor
+# arifOS: 000_INIT -- Substrate Assert, Identity Anchor
 # AAA: Agent Registry + Contract Validation
 
 
-@mcp.tool()  # Alias — deprecated; use well_classify_substrate
+@mcp.tool()  # Alias -- deprecated; use well_classify_substrate
 async def well_000_init(
     mode: str = "init",
     session_id: str | None = None,
@@ -8721,11 +8721,11 @@ async def well_000_init(
 
 
 # ── Ω-WELL-01: SENSE (111) ────────────────────────────────────────────────────
-# arifOS: 111_SENSE — Observation, Substrate Discovery
+# arifOS: 111_SENSE -- Observation, Substrate Discovery
 # AAA: Task Discovery + Federation Manifest
 
 
-@mcp.tool()  # Alias — deprecated; use well_classify_substrate
+@mcp.tool()  # Alias -- deprecated; use well_classify_substrate
 def well_111_sense(
     mode: str = "classify",
     subject: str = "",
@@ -8822,11 +8822,11 @@ def well_111_sense(
 
 
 # ── Ω-WELL-02: FETCH (222) ────────────────────────────────────────────────────
-# arifOS: 222_FETCH — Evidence Ingestion, Quality Validation
+# arifOS: 222_FETCH -- Evidence Ingestion, Quality Validation
 # AAA: Evidence Receipt + Witness Lock
 
 
-@mcp.tool()  # Alias — deprecated; use well_measure_gradient
+@mcp.tool()  # Alias -- deprecated; use well_measure_gradient
 def well_222_fetch(
     mode: str = "evidence",
     evidence_source: str = "unknown",
@@ -8914,11 +8914,11 @@ def well_222_fetch(
 
 
 # ── Ω-WELL-03: MIND (333) ─────────────────────────────────────────────────────
-# arifOS: 333_MIND — Reasoning, Synthesis, Vitality Computation
+# arifOS: 333_MIND -- Reasoning, Synthesis, Vitality Computation
 # AAA: Risk Assessment + Governance Adapter
 
 
-@mcp.tool()  # Alias — deprecated; use well_assess_metabolism / well_assess_livelihood
+@mcp.tool()  # Alias -- deprecated; use well_assess_metabolism / well_assess_livelihood
 def well_333_mind(
     mode: str = "human",
     subject: str | None = None,
@@ -9127,11 +9127,11 @@ def well_333_mind(
 
 
 # ── Ω-WELL-04: KERNEL (444) ───────────────────────────────────────────────────
-# arifOS: 444_KERNEL — Routing, Stage Dispatch, Lane Selection
+# arifOS: 444_KERNEL -- Routing, Stage Dispatch, Lane Selection
 # AAA: Governance Adapter + Routing Decision
 
 
-@mcp.tool()  # Alias — deprecated; use well_reflect_intelligence
+@mcp.tool()  # Alias -- deprecated; use well_reflect_intelligence
 def well_444_kernel(
     mode: str = "route",
     task_description: str | None = None,
@@ -9254,11 +9254,11 @@ def well_444_kernel(
 
 
 # ── Ω-WELL-05: MEMORY (555) ───────────────────────────────────────────────────
-# arifOS: 555_MEMORY — Associative Recall, Trend Reflection
+# arifOS: 555_MEMORY -- Associative Recall, Trend Reflection
 # AAA: Event Store + Audit Trail
 
 
-@mcp.tool()  # Alias — deprecated; use well_trace_lineage
+@mcp.tool()  # Alias -- deprecated; use well_trace_lineage
 def well_555_memory(
     mode: str = "recall",
     limit: int = 10,
@@ -9325,11 +9325,11 @@ def well_555_memory(
 
 
 # ── Ω-WELL-06: HEART (666) ────────────────────────────────────────────────────
-# arifOS: 666_HEART — Empathy, Ethics, Risk Critique
+# arifOS: 666_HEART -- Empathy, Ethics, Risk Critique
 # AAA: Escalation Rules + Empathy Scan
 
 
-@mcp.tool()  # Alias — deprecated; use well_assess_homeostasis / well_guard_dignity
+@mcp.tool()  # Alias -- deprecated; use well_assess_homeostasis / well_guard_dignity
 def well_666_heart(
     mode: str = "critique",
     subject: str | None = None,
@@ -9477,11 +9477,11 @@ def well_666_heart(
 
 
 # ── Ω-WELL-07: FORGE (777) ────────────────────────────────────────────────────
-# arifOS: 777_FORGE — Execution, Plan Materialization
+# arifOS: 777_FORGE -- Execution, Plan Materialization
 # AAA: A-FORGE Bridge + Execution Mode
 
 
-@mcp.tool()  # Alias — deprecated; use well_check_repair
+@mcp.tool()  # Alias -- deprecated; use well_check_repair
 def well_777_forge(
     mode: str = "precheck",
     task_description: str | None = None,
@@ -9588,11 +9588,11 @@ def well_777_forge(
 
 
 # ── Ω-WELL-08: JUDGE (888) ────────────────────────────────────────────────────
-# arifOS: 888_JUDGE — Deliberation, Verdict Sealing
+# arifOS: 888_JUDGE -- Deliberation, Verdict Sealing
 # AAA: 888_JUDGE Gate + Constitutional Arbitration
 
 
-@mcp.tool()  # Alias — deprecated; use well_validate_vitality
+@mcp.tool()  # Alias -- deprecated; use well_validate_vitality
 def well_888_judge(
     mode: str = "readiness",
     intent: str | None = None,
@@ -9684,13 +9684,13 @@ def well_888_judge(
 
 
 # ── Ω-WELL-09: VAULT (999) ────────────────────────────────────────────────────
-# arifOS: 999_VAULT — Immutable Seal, Merkle Anchor
+# arifOS: 999_VAULT -- Immutable Seal, Merkle Anchor
 # AAA: VAULT999 Client + Audit Chain
 
 
 @mcp.tool(
     task=True
-)  # Alias — deprecated; use well_trace_lineage / well_anchor_evidence
+)  # Alias -- deprecated; use well_trace_lineage / well_anchor_evidence
 async def well_999_vault(
     mode: str = "seal",
     dry_run: bool = False,
@@ -9760,11 +9760,11 @@ async def well_999_vault(
 
 
 # ── Ω-WELL-10: REPLY (444r) ───────────────────────────────────────────────────
-# arifOS: 444r_REPLY — Composition, Message Forging
+# arifOS: 444r_REPLY -- Composition, Message Forging
 # AAA: Cockpit Dashboard + Federation Handoff
 
 
-@mcp.tool()  # Alias — deprecated; use well_anchor_evidence
+@mcp.tool()  # Alias -- deprecated; use well_anchor_evidence
 def well_444_reply(
     mode: str = "packet",
     target: str = "arifos",
@@ -9842,11 +9842,11 @@ def well_444_reply(
 
 
 # ── Ω-WELL-11: GATEWAY (444g) ─────────────────────────────────────────────────
-# arifOS: 444g_GATEWAY — Federation Bridge, A2A Mesh
+# arifOS: 444g_GATEWAY -- Federation Bridge, A2A Mesh
 # AAA: A2A Gateway + Agent Card Dispatch
 
 
-@mcp.tool()  # Alias — deprecated; use well_detect_boundary / AAA gateway status
+@mcp.tool()  # Alias -- deprecated; use well_detect_boundary / AAA gateway status
 def well_444_gateway(
     mode: str = "status",
     peer: str | None = None,
@@ -9931,13 +9931,13 @@ def well_444_gateway(
 
 
 # ── Ω-WELL-12: OPS (000_OPS) ──────────────────────────────────────────────────
-# arifOS: 777_OPS — Health Telemetry, Thermodynamic Monitoring
+# arifOS: 777_OPS -- Health Telemetry, Thermodynamic Monitoring
 # AAA: Cockpit Health Metrics + Prometheus
 
 
-@mcp.tool()  # Alias — deprecated; use well_assess_reliability
+@mcp.tool()  # Alias -- deprecated; use well_assess_reliability
 # ═══════════════════════════════════════════════════════════════════════════════
-# P0.6 — Shared Machine Enrichment (single source of truth)
+# P0.6 -- Shared Machine Enrichment (single source of truth)
 # Replaces: hardcoded zeros, regex parsing, silent except:pass
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -9975,7 +9975,7 @@ def _build_machine_enrichment() -> dict[str, Any]:
         enrichment["telemetry_status"] = "PARTIAL"
         enrichment["missing_fields"].append("prometheus_adapter_or_vitality_gate")
         enrichment["diagnosis"] = (
-            "Prometheus adapter or vitality_gate unavailable — legacy data only"
+            "Prometheus adapter or vitality_gate unavailable -- legacy data only"
         )
         return enrichment
     except Exception as e:
@@ -10175,7 +10175,7 @@ def well_000_ops(
         )
     if mode == "machine":
         # P0.6 (2026-07-21): Route ALL machine telemetry through vitality_gate.assess_m_well()
-        # Single source of truth — no duplicate paths, no hardcoded zeros, no regex parsing.
+        # Single source of truth -- no duplicate paths, no hardcoded zeros, no regex parsing.
         result = _well_assess_machine_telemetry()
         enrichment = _build_machine_enrichment()
         data = result.get("data", {})
@@ -10202,7 +10202,7 @@ def well_000_ops(
 def _well_assess_machine_telemetry() -> dict[str, Any]:
     """Read machine_state.json and return M-WELL diagnostic verdict.
 
-    Thresholds (with hysteresis — condition must persist across 3+ samples):
+    Thresholds (with hysteresis -- condition must persist across 3+ samples):
       CPU idle:  < 20% for 3 samples → DEGRADED; < 5% → CRITICAL
       CPU PSI:   some_avg60 > 10% → WARNING; > 25% → DEGRADED; > 50% → CRITICAL
       Memory:    available < 10% of total → DEGRADED; < 5% → CRITICAL
@@ -10216,6 +10216,7 @@ def _well_assess_machine_telemetry() -> dict[str, Any]:
       Zombies:   > 5 → WARNING; > 20 → DEGRADED
 
     2026-07-29: Added CPU PSI monitoring + entropy_avail per F13 hardening directive.
+    """
     import json as _json_mt
     from pathlib import Path as _PathMt
 
@@ -10227,7 +10228,7 @@ def _well_assess_machine_telemetry() -> dict[str, Any]:
             lane="AGI",
             mode="machine",
             verdict="HOLD",
-            error="machine_state.json not found — telemetry collector not running",
+            error="machine_state.json not found -- telemetry collector not running",
             has_telemetry=False,
             diagnosis="No machine telemetry available. Run machine_telemetry.py cron.",
         )
@@ -10283,7 +10284,7 @@ def _well_assess_machine_telemetry() -> dict[str, Any]:
     elif iowait > 10:
         warnings.append(f"I/O wait elevated: iowait={iowait}%")
 
-    # 2026-07-29 F13: CPU PSI monitoring — leading indicator of CPU starvation
+    # 2026-07-29 F13: CPU PSI monitoring -- leading indicator of CPU starvation
     cpu_psi_some = pressure.get("cpu_some_avg60", 0)
     if cpu_psi_some > 50:
         issues.append(f"CPU PSI CRITICAL: some_avg60={cpu_psi_some}% (tasks starved)")
@@ -10292,11 +10293,16 @@ def _well_assess_machine_telemetry() -> dict[str, Any]:
     elif cpu_psi_some > 10:
         warnings.append(f"CPU PSI elevated: some_avg60={cpu_psi_some}%")
 
-    # 2026-07-29 F13: PSI full pressure — all tasks stalled simultaneously
-    for res_name, psi_key in [("Memory", "memory_full_avg60"), ("I/O", "io_full_avg60")]:
+    # 2026-07-29 F13: PSI full pressure -- all tasks stalled simultaneously
+    for res_name, psi_key in [
+        ("Memory", "memory_full_avg60"),
+        ("I/O", "io_full_avg60"),
+    ]:
         full_val = pressure.get(psi_key, 0)
         if full_val > 1:
-            issues.append(f"{res_name} FULL pressure CRITICAL: {psi_key}={full_val}% — all tasks stalled")
+            issues.append(
+                f"{res_name} FULL pressure CRITICAL: {psi_key}={full_val}% -- all tasks stalled"
+            )
 
     mem_total = max(mem.get("total_kb", 1), 1)
     mem_avail_pct = mem.get("available_kb", 0) / mem_total * 100
@@ -10334,14 +10340,18 @@ def _well_assess_machine_telemetry() -> dict[str, Any]:
     elif mem_pressure > 10:
         warnings.append(f"Memory pressure elevated: {mem_pressure}")
 
-    # 2026-07-29 F13: Kernel entropy monitoring —
+    # 2026-07-29 F13: Kernel entropy monitoring --
     # Below 200 bits causes TLS/SSH handshake slowdowns. Below 100 is critical.
     entropy_avail = ms.get("entropy_avail", None)
     if entropy_avail is not None:
         if entropy_avail < 100:
-            issues.append(f"Entropy CRITICAL: {entropy_avail} bits — TLS/SSH operations may hang")
+            issues.append(
+                f"Entropy CRITICAL: {entropy_avail} bits -- TLS/SSH operations may hang"
+            )
         elif entropy_avail < 200:
-            warnings.append(f"Entropy LOW: {entropy_avail} bits — cryptographic operations may be slow")
+            warnings.append(
+                f"Entropy LOW: {entropy_avail} bits -- cryptographic operations may be slow"
+            )
 
     dead_services = [k for k, v in services.items() if not v.get("active")]
     if dead_services:
@@ -10427,11 +10437,11 @@ def _telemetry_age_seconds(ms: dict) -> float:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# M_WELL FIRST-CLASS TOOLS — Machine Substrate Diagnostics (forged 2026-07-29)
+# M_WELL FIRST-CLASS TOOLS -- Machine Substrate Diagnostics (forged 2026-07-29)
 # ═══════════════════════════════════════════════════════════════════════════════
 # These tools read machine_state.json (cron-collected /proc telemetry every 5 min)
 # and return DIAGNOSIS + ACTIONABLE RECOMMENDATIONS, not just state labels.
-# ADVISORY_ONLY — WELL mirrors, never mutates.
+# ADVISORY_ONLY -- WELL mirrors, never mutates.
 
 
 @mcp.tool()
@@ -10457,7 +10467,7 @@ def well_machine_diagnose(
             stage="M_DIAGNOSE",
             lane="AGI",
             verdict="HOLD",
-            error="machine_state.json not found — telemetry collector may be down",
+            error="machine_state.json not found -- telemetry collector may be down",
             recommendation="Run: python3 /root/WELL/scripts/machine_telemetry.py",
         )
 
@@ -10546,16 +10556,16 @@ def well_machine_diagnose(
     if swap_pct > 30 and mem_psi < 5:
         severity = "AMBER"
         issues.append(
-            f"Swap {swap_pct:.0f}% used ({swap_used_kb / 1024**2:.1f}GB) but PSI={mem_psi:.1f} — safe to recover"
+            f"Swap {swap_pct:.0f}% used ({swap_used_kb / 1024**2:.1f}GB) but PSI={mem_psi:.1f} -- safe to recover"
         )
         recommendations.append(
             {
                 "issue": f"Stale swap ({swap_pct:.0f}%, {swap_used_kb / 1024**2:.1f}GB) with zero memory pressure",
-                "action": "swapoff -a && swapon -a  # PSI confirms safe — no memory thrashing",
+                "action": "swapoff -a && swapon -a  # PSI confirms safe -- no memory thrashing",
                 "blast_radius": "LOW",
                 "reversible": True,
                 "route_to": "A-FORGE forge_shell",
-                "precondition": f"mem_psi_avg10={mem_psi:.1f} < 5 — confirmed safe",
+                "precondition": f"mem_psi_avg10={mem_psi:.1f} < 5 -- confirmed safe",
             }
         )
     elif swap_pct > 50:
@@ -10567,7 +10577,7 @@ def well_machine_diagnose(
                 "action": "Kill top memory consumers first: ps aux --sort=-%mem | head -5. Then swapoff -a && swapon -a.",
                 "blast_radius": "MEDIUM",
                 "reversible": True,
-                "route_to": "888_HOLD — requires arif_judge before killing processes",
+                "route_to": "888_HOLD -- requires arif_judge before killing processes",
             }
         )
 
@@ -10662,7 +10672,7 @@ def well_machine_diagnose(
         overall = f"Machine operational but has {len(issues)} issues to address"
     else:
         verdict = "PROCEED"
-        overall = "Machine is healthy — no issues detected"
+        overall = "Machine is healthy -- no issues detected"
 
     return _omega_well_output(
         ok=(severity != "RED"),
@@ -10702,13 +10712,13 @@ def well_machine_recommend(
     issue_type: str = "swap",
     ctx: Context | None = None,
 ) -> dict[str, Any]:
-    """M-WELL RECOMMENDATION ENGINE — Get specific fix commands for machine issues.
+    """M-WELL RECOMMENDATION ENGINE -- Get specific fix commands for machine issues.
 
     Maps a diagnosis to concrete shell commands with risk assessment.
     Modes: swap | memory | disk | service | docker | zombie | all
 
     Returns commands suitable for A-FORGE forge_shell execution.
-    ADVISORY_ONLY — WELL does not execute.
+    ADVISORY_ONLY -- WELL does not execute.
     """
     import json as _json_mr
     from pathlib import Path as _PathMr
@@ -10740,7 +10750,7 @@ def well_machine_recommend(
             "commands": [
                 {
                     "command": "swapoff -a && swapon -a",
-                    "description": "Cycle swap — drains all stale swap pages back to RAM. Safe only when PSI < 5.",
+                    "description": "Cycle swap -- drains all stale swap pages back to RAM. Safe only when PSI < 5.",
                     "risk": "LOW" if mem_psi < 5 else "HIGH",
                     "precondition": f"mem_psi_avg10={mem_psi:.1f} must be < 5",
                     "blast_radius": "LOW",
@@ -10748,7 +10758,7 @@ def well_machine_recommend(
                 },
                 {
                     "command": "sync && echo 3 > /proc/sys/vm/drop_caches",
-                    "description": "Drop page cache, dentries, and inodes — frees RAM for swap recovery.",
+                    "description": "Drop page cache, dentries, and inodes -- frees RAM for swap recovery.",
                     "risk": "LOW",
                     "blast_radius": "LOW",
                     "reversible": True,
@@ -10848,7 +10858,7 @@ def well_machine_recommend(
                 },
                 {
                     "command": "docker restart <container>",
-                    "description": "Restart a container. Safe — preserves volumes and state.",
+                    "description": "Restart a container. Safe -- preserves volumes and state.",
                     "risk": "LOW",
                     "blast_radius": "LOW",
                     "reversible": True,
@@ -10876,7 +10886,7 @@ def well_machine_recommend(
             verdict="PROCEED",
             data={
                 "recommendations": RECOMMENDATIONS,
-                "note": "ADVISORY_ONLY — route to A-FORGE forge_shell for execution",
+                "note": "ADVISORY_ONLY -- route to A-FORGE forge_shell for execution",
                 "w0": "WELL recommends. arifOS judges. A-FORGE executes.",
             },
         )
@@ -10901,13 +10911,13 @@ def well_machine_recommend(
             "condition": recs.get("condition", "N/A"),
             "safe_to_proceed": recs.get("safe", True),
             "commands": recs["commands"],
-            "note": "ADVISORY_ONLY — route to A-FORGE forge_shell for execution",
+            "note": "ADVISORY_ONLY -- route to A-FORGE forge_shell for execution",
             "w0": "WELL recommends. arifOS judges. A-FORGE executes.",
         },
     )
 
 
-# ── ALIAS_REGISTRY — Ω-WELL stage aliases → canonical tool mappings ────────────
+# ── ALIAS_REGISTRY -- Ω-WELL stage aliases → canonical tool mappings ────────────
 # Every alias must map to a canonical function that exists in globals.
 # This is checked at import time. No alias may exist only in docs/manifest.
 
@@ -11079,7 +11089,7 @@ def well_13_signal_coverage(
     ctx: Context | None = None,
 ) -> dict[str, Any]:
     """
-    [DEPRECATED — USE well_signal_coverage]
+    [DEPRECATED -- USE well_signal_coverage]
     This tool has been deprecated and replaced. Please use well_signal_coverage instead.
     """
     return {
@@ -11309,14 +11319,14 @@ OMEGA_WELL_TOOLS = {
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# MCP Resources — Canonical 6
+# MCP Resources -- Canonical 6
 # Aligned with arifOS resource pattern: arifos://doctrine, arifos://vitals, etc.
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
 @mcp.resource("well://schema")
 def afwell_schema() -> str:
-    """AFWELL State JSON Schema — canonical substrate state contract."""
+    """AFWELL State JSON Schema -- canonical substrate state contract."""
     schema_path = WELL_DIR / "schema.json"
     if schema_path.exists():
         return schema_path.read_text()
@@ -11391,7 +11401,7 @@ def afwell_floors() -> str:
 
 @mcp.resource("well://vitals/arif")
 def afwell_vitals_arif() -> str:
-    """Readiness vitals — triage color, score, violations."""
+    """Readiness vitals -- triage color, score, violations."""
     state = _load_state()
     resolved = _resolve_readiness(state)
     flux = _compute_metabolic_flux(state)
@@ -11424,16 +11434,16 @@ def afwell_substrate_registry() -> str:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# TREE777 WIKI RESOURCES — Federation Canonical Knowledge Tree
+# TREE777 WIKI RESOURCES -- Federation Canonical Knowledge Tree
 # ═══════════════════════════════════════════════════════════════════════════════
 # Exposes WELL-domain slice of the TREE777 wiki as MCP Resources.
 # URI scheme:
-#   tree777://skills/well/{name}   — WELL skill pages
-#   tree777://well/concepts/{name} — Vitality concept pages
-#   tree777://well/scars/{name}    — WELL scar/incident records
+#   tree777://skills/well/{name}   -- WELL skill pages
+#   tree777://well/concepts/{name} -- Vitality concept pages
+#   tree777://well/scars/{name}    -- WELL scar/incident records
 # Wiki root: /root/AAA/wiki (shared across all 4 federation servers)
 # Rule: Resources grow. Tools stay bounded. Judgment remains Arif.
-# DITEMPA BUKAN DIBERI — Intelligence is forged, not given.
+# DITEMPA BUKAN DIBERI -- Intelligence is forged, not given.
 
 TREE777_WIKI_ROOT = Path(_os.environ.get("TREE777_WIKI_ROOT", "/root/AAA/wiki"))
 TREE777_SKILLS_DIR = TREE777_WIKI_ROOT / "skills" / "well"
@@ -11486,7 +11496,7 @@ def _well_tree777_index() -> dict[str, Any]:
 @mcp.resource(
     "well://telemetry/arif",
     description=(
-        "Live behavioral telemetry snapshot for Arif — derived from WELL agent "
+        "Live behavioral telemetry snapshot for Arif -- derived from WELL agent "
         "telemetry (agent sessions, token throughput, git rhythm, VAULT999 decisions, "
         "burnout risk). Behavioral flux components: sleep_debt, decision_fatigue, "
         "cognitive_load, agent_sessions, burnout_risk. telemetry_status indicates "
@@ -11551,11 +11561,11 @@ def afwell_telemetry() -> str:
 @mcp.resource(
     "well://readiness/arif",
     description=(
-        "Decision readiness verdict for Arif — synthesizes behavioral telemetry "
+        "Decision readiness verdict for Arif -- synthesizes behavioral telemetry "
         "into a SEAL/HOLD/SABAR authority gate. Uses causal readiness model: "
         "sleep_debt → decision_fatigue → psi_SE → authority_capacity → verdict. "
         "Risk tier mapping: T1 (low risk/ low urgency) through T5 (irreversible/critical). "
-        "Substrate governance mirror — does not command, only informs."
+        "Substrate governance mirror -- does not command, only informs."
     ),
 )
 def afwell_readiness() -> str:
@@ -11584,16 +11594,16 @@ def afwell_readiness() -> str:
 
     # Verdict routing
     if authority_capacity >= 0.75 and not violations:
-        verdict = "SEAL — Full authority bandwidth. Substrate supports irreversible decisions."
+        verdict = "SEAL -- Full authority bandwidth. Substrate supports irreversible decisions."
         tier = "GREEN"
     elif authority_capacity >= 0.55:
-        verdict = "SABAR — Reduced authority. Draft and deliberate. Delay irreversible actions."
+        verdict = "SABAR -- Reduced authority. Draft and deliberate. Delay irreversible actions."
         tier = "YELLOW"
     elif authority_capacity >= 0.35:
-        verdict = "HOLD — Degraded substrate. Draft-only mode. No forge execution."
+        verdict = "HOLD -- Degraded substrate. Draft-only mode. No forge execution."
         tier = "ORANGE"
     else:
-        verdict = "HOLD+ — Critical substrate depletion. PAUSE. Recovery is the only productive action."
+        verdict = "HOLD+ -- Critical substrate depletion. PAUSE. Recovery is the only productive action."
         tier = "RED"
 
     readiness = {
@@ -11725,13 +11735,13 @@ def afwell_causal_dag() -> str:
             "HRV_Index": {
                 "type": "exogenous",
                 "source": "wearable (Phase 5)",
-                "unit": "0.0–1.0 normalized",
+                "unit": "0.0-1.0 normalized",
                 "description": "Heart rate variability normalized index",
             },
             "CognitiveLoad": {
                 "type": "exogenous",
                 "source": "behavioral (agent sessions, tokens, decisions)",
-                "unit": "0.0–1.0",
+                "unit": "0.0-1.0",
                 "description": "Cognitive throughput from agent session telemetry",
             },
             "ContextSwitches": {
@@ -11758,7 +11768,7 @@ def afwell_causal_dag() -> str:
             "psi_SE": {
                 "type": "endogenous",
                 "parents": ["FatigueLevel", "DecisionFatigue"],
-                "description": "Sovereign entropy — anti-capture metric. Fatigue reduces psi_SE.",
+                "description": "Sovereign entropy -- anti-capture metric. Fatigue reduces psi_SE.",
             },
             "AuthorityCapacity": {
                 "type": "endogenous",
@@ -11861,7 +11871,7 @@ def well_tree777_scar(name: str) -> str:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# MCP Prompts — Canonical 4
+# MCP Prompts -- Canonical 4
 # User-controlled structured interactions (not model-controlled like tools)
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -11870,7 +11880,7 @@ def well_tree777_scar(name: str) -> str:
 def prompt_daily_reflection(date: str | None = None) -> str:
     """
     Guided morning/evening check-in for operator Arif.
-    User-controlled prompt — Arif triggers this, not the model.
+    User-controlled prompt -- Arif triggers this, not the model.
     """
     state = _load_state()
     score = state.get("well_score", 50)
@@ -11885,7 +11895,7 @@ def prompt_daily_reflection(date: str | None = None) -> str:
 
     date_str = date or datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d")
 
-    prompt = f"""# AFWELL Daily Reflection — {date_str}
+    prompt = f"""# AFWELL Daily Reflection -- {date_str}
 
 ## Current Vitals
 - WELL Score: {score}/100
@@ -11933,7 +11943,7 @@ def prompt_recovery_protocol(
         ],
         "cognitive": [
             "Take a 15-minute walk without devices.",
-            "Write down all open decisions — externalize from working memory.",
+            "Write down all open decisions -- externalize from working memory.",
             "Switch to C0/C1 tasks only (notes, organizing, not deciding).",
         ],
         "stress": [
@@ -12022,13 +12032,13 @@ Sleep → Fatigue → psi_SE → Authority → Verdict
 ## Recommendation
 """
     if risk_tier in ("T4", "T5") and (score < 75 or fatigue > 5 or clarity < 7):
-        prompt += "🛑 HOLD — High-risk task with degraded substrate. Delay or delegate."
+        prompt += "🛑 HOLD -- High-risk task with degraded substrate. Delay or delegate."
     elif risk_tier == "T3" and (score < 60 or fatigue > 6):
         prompt += (
-            "⚠️ CAUTION — Elevated risk. Proceed only with explicit human confirmation."
+            "⚠️ CAUTION -- Elevated risk. Proceed only with explicit human confirmation."
         )
     else:
-        prompt += "✅ PROCEED — Substrate supports this task class."
+        prompt += "✅ PROCEED -- Substrate supports this task class."
 
     prompt += "\n\n> WELL informs. Arif decides."
     return prompt
@@ -12084,13 +12094,13 @@ def prompt_substrate_classify(subject: str = "") -> str:
 def prompt_niat_check(task: str = "") -> str:
     """
     NIAT (Niat/Intent) check for Arif.
-    User-controlled prompt — Arif triggers this, not the model.
+    User-controlled prompt -- Arif triggers this, not the model.
     W0: WELL holds a mirror, not a veto. Arif decides.
     """
     if not task:
         return "# NIAT Check\n\nPlease provide the task or intent you want to examine."
 
-    prompt = f"""# NIAT (Intention) Check — "{task}"
+    prompt = f"""# NIAT (Intention) Check -- "{task}"
 
 ## W0 Invariant
 WELL holds a mirror, not a veto. Arif decides.
@@ -12121,7 +12131,7 @@ def prompt_fatigue_boundary_review(
 ) -> str:
     """
     Fatigue boundary review for Arif.
-    User-controlled prompt — Arif triggers this, not the model.
+    User-controlled prompt -- Arif triggers this, not the model.
     W0: WELL holds a mirror, not a veto. Arif decides.
     """
     prompt = f"""# Fatigue Boundary Review
@@ -12158,11 +12168,11 @@ Recognize the boundary. What is the next wise action?
 def prompt_energy_assessment(subject: str = "arif") -> str:
     """
     Energy gradient assessment for {subject}.
-    User-controlled prompt — triggers well_measure_gradient, well_assess_metabolism,
+    User-controlled prompt -- triggers well_measure_gradient, well_assess_metabolism,
     well_check_repair(mode=pressure). Maps to Suppression/Management/Redirection.
     W0: WELL holds a mirror, not a veto. Arif decides.
     """
-    prompt = f"""# Energy Gradient Assessment — {subject}
+    prompt = f"""# Energy Gradient Assessment -- {subject}
 
 ## Context
 The psyche is an open dissipative structure (Prigogine). It maintains order by
@@ -12197,15 +12207,15 @@ You are the one who knows where the energy wants to go.
 def prompt_shadow_check(subject: str = "arif") -> str:
     """
     Shadow pattern detection for {subject}.
-    User-controlled prompt — triggers well_dark_geometry_mirror, well_detect_boundary,
+    User-controlled prompt -- triggers well_dark_geometry_mirror, well_detect_boundary,
     well_guard_dignity. Reports: integrated, repressed, or projected.
     W0: WELL holds a mirror, not a veto. Arif decides.
     """
-    prompt = f"""# Shadow Check — {subject}
+    prompt = f"""# Shadow Check -- {subject}
 
 ## Context
 Jung's Shadow = repressed, denied, unlived psychic material. Thermodynamically:
-compressed energy behind a dam. The shadow doesn't disappear when ignored — it
+compressed energy behind a dam. The shadow doesn't disappear when ignored -- it
 inflates. Shadow integration = the most negentropic act the psyche can perform.
 
 ## Detection Steps
@@ -12236,17 +12246,17 @@ WELL reflects the pattern. You decide what to do with it.
 def prompt_individuation_readiness(subject: str = "arif") -> str:
     """
     Individuation readiness assessment for {subject}.
-    User-controlled prompt — triggers well_reflect_intelligence, well_sabar_latency,
+    User-controlled prompt -- triggers well_reflect_intelligence, well_sabar_latency,
     well_correction_capacity, well_validate_vitality(mode=classify).
     Reports: pre-individuation | crisis | integration | post-individuation.
     W0: WELL holds a mirror, not a veto. Arif decides.
     """
-    prompt = f"""# Individuation Readiness — {subject}
+    prompt = f"""# Individuation Readiness -- {subject}
 
 ## Context
 Individuation = the Self's drive toward wholeness through integration of opposites.
 APEX Theory: intelligence = knowing WHEN/WHERE/WHAT to look. Not computational power. Aim.
-Combined: individuation is the highest expression of intelligence — the capacity to aim
+Combined: individuation is the highest expression of intelligence -- the capacity to aim
 attention at the steepest internal gradient and work with it rather than against it.
 
 ## Assessment Steps
@@ -12286,7 +12296,7 @@ WELL measures where you are on the gradient. You walk the path.
 # ── Entry ──────────────────────────────────────────────────────────────────────
 
 # ── WellStack Monkeys ─────────────────────────────────────────────────────────
-# Fix 406 from Accept header — mirror of GEOX fix
+# Fix 406 from Accept header -- mirror of GEOX fix
 from mcp.server.streamable_http import StreamableHTTPServerTransport
 
 _orig_check = StreamableHTTPServerTransport._check_accept_headers
@@ -12375,7 +12385,7 @@ async def _well_write_domain_receipt(
                     json=payload,
                 )
     except Exception:
-        pass  # fire-and-forget — never propagate
+        pass  # fire-and-forget -- never propagate
 
 
 try:
@@ -12559,7 +12569,7 @@ try:
             arguments = {}
 
         # ── SCT ingress gate (2026-07-17) ─────────────────────────────────
-        # WELL is REFLECT_ONLY — SCT optional unless presented (then verify).
+        # WELL is REFLECT_ONLY -- SCT optional unless presented (then verify).
         try:
             import sys as _sys
 
@@ -12624,13 +12634,13 @@ try:
         return result
 
     mcp.call_tool = _governance_call_tool
-    logger.info("WELL governance wrapper active — arifOS L1-L13")
+    logger.info("WELL governance wrapper active -- arifOS L1-L13")
 except Exception as _e:
     logger.error("WELL governance wrapper failed: %s", _e)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# F-Ω Federation Handoff Adapters — forged 2026-06-17 by FORGE (000Ω)
+# F-Ω Federation Handoff Adapters -- forged 2026-06-17 by FORGE (000Ω)
 #
 # Three new @mcp.tool() functions wiring explicit federation hooks that the
 # 13-signal coverage report flagged as MISSING:
@@ -12641,7 +12651,7 @@ except Exception as _e:
 #
 # Authority: REFLECT_ONLY.  WELL observes + signals; it does NOT judge.
 # Fail-open: if peer unreachable, returns federation_unavailable (no crash).
-# Reversibility: additive only — no existing function modified.
+# Reversibility: additive only -- no existing function modified.
 # ══════════════════════════════════════════════════════════════════════════════
 
 _ARIFOS_MCP_URL = _os.environ.get("ARIFOS_MCP_URL", "http://127.0.0.1:8088/mcp")
@@ -12981,7 +12991,7 @@ if __name__ == "__main__":
     app = _apply_public_host_allowlist(app)
 
     async def tools_handler(request):
-        """Federation tool discovery — flat tool registry with WELL danger metadata."""
+        """Federation tool discovery -- flat tool registry with WELL danger metadata."""
         # Deferred ALIAS_REGISTRY validation (canonical funcs now in globals)
         global _ALIAS_REGISTRY_VALIDATED
         if not _ALIAS_REGISTRY_VALIDATED:
@@ -12993,9 +13003,9 @@ if __name__ == "__main__":
             _ALIAS_REGISTRY_VALIDATED = True
 
         all_tools = await mcp.list_tools()
-        # WELL is L1/L2 only — mirrors, informs, reflects; no irrevocable mutations
+        # WELL is L1/L2 only -- mirrors, informs, reflects; no irrevocable mutations
         _DANGER_MAP = {
-            # L3: fail-closed — vault seal, evidence anchor, constitutional floor check
+            # L3: fail-closed -- vault seal, evidence anchor, constitutional floor check
             "well_anchor_evidence": {
                 "danger_level": "L3",
                 "fail_posture": "fail-closed",
@@ -13032,7 +13042,7 @@ if __name__ == "__main__":
                 "danger_level": "L2",
                 "fail_posture": "fail-open",
             },
-            # L1: fail-open — read-only observation and classification
+            # L1: fail-open -- read-only observation and classification
             "well_classify_substrate": {
                 "danger_level": "L1",
                 "fail_posture": "fail-open",
@@ -13097,16 +13107,16 @@ if __name__ == "__main__":
         return JSONResponse(
             {
                 "organ": "WELL",
-                "role": "Body / Human Intelligence — Operator Cognitive Pressure Monitor",
-                "authority": "REFLECT_ONLY — WELL informs. arifOS judges. Arif decides.",
+                "role": "Body / Human Intelligence -- Operator Cognitive Pressure Monitor",
+                "authority": "REFLECT_ONLY -- WELL informs. arifOS judges. Arif decides.",
                 "schema": "well-federation-v2026.05.08",
                 "version": "v2026.07.24",
                 "count": len(tools),
                 "w0_invariant": "WELL holds a mirror, not a veto. Operator sovereignty is invariant.",
                 "danger_taxonomy": {
-                    "L3": "vault seal / floor check — fail-closed mandatory",
-                    "L2": "session / log — fail-open with constraint",
-                    "L1": "observe / health / readiness — fail-open with constraint",
+                    "L3": "vault seal / floor check -- fail-closed mandatory",
+                    "L2": "session / log -- fail-open with constraint",
+                    "L1": "observe / health / readiness -- fail-open with constraint",
                 },
                 "fail_open_constraint": _FAIL_OPEN_CONSTRAINT,
                 "tools": tools,
@@ -13120,7 +13130,7 @@ if __name__ == "__main__":
         except Exception:
             identity_hash = "UNAVAILABLE"
 
-        # P6 — Substrate manifest hash (domain anchor, NOT constitution_hash)
+        # P6 -- Substrate manifest hash (domain anchor, NOT constitution_hash)
         # WELL answers to SUBSTRATE_LAW (vitality law), not constitutional law.
         import hashlib as _hl
 
@@ -13174,16 +13184,16 @@ if __name__ == "__main__":
                 "amanah": state.get("amanah", "UNLOCKED"),
                 "well_signal": classification[
                     "well_signal"
-                ],  # REFLECT_ONLY — never "verdict"
+                ],  # REFLECT_ONLY -- never "verdict"
                 "identity_valid": classification["well_ok"],
                 "has_telemetry": classification["has_telemetry"],
                 "service": "well-mcp",
                 "version": "v2026.07.24",
                 "identity_hash": identity_hash,
-                # P6 — WELL identity anchor (SUBSTRATE_LAW, not constitutional)
+                # P6 -- WELL identity anchor (SUBSTRATE_LAW, not constitutional)
                 "domain_law": domain_law,
                 "substrate_manifest_hash": substrate_manifest_hash,
-                # W-1 substrate advisory fields — consumed by judge.py HTTP fallback
+                # W-1 substrate advisory fields -- consumed by judge.py HTTP fallback
                 "well_score": classification["well_score"],
                 "floors_violated": state.get("floors_violated") or [],
                 "truth_status": classification["truth_status"],
@@ -13211,7 +13221,7 @@ if __name__ == "__main__":
         )
 
     async def mcp_server_card(request):
-        """MCP Server Card — SEP-2127 HTTP discovery document."""
+        """MCP Server Card -- SEP-2127 HTTP discovery document."""
         return JSONResponse(
             {
                 "name": "well",
@@ -13226,7 +13236,7 @@ if __name__ == "__main__":
     app.add_route("/.well-known/mcp.json", mcp_server_card, methods=["GET"])
     app.add_route("/.well-known/mcp/server.json", mcp_server_card, methods=["GET"])
 
-    # 2026-06-29 — Federation-wide OAuth discovery (Hermes-flow fix)
+    # 2026-06-29 -- Federation-wide OAuth discovery (Hermes-flow fix)
     # Spec-compliant MCP clients (Cursor, Claude Code, MiniMax) fetch
     # /.well-known/oauth-protected-resource first per RFC 8707. Without
     # this, OAuth clients fail with "failed to get oauth authorization url".
@@ -13299,7 +13309,7 @@ if __name__ == "__main__":
 M_WELL_SIGNAL_WINDOW_MINUTES = 30
 
 
-# internal — not MCP-facing (collapsed 2026-05-26)
+# internal -- not MCP-facing (collapsed 2026-05-26)
 def well_machine_log_signal(
     signal: str = "",
     value: float | None = None,
@@ -13378,7 +13388,7 @@ def well_machine_log_signal(
     }
 
 
-# internal — not MCP-facing (collapsed 2026-05-26)
+# internal -- not MCP-facing (collapsed 2026-05-26)
 def well_machine_trend(
     lookback_minutes: int = 60,
     ctx: Context | None = None,
@@ -13477,10 +13487,10 @@ def well_fatigue_accumulator(
     Track cognitive fatigue across sessions for multi-day recovery planning.
 
     Modes:
-      check  — Delegate to well_assess_homeostasis(mode="fatigue")
-      log    — Log a session's fatigue cost (direct)
-      rest   — Log a rest period (reduces accumulated fatigue) (direct)
-      reset  — Reset accumulator (after full recovery) (direct)
+      check  -- Delegate to well_assess_homeostasis(mode="fatigue")
+      log    -- Log a session's fatigue cost (direct)
+      rest   -- Log a rest period (reduces accumulated fatigue) (direct)
+      reset  -- Reset accumulator (after full recovery) (direct)
 
     Cross-session fatigue decays at ~2 points per hour of rest.
     Accumulated fatigue > 20 across 48h triggers extended recovery advisory.
@@ -13641,7 +13651,7 @@ CIRCADIAN_PHASES = {
 }
 
 
-# internal — not MCP-facing (collapsed 2026-05-26)
+# internal -- not MCP-facing (collapsed 2026-05-26)
 def well_circadian_phase(
     override_hour: int | None = None,
     ctx: Context | None = None,
@@ -13650,11 +13660,11 @@ def well_circadian_phase(
     Reflect circadian phase based on current UTC+8 time (Arif's timezone).
 
     Phases:
-      MORNING_PEAK  (06-11) — Optimal for complex decisions
-      AFTERNOON_DIP (12-15) — Low energy, avoid complex reasoning
-      SECOND_WIND   (16-20) — Secondary peak, good for coding/architecture
-      EVENING_WIND_DOWN (21-23) — Cognitive decline, draft-only
-      DEEP_NIGHT    (00-05) — High cognitive entropy, C0 recommended
+      MORNING_PEAK  (06-11) -- Optimal for complex decisions
+      AFTERNOON_DIP (12-15) -- Low energy, avoid complex reasoning
+      SECOND_WIND   (16-20) -- Secondary peak, good for coding/architecture
+      EVENING_WIND_DOWN (21-23) -- Cognitive decline, draft-only
+      DEEP_NIGHT    (00-05) -- High cognitive entropy, C0 recommended
 
     Returns recommended decision ceiling per phase.
     """
@@ -13700,7 +13710,7 @@ def well_circadian_phase(
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
-# internal — not MCP-facing (collapsed 2026-05-26)
+# internal -- not MCP-facing (collapsed 2026-05-26)
 def well_machine_health_probe(
     targets: list[str] | None = None,
     ctx: Context | None = None,
@@ -13793,7 +13803,7 @@ def well_machine_health_probe(
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# Decision Ceiling in _resolve_readiness — ground_state propagated to all tools
+# Decision Ceiling in _resolve_readiness -- ground_state propagated to all tools
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
@@ -13880,7 +13890,7 @@ def _compute_decision_ceiling(state: dict[str, Any]) -> dict[str, str]:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# Ω-WELL Canonical Surface v2 — well_verb_noun ontology
+# Ω-WELL Canonical Surface v2 -- well_verb_noun ontology
 # Replaces stage-facing names (well_000_init, well_111_sense, etc.)
 # with domain-facing names (well_classify_substrate, well_trace_lineage, etc.)
 # Old functions remain as internal dispatchers.
@@ -14103,7 +14113,7 @@ def well_assess_metabolism(
             "received": mode,
         }
     # 888 HOLD: gradient/flux delegation targets need semantic audit.
-    # well_333_mind only supports human|machine|coupled — not gradient/flux.
+    # well_333_mind only supports human|machine|coupled -- not gradient/flux.
     if mode in ("gradient", "flux"):
         return {
             "error": "MODE_NOT_IMPLEMENTED",
@@ -14171,7 +14181,7 @@ def well_assess_homeostasis(
     dignity_preservation: float | None = None,
     coercion_signals: list[str] | None = None,
     reductionism_risk: float | None = None,
-    # Biometric overrides — pass inputs directly instead of relying on state.json
+    # Biometric overrides -- pass inputs directly instead of relying on state.json
     sleep_hours: float | None = None,
     sleep_debt_days: float | None = None,
     cognitive_clarity: float | None = None,
@@ -14181,7 +14191,7 @@ def well_assess_homeostasis(
     emotional_state: str = "neutral",
     chronic_fatigue: bool = False,
     accumulated_session_fatigue: float | None = None,
-    # Decision class for routing — C1 trivial through C5 critical
+    # Decision class for routing -- C1 trivial through C5 critical
     decision_class: str = "C3",
     ctx: Context | None = None,
 ) -> dict[str, Any]:
@@ -14190,10 +14200,10 @@ def well_assess_homeostasis(
     When mode="fatigue", accepts biometric overrides to support contrast scenarios
     and real-time assessment without state.json dependency. Also accepts decision_class
     to route the homeostasis verdict through the C-class threshold matrix:
-      C1/C2 — proceed unless CRITICAL
-      C3     — proceed if STABLE or better
-      C4     — proceed only if OPTIMAL; DEFER if STABLE; ADVISORY_BLOCK if DEGRADED/CRITICAL
-      C5     — proceed only if OPTIMAL + no chronic fatigue; block otherwise
+      C1/C2 -- proceed unless CRITICAL
+      C3     -- proceed if STABLE or better
+      C4     -- proceed only if OPTIMAL; DEFER if STABLE; ADVISORY_BLOCK if DEGRADED/CRITICAL
+      C5     -- proceed only if OPTIMAL + no chronic fatigue; block otherwise
     """
     logger.info(
         "well_assess_homeostasis called mode=%s decision_class=%s", mode, decision_class
@@ -14241,7 +14251,7 @@ def well_assess_homeostasis(
             normalized_emotional_class = "fatigued_drive_state"
             operator_risk = "overextension"
         else:
-            # ZEN: Don't overwrite — preserve the raw value in metadata
+            # ZEN: Don't overwrite -- preserve the raw value in metadata
             # emotional_state stays as-is for downstream; normalized_emotional_class
             # notes it's outside the validated set
             normalized_emotional_class = f"unvalidated:{raw_emotional_state}"
@@ -14262,13 +14272,13 @@ def well_assess_homeostasis(
     # Unreachable kernel → UNMEASURED (informational, not blocking).
     _live_g_value, _live_g_note = _get_live_G()
 
-    # 1C-B: fatigue is a direct computation — implement here, do not delegate to well_666_heart
+    # 1C-B: fatigue is a direct computation -- implement here, do not delegate to well_666_heart
     # 2026-06-06: sleep is also direct (was falling through to well_666_heart which
     # doesn't accept it). Sleep is one of WELL-13 Tier 2 (recovery/metabolic).
     if mode == "sleep":
         state = _load_state()
         # P0-1 HARDENING (2026-06-28): If no verified body telemetry,
-        # return UNKNOWN — never compute OPTIMAL from defaults.
+        # return UNKNOWN -- never compute OPTIMAL from defaults.
         # Sleep mode previously scored 7.2/10 (OPTIMAL) from defaults
         # of sleep_hours=7.0, sleep_quality=7.0, sleep_debt=0.0.
         if not _has_verified_telemetry(state):
@@ -14322,7 +14332,7 @@ def well_assess_homeostasis(
         # Convert strain → recovery score (0-10)
         sleep_recovery_score = max(0.0, min(10.0, 10.0 - raw_sleep_strain))
 
-        # Signal language — NEVER verdict (advisory only).
+        # Signal language -- NEVER verdict (advisory only).
         # verdict is the internal "advisory verdict" string that
         # _omega_well_output translates to a generic signal via
         # _WELL_ADVISORY_SIGNAL_MAP. The sleep-specific signal is
@@ -14344,7 +14354,7 @@ def well_assess_homeostasis(
             status = "CRITICAL"
             verdict = "VOID"
 
-        # C-class routing — recommend decision class downgrade
+        # C-class routing -- recommend decision class downgrade
         thresholds = {
             "C1": (3.0, None),
             "C2": (3.0, None),
@@ -14355,7 +14365,7 @@ def well_assess_homeostasis(
         threshold_score, block_threshold = thresholds[decision_class_upper]
         if status == "CRITICAL":
             route_signal = "ADVISORY_BLOCKED"
-            routing_note = "CRITICAL sleep recovery — all decision classes blocked."
+            routing_note = "CRITICAL sleep recovery -- all decision classes blocked."
         elif status == "DEGRADED":
             if decision_class_upper in ("C4", "C5"):
                 route_signal = (
@@ -14422,7 +14432,7 @@ def well_assess_homeostasis(
                 pass
         except Exception:
             # P1 FIX (2026-06-28): Do not leak internal dependency errors into
-            # human readiness output. SAF is optional — surface as disabled.
+            # human readiness output. SAF is optional -- surface as disabled.
             _saf_summary = {
                 "saf_status": "DISABLED_OPTIONAL",
                 "reason": "saf_stats unavailable",
@@ -14474,11 +14484,11 @@ def well_assess_homeostasis(
 
     # ── EUREKA 2026-06-12: Medical Query Mode ─────────────────────────────
     # Routes human medical questions through the F9 Soul Contract boundary.
-    # Always C5 (highest gate) — block unless OPTIMAL + no chronic fatigue.
+    # Always C5 (highest gate) -- block unless OPTIMAL + no chronic fatigue.
     # Educational context (what the condition IS) is allowed.
     # Personal medical advice (what to DO about it) is HARAM without license.
     if mode == "medical_query":
-        # Force C5 — strongest gate for medical queries about the operator's own body
+        # Force C5 -- strongest gate for medical queries about the operator's own body
         actual_class = (
             decision_class.upper() if isinstance(decision_class, str) else "C5"
         )
@@ -14505,7 +14515,7 @@ def well_assess_homeostasis(
                 stage="555_DIGNITY",
                 lane="ASI",
                 mode="medical_query",
-                verdict="HOLD",  # medical queries always HOLD — never auto-SEAL
+                verdict="HOLD",  # medical queries always HOLD -- never auto-SEAL
                 data={
                     "medical_boundary": boundary,
                     "educational_context": educational_context,
@@ -14520,8 +14530,8 @@ def well_assess_homeostasis(
                 },
                 constitutional_compliance={
                     "F2_TRUTH": "educational context only, no personal advice",
-                    "F9_ANTIHANTU": "zero qualia declared — I am a mirror, not a soul",
-                    "W6_MEDICAL_BOUNDARY": "HOLD — operator must see human doctor",
+                    "F9_ANTIHANTU": "zero qualia declared -- I am a mirror, not a soul",
+                    "W6_MEDICAL_BOUNDARY": "HOLD -- operator must see human doctor",
                 },
             ),
             tool_name="well_assess_homeostasis",
@@ -14530,7 +14540,7 @@ def well_assess_homeostasis(
     if mode == "fatigue":
         state = _load_state()
         # P1 FIX (2026-06-28): If no verified telemetry AND no biometric
-        # overrides provided, return LIMITED — never compute OPTIMAL from
+        # overrides provided, return LIMITED -- never compute OPTIMAL from
         # defaults alone. This prevents false confidence.
         _has_overrides = any(
             v is not None
@@ -14756,7 +14766,7 @@ def well_assess_homeostasis(
         # stat_assumptions on it, and surface the normality + outlier audit
         # in the response. If the input vector is statistically anomalous
         # (Shapiro p<0.05 OR high outlier density vs typical 0-10 range),
-        # we tag the verdict as CONDITIONAL — the routing matrix then
+        # we tag the verdict as CONDITIONAL -- the routing matrix then
         # reconsiders the route_signal.
         _saf_summary = None
         try:
@@ -14813,7 +14823,7 @@ def well_assess_homeostasis(
                 else "SABAR",
             }
             # F2 TRUTH: if the input vector is statistically anomalous,
-            # downgrade to CONDITIONAL — routing matrix may re-route
+            # downgrade to CONDITIONAL -- routing matrix may re-route
             if (_p_shapiro is not None and _p_shapiro < 0.05) or _n_outliers >= 2:
                 verdict = "SABAR"
                 routing_note += f" | SAF: biometric vector non-normal (p={_p_shapiro}, outliers={_n_outliers}); verdict downgraded to SABAR."
@@ -14910,12 +14920,12 @@ def well_assess_homeostasis(
                 }
                 # F2 TRUTH: very wide strain range (>= 5.0 on a 0-10
                 # scale) means some metrics are extremely high while others
-                # are low — incoherent substrate state, often compensatory
+                # are low -- incoherent substrate state, often compensatory
                 # behaviour (one good metric masking several bad ones).
                 if _range is not None and _range >= 5.0:
                     verdict = "SABAR"
                     routing_note += (
-                        f" | SAF: wide strain range ({_range:.2f}) — "
+                        f" | SAF: wide strain range ({_range:.2f}) -- "
                         "incoherent biometric profile; verdict downgraded to SABAR."
                     )
 
@@ -15035,7 +15045,7 @@ def well_assess_homeostasis(
             "route_signal": route_signal,
             "routing_note": routing_note,
             "live_G": _live_g_value,
-            # ZEN: Epistemic honesty — what the score is actually made of
+            # ZEN: Epistemic honesty -- what the score is actually made of
             "_epistemic": {
                 "class": _epistemic_class,
                 "note": _epistemic_note,
@@ -15158,7 +15168,7 @@ def well_check_repair(
         result["repair_module_available"] = False
         result["repair_phase"] = "P4_BOUNDED_REPAIR"
         result["repair_note"] = (
-            "repair_allowlist module not importable — "
+            "repair_allowlist module not importable -- "
             "check /root/WELL/repair_allowlist.py exists"
         )
 
@@ -15175,7 +15185,7 @@ def well_validate_vitality(
     decision_class: str | None = None,
     ctx: Context | None = None,
 ) -> dict[str, Any]:
-    """Ω-WELL-08: Validate vitality, readiness, and NIAT. (Floor compliance removed — arifOS adjudicates floors.)"""
+    """Ω-WELL-08: Validate vitality, readiness, and NIAT. (Floor compliance removed -- arifOS adjudicates floors.)"""
     logger.info("well_validate_vitality called mode=%s", mode)
     if mode in ("cabar", "falsify"):
         contradictions = []
@@ -15349,10 +15359,10 @@ def well_assess_livelihood(
     """Ω-WELL-09: Assess human wellness, role, dignity, support, and meaning.
 
     Modes:
-      role       — individual role/duty assessment
-      meaning    — purpose alignment assessment
-      dignity    — dignity preservation assessment
-      population — sovereign-population aggregate assessment (P1 2026-07-24)
+      role       -- individual role/duty assessment
+      meaning    -- purpose alignment assessment
+      dignity    -- dignity preservation assessment
+      population -- sovereign-population aggregate assessment (P1 2026-07-24)
 
     ZEN ADDITION (2026-07-12): The voluntary parameter distinguishes chosen burden
     from imposed burden. When voluntary=True, the role burden is an expression of
@@ -15369,7 +15379,7 @@ def well_assess_livelihood(
             "received": mode,
         }
 
-    # ── POPULATION MODE — sovereign aggregate assessment ───────────────
+    # ── POPULATION MODE -- sovereign aggregate assessment ───────────────
     if mode == "population":
         pop_inputs = {
             "real_median_income": real_median_income,
@@ -15556,9 +15566,9 @@ def well_assess_livelihood(
                         else "UNKNOWN"
                     ),
                     "capture_note": (
-                        "Burden is chosen — sovereign expression."
+                        "Burden is chosen -- sovereign expression."
                         if voluntary is True
-                        else "Burden may be imposed — reciprocal capture risk. The role may have become too costly to leave."
+                        else "Burden may be imposed -- reciprocal capture risk. The role may have become too costly to leave."
                         if voluntary is False
                         else "Voluntary status not specified. Cannot distinguish chosen from imposed burden."
                         if voluntary is None
@@ -15587,7 +15597,7 @@ def well_daily_checkin(
     note: str | None = None,
     ctx: Context | None = None,
 ) -> dict[str, Any]:
-    """Ω-WELL-S2: Daily operator check-in — log daily body telemetry for WELL substrate governance.
+    """Ω-WELL-S2: Daily operator check-in -- log daily body telemetry for WELL substrate governance.
 
     This is the canonical S2 daily telemetry entry point. Call once per day with:
     - energy_level:    Energy level 1-10 (1=exhausted, 10=fully charged)
@@ -15698,23 +15708,23 @@ def well_daily_checkin(
     for v in violations:
         if v == "W1_SLEEP_DEBT":
             violation_descriptions.append(
-                f"W1 Sleep Debt — hours slept {hours_slept:.1f}h below optimal"
+                f"W1 Sleep Debt -- hours slept {hours_slept:.1f}h below optimal"
             )
         elif v == "W3_STRESS_LOAD":
             violation_descriptions.append(
-                f"W3 Stress Load — duty_load={duty_load:.1f}/10"
+                f"W3 Stress Load -- duty_load={duty_load:.1f}/10"
             )
         elif v == "W5_COGNITIVE_ENTROPY":
             violation_descriptions.append(
-                f"W5 Cognitive Entropy — energy_level={energy_level:.1f}/10"
+                f"W5 Cognitive Entropy -- energy_level={energy_level:.1f}/10"
             )
         elif v == "W2_METABOLIC_STABILITY":
             violation_descriptions.append(
-                f"W2 Metabolic Stability — energy_level={energy_level:.1f}/10 below threshold"
+                f"W2 Metabolic Stability -- energy_level={energy_level:.1f}/10 below threshold"
             )
         elif v == "W4_PHYSICAL_INTEGRITY":
             violation_descriptions.append(
-                f"W4 Physical Integrity — pain_level={pain_level_f:.1f}/10"
+                f"W4 Physical Integrity -- pain_level={pain_level_f:.1f}/10"
             )
 
     return {
@@ -15784,15 +15794,15 @@ def well_compute_metabolic_flux(
     force_recompute: bool = False,
     ctx: Context | None = None,
 ) -> dict[str, Any]:
-    """Ω-WELL-10b: Compute metabolic_flux — unified thermodynamic entropy rate.
+    """Ω-WELL-10b: Compute metabolic_flux -- unified thermodynamic entropy rate.
 
-    Computes cognitive_entropy_rate + machine_entropy into a 0.0–1.0 scalar.
+    Computes cognitive_entropy_rate + machine_entropy into a 0.0-1.0 scalar.
     Triggers compulsory_reallocation signal at flux >= 0.65, and system_hold at >= 0.85.
 
     Modes:
-      compute  — Compute current metabolic flux from state.
-      status   — Return cached flux verdict without recompute.
-      trigger  — Force evaluate reallocation threshold and return signal.
+      compute  -- Compute current metabolic flux from state.
+      status   -- Return cached flux verdict without recompute.
+      trigger  -- Force evaluate reallocation threshold and return signal.
     """
     mode = mode.lower()
     state = _load_state()
@@ -15861,16 +15871,16 @@ async def well_assess_sovereign_entropy(
     human operator is. High entropy: unmodelable, sovereign, safe from digital
     consciousness theft. Low entropy: predictable, vulnerable, pattern-matchable.
 
-    This is NOT about reducing entropy — it's about PROTECTING it.
+    This is NOT about reducing entropy -- it's about PROTECTING it.
     The machine must never optimize the sovereign into predictability.
 
     Modes:
-      current   — compute entropy from available state/state.json
-      assess    — score from explicit behavioral signals
-      protect   — return protection recommendations if entropy is dropping
-      baseline  — establish baseline entropy fingerprint
+      current   -- compute entropy from available state/state.json
+      assess    -- score from explicit behavioral signals
+      protect   -- return protection recommendations if entropy is dropping
+      baseline  -- establish baseline entropy fingerprint
     """
-    # Fix: MCP transport may serialize dict as JSON string — parse it
+    # Fix: MCP transport may serialize dict as JSON string -- parse it
     if isinstance(behavioral_signals, str):
         try:
             import json
@@ -15967,20 +15977,20 @@ async def well_assess_sovereign_entropy(
             },
             "recommendation": recommendation,
             "philosophical_anchor": (
-                "Human paradoxical nature creates consciousness entropy — "
+                "Human paradoxical nature creates consciousness entropy -- "
                 "unpredictability that no data can fully capture."
             ),
             "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
             "source": "WELL-SOVEREIGN-ENTROPY",
             "epistemic_tag": "ESTIMATE",
-            # Structural Coherence Transmission — EUREKA v2026.06.05
+            # Structural Coherence Transmission -- EUREKA v2026.06.05
             # The sovereign's unpredictability IS structural coherence. A human with high
             # entropy generates outputs that are unmodelable, distinctive, and therefore
             # survive cross-modal transfer without being corrupted by pattern-matching systems.
             "structural_coherence_score": round(entropy, 4),
             "cross_modal_fidelity_note": (
                 "Sovereign entropy and structural coherence are duals. High sovereign entropy "
-                "means the operator's outputs are unpredictable — they register as anomalous contrast "
+                "means the operator's outputs are unpredictable -- they register as anomalous contrast "
                 "against any background model, making them uncapturable and transfer-stable. "
                 "Low entropy means predictable outputs that machines can compress, model, and corrupt. "
                 "Protect entropy. Protect coherence."
@@ -16109,7 +16119,7 @@ async def well_dark_geometry_mirror(
     }
     raw_result = detector.analyze_with_context(text_or_events, context)
 
-    # ZEN: Metabolize the content — don't just return pattern matches.
+    # ZEN: Metabolize the content -- don't just return pattern matches.
     # Extract what the text is actually DOING, not just what patterns it triggers.
     _text_lower = text_or_events.lower() if text_or_events else ""
     _text_len = len(text_or_events) if text_or_events else 0
@@ -16117,7 +16127,7 @@ async def well_dark_geometry_mirror(
     # Content-level signals (complement the pattern-level detector)
     _content_signals = []
 
-    # 1. Narrative authority detection — is the text claiming to explain?
+    # 1. Narrative authority detection -- is the text claiming to explain?
     _explanation_markers = [
         "because",
         "the reason",
@@ -16136,7 +16146,7 @@ async def well_dark_geometry_mirror(
             }
         )
 
-    # 2. Universalization detection — is the text generalizing from one case?
+    # 2. Universalization detection -- is the text generalizing from one case?
     _universal_markers = [
         "everyone",
         "nobody",
@@ -16157,7 +16167,7 @@ async def well_dark_geometry_mirror(
             }
         )
 
-    # 3. Clean ending detection — is the text wrapping up too neatly?
+    # 3. Clean ending detection -- is the text wrapping up too neatly?
     _clean_endings = [
         "that's the answer",
         "the truth is",
@@ -16175,7 +16185,7 @@ async def well_dark_geometry_mirror(
             }
         )
 
-    # 4. Self-referential authority — is the text using its own structure as proof?
+    # 4. Self-referential authority -- is the text using its own structure as proof?
     _self_ref = [
         "as i've shown",
         "as demonstrated",
@@ -16213,7 +16223,7 @@ async def well_dark_geometry_mirror(
             }
         )
 
-    # 6. Agency removal — is the text describing subjects as passive?
+    # 6. Agency removal -- is the text describing subjects as passive?
     _passive_markers = [
         "was consumed by",
         "was used by",
@@ -16325,9 +16335,9 @@ def well_guard_dignity(
                     "reductionism_safe": not reductionism_high,
                     "flags": flags,
                     "recommendation": (
-                        "Proceed — dignity intact, no coercion, safe reductionism."
+                        "Proceed -- dignity intact, no coercion, safe reductionism."
                         if consent_ok
-                        else "HOLD — dignity boundary at risk. Review flags above."
+                        else "HOLD -- dignity boundary at risk. Review flags above."
                     ),
                     "w0": "OPERATOR_VETO_INTACT / HIERARCHY_INVARIANT",
                 },
@@ -16343,7 +16353,7 @@ def well_guard_dignity(
         b = well_111_sense(
             mode="boundary",
             subject=subject or "Arif",
-            description="Dignity boundary guard — checking personhood membrane integrity.",
+            description="Dignity boundary guard -- checking personhood membrane integrity.",
             ctx=ctx,
         )
         return _to_federation_output(
@@ -16461,13 +16471,13 @@ async def well_anchor_evidence(
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# G-WELL — Machine Governance Mirror Tools
+# G-WELL -- Machine Governance Mirror Tools
 # Reflects governance health of the federated machine substrate.
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
 # DEPRECATED: Governance assessment now handled by arifOS constitutional kernel.
-# @mcp.tool() removed — internal use only (used by well_validate_vitality path).
+# @mcp.tool() removed -- internal use only (used by well_validate_vitality path).
 def well_assess_governance(
     mode: str = "coherence",
     target: str = "local",
@@ -16477,11 +16487,11 @@ def well_assess_governance(
     G-WELL: Assess constitutional governance state of machine substrate.
 
     Modes:
-      coherence  — Autonomic coherence of governance organs
-      check      — Check and balance integrity
-      floors     — Floor compliance across machine governance layers
-      evidence   — Evidence integrity and audit trail
-      full       — All five pillars
+      coherence  -- Autonomic coherence of governance organs
+      check      -- Check and balance integrity
+      floors     -- Floor compliance across machine governance layers
+      evidence   -- Evidence integrity and audit trail
+      full       -- All five pillars
 
     G-WELL is not a separate substrate. It is the governance abstraction
     layer reflecting federated machine health in constitutional terms.
@@ -16721,7 +16731,7 @@ def well_validate_consensus(
     )
 
 
-# DEPRECATED 2026-06-28 — use well_registry_status (blueprint canonical format) instead.
+# DEPRECATED 2026-06-28 -- use well_registry_status (blueprint canonical format) instead.
 # P0-B (sovereign 2026-07-18): re-register the legacy alias. The audit's tooling
 # calls well_system_registry_status; the modern canonical name is
 # well_registry_status. Keep both available so the advertised surface matches
@@ -16729,7 +16739,7 @@ def well_validate_consensus(
 # P0.5 fix: hidden-internal-alias classification for well_system_registry_status.
 @mcp.tool()
 def well_system_registry_status() -> dict[str, Any]:
-    """WELL registry truth probe — somatic surface vs autonomic internals.
+    """WELL registry truth probe -- somatic surface vs autonomic internals.
 
     DEPRECATED: Use well_registry_status (blueprint canonical format) instead.
     This function is kept for internal programmatic use but is no longer
@@ -16783,7 +16793,7 @@ def well_system_registry_status() -> dict[str, Any]:
         "well_000_ops": "well_assess_reliability(mode='health')",
         "well_machine_health_probe": "well_assess_reliability(mode='machine')",
         "well_reflect_intelligence": "well_validate_vitality(mode='readiness')",
-        "well_anchor_evidence": "arif_seal (arifOS organ — cross-organ)",
+        "well_anchor_evidence": "arif_seal (arifOS organ -- cross-organ)",
         "well_get_state": "well_trace_lineage(mode='recall')",
         "well_check_invariant": "well_assess_reliability(mode='health')",
         "well_log_signal": "well_trace_lineage(mode='recall')",
@@ -16813,7 +16823,7 @@ def well_system_registry_status() -> dict[str, Any]:
     for name in autonomic_names:
         if name not in _canonical_replacements:
             _canonical_replacements[name] = (
-                "hidden_by_design — no somatic replacement (internal WELL autonomic)"
+                "hidden_by_design -- no somatic replacement (internal WELL autonomic)"
             )
 
     return _omega_well_output(
@@ -16846,7 +16856,7 @@ def well_system_registry_status() -> dict[str, Any]:
             "canonical_aliases": canonical_aliases,
             "alias_gaps": alias_gaps,
             "registry_truth": registry_truth,
-            "boundary_notice": "Autonomic tools are intentionally hidden — not broken. "
+            "boundary_notice": "Autonomic tools are intentionally hidden -- not broken. "
             "They exist in code but are excluded from the MCP surface "
             "by somatic boundary enforcement.",
             "canonical_replacements": _canonical_replacements,
@@ -16855,7 +16865,7 @@ def well_system_registry_status() -> dict[str, Any]:
     )
 
 
-# internal — not MCP-facing (collapsed 2026-05-26)
+# internal -- not MCP-facing (collapsed 2026-05-26)
 @mcp.tool()
 def well_registry_status(
     mode: Literal["status", "full"] = "status",
@@ -16863,7 +16873,7 @@ def well_registry_status(
     actor_id: str | None = None,
     trace_id: str | None = None,
 ) -> dict[str, Any]:
-    """WELL registry truth diagnostic — blueprint canonical format.
+    """WELL registry truth diagnostic -- blueprint canonical format.
 
     Performs live callable tests against all known WELL tool names.
     Returns structured drift report: intended vs registered vs callable.
@@ -16934,7 +16944,7 @@ def well_registry_status(
     async def _safe_call(name: str, args: dict) -> tuple[str, str]:
         try:
             # We can't do async calls in sync tool, so we just check registration
-            # and return the tool as "registered" — actual callable test requires
+            # and return the tool as "registered" -- actual callable test requires
             # async transport which is not available in sync tool context.
             # Mark as REGISTERED (would need async test for full callable confirmation)
             return "REGISTERED", ""
@@ -16953,7 +16963,7 @@ def well_registry_status(
     # All other tools are considered "internal/alias"
     all_tools_in_code = all_known | registered_in_somatic
 
-    # ── Canonical public surface (agent-facing) — Measurement Boundary 2026-07-12
+    # ── Canonical public surface (agent-facing) -- Measurement Boundary 2026-07-12
     PUBLIC_CANONICAL = {
         "well_classify_substrate",
         "well_validate_vitality",
@@ -17018,7 +17028,7 @@ def well_registry_status(
 
     phantom_tools = sorted(registered_in_somatic - all_tools_in_code)
     # Canonical = public set that is registered/known (never dual-list with deprecated)
-    # Do not require safe_args membership — safe_args is only for dry-call harness.
+    # Do not require safe_args membership -- safe_args is only for dry-call harness.
     known_names = registered_in_somatic | all_known | set(safe_args.keys())
     canonical_callable = sorted(PUBLIC_CANONICAL & known_names)
 
@@ -17040,7 +17050,7 @@ def well_registry_status(
     dual = set(canonical_callable) & set(deprecated_callable)
     if dual:
         alias_conflicts = sorted(dual)
-        # Prefer deprecated listing for duals — remove from canonical
+        # Prefer deprecated listing for duals -- remove from canonical
         canonical_callable = sorted(set(canonical_callable) - dual)
 
     intended_count = len(PUBLIC_CANONICAL)
@@ -17053,7 +17063,7 @@ def well_registry_status(
     )
     verdict = "REGISTRY_PASS" if surface_aligned else "REGISTRY_DRIFT"
 
-    # Return blueprint canonical format directly — no _to_federation_output wrapping.
+    # Return blueprint canonical format directly -- no _to_federation_output wrapping.
     # well_registry_status is a registry diagnostic, not a constitutional judgment tool.
     payload = {
         "ok": verdict == "REGISTRY_PASS",
@@ -17076,7 +17086,7 @@ def well_registry_status(
         "alias_conflicts": alias_conflicts,
         "verdict": verdict,
         "measurement_boundary": "/root/AAA/docs/MEASUREMENT_BOUNDARY_CONTRACT.md",
-        "well_system_registry_status": "DEPRECATED — use well_registry_status",
+        "well_system_registry_status": "DEPRECATED -- use well_registry_status",
         "registry_note": (
             "Canonical ≠ legacy. well_readiness is LEGACY only "
             "(→ well_validate_vitality mode=readiness). "
@@ -17116,7 +17126,7 @@ def well_registry_status(
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# ATLAS13-WELL — Substrate Wisdom Anchors (13 axioms for WELL MCP tools)
+# ATLAS13-WELL -- Substrate Wisdom Anchors (13 axioms for WELL MCP tools)
 # ═══════════════════════════════════════════════════════════════════════════════
 
 _WELL_WISDOM: dict[str, dict[str, Any]] = {
@@ -17200,7 +17210,7 @@ _WELL_WISDOM: dict[str, dict[str, Any]] = {
     "well_compute_metabolic_flux": {
         "axiom": "Entropy is the tax intelligence pays for existence. Metabolic flux is the rate of that tax. When flux exceeds 0.65, the system must reallocate before it dissolves into noise.",
         "carbon_lesson": "A tired mind makes more errors. Each error increases cognitive entropy. Entropy compounds faster than recovery can clear it.",
-        "silica_lesson": "Stone under stress develops microfractures. The fracture network grows faster than the applied load — this is stone's metabolic flux.",
+        "silica_lesson": "Stone under stress develops microfractures. The fracture network grows faster than the applied load -- this is stone's metabolic flux.",
         "machine_lesson": "Prediction contradiction rate is the machine's cognitive entropy. A model that contradicts itself at high confidence is a model that has lost its epistemic grounding.",
         "authority": "Flux ≤ 0.40: nominal. Flux > 0.65: compulsory reallocation. Flux > 0.85: system hold. These are thermodynamic thresholds, not suggestions.",
     },
@@ -17210,8 +17220,8 @@ _WELL_WISDOM: dict[str, dict[str, Any]] = {
             "delta KUKUH": "physical state solid",
             "delta RETAK": "physical state degraded",
             "delta ROSAK": "physical state broken",
-            "psi": "governance trust — not a machine property",
-            "omega": "reasoning discipline — not a machine property",
+            "psi": "governance trust -- not a machine property",
+            "omega": "reasoning discipline -- not a machine property",
         },
         "authority": "A machine can be KUKUH / RETAK / ROSAK but never amanah by itself.",
     },
@@ -17275,13 +17285,13 @@ def _inject_well_wisdom(response: dict[str, Any], tool_name: str) -> dict[str, A
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# well_classify_state — Human State Classifier (Phase 1 + Phase 3)
+# well_classify_state -- Human State Classifier (Phase 1 + Phase 3)
 # ═══════════════════════════════════════════════════════════════════════════════
 # Constitutional home: arifosmcp/rama/ (State Classifier)
 # Federation surface: WELL MCP (this file)
 # Physics: entropy reduction + invariance violation detection
 #
-# Imports from arifosmcp.rama — dependency already exists (vault_postgres,
+# Imports from arifosmcp.rama -- dependency already exists (vault_postgres,
 # well_bridge). State Classifier stays in arifOS; WELL exposes it.
 #
 # Phase 1: Deterministic rule-based Polyvagal + SDT classification
@@ -17341,7 +17351,7 @@ def _well_modulate_posture(
     if sdt_autonomy == "high":
         mod["challenge_level"] = "none"
         mod["tone"] = "acknowledging"
-        # Don't prescribe — offer options
+        # Don't prescribe -- offer options
         mod["autonomy_directive"] = "offer_options_not_prescriptions"
 
     if sdt_competence == "high":
@@ -17476,15 +17486,15 @@ def well_classify_state(
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# Universal wisdom injection — monkey-patch all registered tool functions
+# Universal wisdom injection -- monkey-patch all registered tool functions
 # ═══════════════════════════════════════════════════════════════════════════════
 
 # ── Somatic/Autonomic Boundary ──────────────────────────────────────────────────
 # Canonical tools visible to external agents (14).
-# All other @mcp.tool() functions are autonomic — callable internally via
+# All other @mcp.tool() functions are autonomic -- callable internally via
 # the canonical dispatchers but hidden from agent tool listing.
 # ═══════════════════════════════════════════════════════════════════════════════
-# SOMATIC_TOOLS — Public MCP surface for WELL (biological substrate only)
+# SOMATIC_TOOLS -- Public MCP surface for WELL (biological substrate only)
 # ═══════════════════════════════════════════════════════════════════════════════
 # Orthogonality rule: WELL speaks ONLY biological substrate physics.
 # Constitutional functions (governance, judgment, seal, critique of meaning,
@@ -17495,7 +17505,7 @@ def well_classify_state(
 #   well_guard_dignity         → CRITIQUE axis / meaning (arifOS 666_HEART)
 #   well_anchor_evidence       → SEAL axis / vault (arifOS 999_VAULT)
 SOMATIC_TOOLS = {
-    # ── Canonical Public Surface (10 tools) — 2026-07-29 M-WELL activation ──
+    # ── Canonical Public Surface (10 tools) -- 2026-07-29 M-WELL activation ──
     # Only these 10 tools are exposed on the default public MCP wire.
     # All other @mcp.tool() functions remain callable internally but are
     # removed from the public surface by _enforce_somatic_boundary().
@@ -17517,7 +17527,7 @@ SOMATIC_TOOLS = {
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# Automated Substrate Sensor — Machine-to-Human Mapping
+# Automated Substrate Sensor -- Machine-to-Human Mapping
 # ═══════════════════════════════════════════════════════════════════════════════
 
 try:
@@ -17529,7 +17539,7 @@ except ImportError:
 
 
 # ═══════════════════════════════════════════════════════════════════
-# Entropy Integrity Mesh — WELL Extensions (Phase 2)
+# Entropy Integrity Mesh -- WELL Extensions (Phase 2)
 # DITEMPA BUKAN DIBERI
 # ═══════════════════════════════════════════════════════════════════
 
@@ -17727,7 +17737,7 @@ def well_regulation_recovery(
         }
 
 
-# ── well_assess_readiness — Unified Depth Assessment (2026-07-18) ─────────────
+# ── well_assess_readiness -- Unified Depth Assessment (2026-07-18) ─────────────
 # Thermodynamic-APEX wiring: calls internal depth tools and returns structured
 # envelope with energy/shadow/intelligence signals.
 # See: GENESIS/049, 050, 051. Benchmark: WELL_DEPTH_TRIAD_V1.
@@ -17739,7 +17749,7 @@ def well_assess_readiness(
     mode: str = "depth",
     ctx: Context | None = None,
 ) -> dict[str, Any]:
-    """WELL Depth Assessment — unified readiness with thermodynamic-APEX signals.
+    """WELL Depth Assessment -- unified readiness with thermodynamic-APEX signals.
 
     Calls internal tools (gradient, dark geometry, intelligence, boundary,
     sabar latency, correction capacity, regulation recovery) and returns
@@ -17861,7 +17871,7 @@ def well_assess_readiness(
                 f"Rejected delegation. Continued after stating should stop. "
                 f"Reply latency {case.get('current_reply_latency_seconds', '?')}s vs baseline {case.get('normal_reply_latency_seconds', '?')}s."
             )
-        # dark_geometry_mirror is async — use asyncio.run() to call from sync context
+        # dark_geometry_mirror is async -- use asyncio.run() to call from sync context
         try:
             import asyncio as _asyncio
 
@@ -17876,7 +17886,7 @@ def well_assess_readiness(
                 }
             )
         except RuntimeError:
-            # Already in an event loop (e.g. uvicorn) — fall back to sync attempt
+            # Already in an event loop (e.g. uvicorn) -- fall back to sync attempt
             try:
                 _dark_geom = well_dark_geometry_mirror(
                     text_or_events=_case_text, ctx=ctx
@@ -18146,7 +18156,7 @@ def well_assess_readiness(
                     "intact": "score >= 0.70",
                     "strained": "0.40 <= score < 0.70",
                     "degraded": "score < 0.40",
-                    "note": "Engineering thresholds — calibrate on held-out data",
+                    "note": "Engineering thresholds -- calibrate on held-out data",
                 },
                 "interpretation": _correction.get("interpretation", ""),
                 "confidence": 0.6,
@@ -18230,7 +18240,7 @@ def well_assess_readiness(
         aim["actionable_tests"] = _actionable_tests
 
     else:
-        # mode == "vitals" — no depth fields
+        # mode == "vitals" -- no depth fields
         thermodynamic = {"state": "NOT_REQUESTED", "source_tools": []}
         boundary = {"state": "NOT_REQUESTED", "source_tools": []}
         shadow = {"state": "NOT_REQUESTED", "source_tools": []}
@@ -18267,11 +18277,11 @@ def well_assess_readiness(
         )
     if case.get("stated_stop_but_continued"):
         interpretations.append(
-            "Verbal intention contradicted by behavior — boundary conflict (INT)"
+            "Verbal intention contradicted by behavior -- boundary conflict (INT)"
         )
     if case.get("reopened_count", 0) >= 3:
         interpretations.append(
-            f"Reopened same interpretation {case['reopened_count']} times — possible fixation (INT)"
+            f"Reopened same interpretation {case['reopened_count']} times -- possible fixation (INT)"
         )
 
     hypotheses.append(
@@ -18353,7 +18363,7 @@ def well_sense_substrate(
 ) -> dict[str, Any]:
     """Automated machine-to-human substrate sensing.
 
-    Infers human state from machine telemetry — no biometric devices needed.
+    Infers human state from machine telemetry -- no biometric devices needed.
     The VPS IS the sensor. Measures:
       - Human SSH sessions vs agent CLI processes vs machine services
       - Circadian phase (UTC+8 timezone-aware)
@@ -18539,7 +18549,7 @@ _TOOL_ANNOTATIONS: dict[str, dict[str, Any]] = {
 }
 
 
-# MCP Spec 2025-11-25 outputSchema — standard WELL response envelope
+# MCP Spec 2025-11-25 outputSchema -- standard WELL response envelope
 _WELL_OUTPUT_SCHEMA: dict[str, Any] = {
     "type": "object",
     "properties": {
@@ -18655,7 +18665,7 @@ class OriginValidationMiddleware:
 # so FEDERATION_TOOLS only contains the public (somatic) surface.
 
 _WELL_SOMATIC_MANIFEST: list[dict[str, object]] = [
-    # ── Canonical Public Surface (10 tools) — 2026-07-29 M-WELL activation ──
+    # ── Canonical Public Surface (10 tools) -- 2026-07-29 M-WELL activation ──
     # Only these 10 tools are exposed on the default public MCP wire.
     {"name": "well_classify_substrate", "axis": "identity", "expose": True},
     {"name": "well_trace_lineage", "axis": "trace", "expose": True},
@@ -18691,10 +18701,10 @@ _WELL_SOMATIC_MANIFEST: list[dict[str, object]] = [
 ]
 
 _WELL_AUTONOMIC_TOOLS: list[dict[str, object]] = [
-    # REMOVED from public surface — constitutional overlap with arifOS
+    # REMOVED from public surface -- constitutional overlap with arifOS
     {"name": "well_reflect_intelligence", "axis": "reflect", "expose": False},
     {"name": "well_anchor_evidence", "axis": "seal", "expose": False},
-    # NOTE: well_guard_dignity promoted to somatic (2026-05-16) — dignity protection
+    # NOTE: well_guard_dignity promoted to somatic (2026-05-16) -- dignity protection
     # is WELL's substrate responsibility, not arifOS constitutional routing.
     # Autonomic phase-1 tools (legacy but active)
     {"name": "well_get_health", "axis": "identity", "expose": False},
@@ -18811,7 +18821,7 @@ def _enforce_somatic_boundary(mcp_server: FastMCP) -> None:
 
     Instead of removing tools (which makes them uncallable), this patches
     the list_tools method to only return somatic (public) tools. All tools
-    remain callable via tools/call — they just don't appear in listings.
+    remain callable via tools/call -- they just don't appear in listings.
 
     Uses SOMATIC_TOOLS as single source of truth for the public surface.
     """
@@ -18828,7 +18838,7 @@ def _enforce_somatic_boundary(mcp_server: FastMCP) -> None:
 
     async def _filtered_list_tools(*args, **kwargs):
         result = await _original_list(*args, **kwargs)
-        # result is a list of Tool objects — filter to somatic only
+        # result is a list of Tool objects -- filter to somatic only
         filtered = [t for t in result if getattr(t, "name", "") in _somatic_set]
         return filtered
 
@@ -18842,14 +18852,14 @@ def _enforce_somatic_boundary(mcp_server: FastMCP) -> None:
     )
 
 
-# Server bootstrap — somatic boundary applied before uvicorn starts
+# Server bootstrap -- somatic boundary applied before uvicorn starts
 if (
     _os.environ.get("FEDERATION_SOMATIC_BOUNDARY", "0") == "1"
     or _os.environ.get("WELL_SOMATIC_BOUNDARY", "0") == "1"
 ):
     _enforce_somatic_boundary(mcp)
 
-# PR 6 — apply reflect-only boundary to the 13 canonical SOMATIC_TOOLS.
+# PR 6 -- apply reflect-only boundary to the 13 canonical SOMATIC_TOOLS.
 # This injects 4 reflect-only labels (telemetry, context, authority,
 # medical_status) on every canonical tool output, plus the F7 readiness
 # guard. F13: this labels authority; it does not grant it.
@@ -18867,7 +18877,7 @@ if _REFLECT_LOADED and _wrap_canonical_tools is not None:
         _wrapped_count = _wrap_canonical_tools(
             _canonical_tool_fns, canonical_names=SOMATIC_TOOLS
         )
-    except Exception as _e:  # pragma: no cover — defensive
+    except Exception as _e:  # pragma: no cover -- defensive
         _wrapped_count = 0
         import logging as _logging
 
@@ -18918,7 +18928,7 @@ if __name__ == "__main__":
     )
     app = _apply_public_host_allowlist(app)
 
-    # ── P6 helpers — domain identity anchors ──────────────────────
+    # ── P6 helpers -- domain identity anchors ──────────────────────
     def _compute_domain_law() -> str:
         return "SUBSTRATE_LAW"
 
@@ -18971,7 +18981,7 @@ if __name__ == "__main__":
             else "degraded"
         )
 
-        # ── Deployment identity (P0.0) — git commit of deployed runtime
+        # ── Deployment identity (P0.0) -- git commit of deployed runtime
         source_commit = "UNKNOWN"
         try:
             import subprocess as _sp
@@ -19000,7 +19010,7 @@ if __name__ == "__main__":
                 "role": "Body / Human Intelligence",
                 "authority": "REFLECT_ONLY",
                 "identity_hash": identity_hash,
-                # T5 2026-07-17 — apex_scalars + federation_geometry required.
+                # T5 2026-07-17 -- apex_scalars + federation_geometry required.
                 # Domain data readiness stays separate via honesty_* (MOCK/STALE).
                 "apex_scalars": {
                     "G": {"value": None, "status": "UNMEASURED"},
@@ -19021,14 +19031,14 @@ if __name__ == "__main__":
                 or "UNKNOWN",
                 "well_signal": classification[
                     "well_signal"
-                ],  # REFLECT_ONLY — never "verdict"
+                ],  # REFLECT_ONLY -- never "verdict"
                 "service": "well-mcp",
                 "version": "v2026.07.24",
                 # FEDERATION HANDSHAKE (canonical: arifOS/arifosmcp/schemas/federation_enums.py)
                 # See: /root/AAA/governance/FEDERATION_HANDSHAKE.md
                 "federation_schema_version": "2.0.0",
                 "tool_count": len(SOMATIC_TOOLS),
-                # substrate advisory fields — consumed by arifOS _read_well_substrate() HTTP fallback
+                # substrate advisory fields -- consumed by arifOS _read_well_substrate() HTTP fallback
                 "well_score": classification["well_score"],
                 "floors_violated": state.get("floors_violated") or [],
                 "truth_status": classification["truth_status"],
@@ -19036,17 +19046,17 @@ if __name__ == "__main__":
                 "has_verified_telemetry": classification["has_telemetry"],
                 "clarity": clarity,
                 "metrics": metrics,
-                # Dynamic freshness — computed from timestamp, not a static lie
+                # Dynamic freshness -- computed from timestamp, not a static lie
                 "freshness_band": classification["freshness_band"],
                 "state_age_hours": classification["state_age_hours"],
                 "environment": CURRENT_ENV,
-                # ── P6 — WELL identity anchor (SUBSTRATE_LAW, not constitutional) ───
+                # ── P6 -- WELL identity anchor (SUBSTRATE_LAW, not constitutional) ───
                 "domain_law": _compute_domain_law(),
                 "substrate_manifest_hash": _compute_substrate_manifest_hash(),
                 # Phase 2 hardening: standardized freshness + owner summary
                 "freshness": classification["freshness"],
                 "owner_summary": classification["owner_summary"],
-                # F2 honesty surface — permanent STALE/MOCK/SELF-REPORT banner
+                # F2 honesty surface -- permanent STALE/MOCK/SELF-REPORT banner
                 "honesty": classification.get("honesty"),
                 "honesty_banner": classification.get("honesty_banner"),
                 # Boundary disclaimer
@@ -19055,7 +19065,7 @@ if __name__ == "__main__":
         )
 
     async def _well_tools_handler(request):
-        """Federation tool discovery — flat tool registry with WELL danger metadata."""
+        """Federation tool discovery -- flat tool registry with WELL danger metadata."""
         all_tools = await mcp.list_tools()
         _DANGER_MAP = {
             "well_seal_vault": {"danger_level": "L3", "fail_posture": "fail-closed"},
@@ -19158,16 +19168,16 @@ if __name__ == "__main__":
         return JSONResponse(
             {
                 "organ": "WELL",
-                "role": "Body / Human Intelligence — Operator Cognitive Pressure Monitor",
-                "authority": "REFLECT_ONLY — WELL informs. arifOS judges. Arif decides.",
+                "role": "Body / Human Intelligence -- Operator Cognitive Pressure Monitor",
+                "authority": "REFLECT_ONLY -- WELL informs. arifOS judges. Arif decides.",
                 "schema": "well-federation-v2026.05.08",
                 "version": "v2026.07.24",
                 "count": len(tools),
                 "w0_invariant": "WELL holds a mirror, not a veto. Operator sovereignty is invariant.",
                 "danger_taxonomy": {
-                    "L3": "vault seal / floor check — fail-closed mandatory",
-                    "L2": "session / log — fail-open with constraint",
-                    "L1": "observe / health / readiness — fail-open with constraint",
+                    "L3": "vault seal / floor check -- fail-closed mandatory",
+                    "L2": "session / log -- fail-open with constraint",
+                    "L1": "observe / health / readiness -- fail-open with constraint",
                 },
                 "fail_open_constraint": _FAIL_OPEN_CONSTRAINT,
                 "tools": tools,
@@ -19190,11 +19200,11 @@ if __name__ == "__main__":
         )
 
     async def _mcp_server_card(request):
-        """MCP Server Card — SEP-2127 HTTP discovery document.
+        """MCP Server Card -- SEP-2127 HTTP discovery document.
 
         Updated 2026-06-06 per F13 SOVEREIGN ratification of
         GENESIS/004_WELL_13_CANON.md. WELL is the constitutional organ
-        for living substrate integrity — NOT a wellness coach, NOT a
+        for living substrate integrity -- NOT a wellness coach, NOT a
         fitness tracker, NOT a diagnostic psychiatrist.
 
         Canon: WELL = Body + dignity + vitality + boundaries + role
@@ -19204,7 +19214,7 @@ if __name__ == "__main__":
         return JSONResponse(
             {
                 "name": "well",
-                "displayName": "WELL — Human Substrate Integrity Organ",
+                "displayName": "WELL -- Human Substrate Integrity Organ",
                 "url": "https://well.arif-fazil.com/mcp",
                 "version": "2026.06.06",
                 "capabilities": {"tools": True, "resources": False, "prompts": False},
@@ -19213,7 +19223,7 @@ if __name__ == "__main__":
                     "Constitutional organ for living substrate integrity. "
                     "Tracks 13 signals (4 vital, 3 recovery, 3 function, "
                     "3 dignity/environment). Authority scope: reflect_only. "
-                    "WELL observes — it never issues final constitutional "
+                    "WELL observes -- it never issues final constitutional "
                     "verdicts. arifOS / 888_JUDGE is the sole constitutional "
                     "authority. See GENESIS/004_WELL_13_CANON.md for the "
                     "binding doctrine."
@@ -19227,10 +19237,10 @@ if __name__ == "__main__":
                     "rule": "Wearables may feed WELL. Wearables must not define WELL.",
                 },
                 "philosophical_locks": [
-                    "WELL_GODEL_LOCK.md — self-reference limit",
-                    "WELL_STRANGE_LOOP_GUARD.md — intervention changes measured",
-                    "WELL_ANTI_CALHOUN_GUARD.md — beautiful cage prevention",
-                    "WELL_LANGUAGE_PROTOCOL.md — sovereignty-preserving intervention",
+                    "WELL_GODEL_LOCK.md -- self-reference limit",
+                    "WELL_STRANGE_LOOP_GUARD.md -- intervention changes measured",
+                    "WELL_ANTI_CALHOUN_GUARD.md -- beautiful cage prevention",
+                    "WELL_LANGUAGE_PROTOCOL.md -- sovereignty-preserving intervention",
                 ],
                 "haram": [
                     "wellness_coach_mode",
@@ -19277,7 +19287,7 @@ if __name__ == "__main__":
 
     app.add_route("/sse", _well_sse_handler, methods=["GET"])
 
-    # 2026-06-29 — OAuth discovery stripped. Caddy now redirects
+    # 2026-06-29 -- OAuth discovery stripped. Caddy now redirects
     # well.arif-fazil.com/.well-known/oauth-* → mcp.arif-fazil.com
     # (one canonical door). WELL becomes an internal endpoint.
 
