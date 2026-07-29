@@ -1760,35 +1760,72 @@ class WellSessionValidationMiddleware(_MiddlewareBase):
             ot = "H_WELL"
             if tool_name.startswith(("well_assess_reliability", "well_check_repair")):
                 ot = "M_WELL"
-            elif tool_name.startswith(("well_assess_metabolism", "well_compute_metabolic",
-                                       "well_trace_lineage", "well_measure_gradient")):
+            elif tool_name.startswith(
+                (
+                    "well_assess_metabolism",
+                    "well_compute_metabolic",
+                    "well_trace_lineage",
+                    "well_measure_gradient",
+                )
+            ):
                 ot = "C_WELL"
-            elif tool_name.startswith(("well_classify_substrate", "well_detect_boundary")):
+            elif tool_name.startswith(
+                ("well_classify_substrate", "well_detect_boundary")
+            ):
                 ot = "G_WELL"
-            elif tool_name.startswith(("well_attest", "well_handoff", "well_registry",
-                                       "well_signal", "well_system")):
+            elif tool_name.startswith(
+                (
+                    "well_attest",
+                    "well_handoff",
+                    "well_registry",
+                    "well_signal",
+                    "well_system",
+                )
+            ):
                 ot = "FEDERATION"
 
             # Parse the tool's output JSON from content
-            tc = getattr(result, 'content', [])
-            if tc and hasattr(tc[0], 'text'):
+            tc = getattr(result, "content", [])
+            if tc and hasattr(tc[0], "text"):
                 import json as _json
-                domain = _json.loads(tc[0].text) if isinstance(tc[0].text, str) else tc[0].text
-                if isinstance(domain, dict) and '_well_conformance' not in domain:
+
+                domain = (
+                    _json.loads(tc[0].text)
+                    if isinstance(tc[0].text, str)
+                    else tc[0].text
+                )
+                if isinstance(domain, dict) and "_well_conformance" not in domain:
                     # Auto-detect claim state
                     cs = "HOLD"
-                    verdict = str(domain.get('verdict', domain.get('status', ''))).upper()
-                    truth = str(domain.get('truth_class', '')).upper()
-                    if truth in ('LIVE', 'OBSERVED', 'VERIFIED'):
-                        cs = 'OBSERVED'
-                    elif truth in ('INFERRED', 'DERIVED') or verdict in ('STABLE', 'OPTIMAL', 'READY'):
-                        cs = 'QUALIFIED'
-                    elif domain.get('ok') is True or verdict in ('REGISTRY_PASS', 'PASS', 'OK'):
-                        cs = 'HYPOTHESIS'
-                    wt = 'HYBRID' if domain.get('telemetry') or truth in ('LIVE', 'OBSERVED') else 'AI'
-                    domain['_well_conformance'] = {
-                        'claim_state': cs, 'witness_type': wt, 'organ_type': ot,
-                        'conformance_version': 'v1.0', 'conformant': True,
+                    verdict = str(
+                        domain.get("verdict", domain.get("status", ""))
+                    ).upper()
+                    truth = str(domain.get("truth_class", "")).upper()
+                    if truth in ("LIVE", "OBSERVED", "VERIFIED"):
+                        cs = "OBSERVED"
+                    elif truth in ("INFERRED", "DERIVED") or verdict in (
+                        "STABLE",
+                        "OPTIMAL",
+                        "READY",
+                    ):
+                        cs = "QUALIFIED"
+                    elif domain.get("ok") is True or verdict in (
+                        "REGISTRY_PASS",
+                        "PASS",
+                        "OK",
+                    ):
+                        cs = "HYPOTHESIS"
+                    wt = (
+                        "HYBRID"
+                        if domain.get("telemetry") or truth in ("LIVE", "OBSERVED")
+                        else "AI"
+                    )
+                    domain["_well_conformance"] = {
+                        "claim_state": cs,
+                        "witness_type": wt,
+                        "organ_type": ot,
+                        "conformance_version": "v1.0",
+                        "conformant": True,
                     }
                     tc[0].text = _json.dumps(domain)
         except Exception:
@@ -6144,7 +6181,7 @@ def _check_tool_surface() -> dict[str, Any]:
 
     Measures MCP-registered somatic tools against SOMATIC_TOOLS canonical set.
     registered_count: actual MCP tools/list count (8 after boundary enforcement).
-    canonical_count:  SOMATIC_TOOLS set size (8).
+    canonical_count:  SOMATIC_TOOLS set size (dynamic).
     surface_integrity: True when registered == canonical.
     """
     # Count MCP-registered somatic tools by checking what's exposed
@@ -10082,13 +10119,18 @@ def well_000_ops(
     """
     mode = mode.lower()
     if mode == "health":
-        res = well_get_health(ctx=ctx)
+        # 2026-07-29 F13 directive: Route through M-WELL machine telemetry
+        # instead of well_get_health() → state.json (human self-report).
+        # _well_assess_machine_telemetry() → machine_state.json is sensor-verified.
+        res = _well_assess_machine_telemetry()
         return _omega_well_output(
-            ok=res.get("verdict") in ("PASS", "WELL_PASS"),
+            ok=res.get("verdict") in ("PASS", "SEAL", "OPTIMAL", "STABLE"),
             stage="000_OPS",
             lane="AGI",
             mode="health",
-            verdict="SEAL" if res.get("verdict") in ("PASS", "WELL_PASS") else "HOLD",
+            verdict="SEAL"
+            if res.get("verdict") in ("PASS", "SEAL", "OPTIMAL", "STABLE")
+            else "HOLD",
             data=res,
         )
     if mode == "consent":
@@ -10161,15 +10203,19 @@ def _well_assess_machine_telemetry() -> dict[str, Any]:
     """Read machine_state.json and return M-WELL diagnostic verdict.
 
     Thresholds (with hysteresis — condition must persist across 3+ samples):
-      CPU:       idle < 20% for 3 samples → DEGRADED; idle < 5% → CRITICAL
+      CPU idle:  < 20% for 3 samples → DEGRADED; < 5% → CRITICAL
+      CPU PSI:   some_avg60 > 10% → WARNING; > 25% → DEGRADED; > 50% → CRITICAL
       Memory:    available < 10% of total → DEGRADED; < 5% → CRITICAL
       Swap:      used > 50% of total → DEGRADED; swap_out > 0 over last 3 → WARNING
       Disk:      used > 85% → DEGRADED; > 95% → CRITICAL
       I/O wait:  > 10% → DEGRADED; > 25% → CRITICAL
-      Pressure:  memory_some > 10 → DEGRADED; > 50 → CRITICAL
+      PSI mem:   some_avg60 > 10% → WARNING; > 25% → DEGRADED; > 50% → CRITICAL
+      PSI full:  any full_avg60 > 1% → CRITICAL (all tasks stalled simultaneously)
+      Entropy:   avail < 200 bits → WARNING; < 100 → CRITICAL
       Services:  any dead → DEGRADED; arifos/a-forge dead → CRITICAL
       Zombies:   > 5 → WARNING; > 20 → DEGRADED
-    """
+
+    2026-07-29: Added CPU PSI monitoring + entropy_avail per F13 hardening directive.
     import json as _json_mt
     from pathlib import Path as _PathMt
 
@@ -10237,6 +10283,21 @@ def _well_assess_machine_telemetry() -> dict[str, Any]:
     elif iowait > 10:
         warnings.append(f"I/O wait elevated: iowait={iowait}%")
 
+    # 2026-07-29 F13: CPU PSI monitoring — leading indicator of CPU starvation
+    cpu_psi_some = pressure.get("cpu_some_avg60", 0)
+    if cpu_psi_some > 50:
+        issues.append(f"CPU PSI CRITICAL: some_avg60={cpu_psi_some}% (tasks starved)")
+    elif _persists(lambda h: h.get("cpu_psi_some_avg60", 0) > 25):
+        issues.append(f"CPU PSI DEGRADED: some_avg60={cpu_psi_some}% sustained")
+    elif cpu_psi_some > 10:
+        warnings.append(f"CPU PSI elevated: some_avg60={cpu_psi_some}%")
+
+    # 2026-07-29 F13: PSI full pressure — all tasks stalled simultaneously
+    for res_name, psi_key in [("Memory", "memory_full_avg60"), ("I/O", "io_full_avg60")]:
+        full_val = pressure.get(psi_key, 0)
+        if full_val > 1:
+            issues.append(f"{res_name} FULL pressure CRITICAL: {psi_key}={full_val}% — all tasks stalled")
+
     mem_total = max(mem.get("total_kb", 1), 1)
     mem_avail_pct = mem.get("available_kb", 0) / mem_total * 100
     if _persists(lambda h: h.get("mem_available_kb", mem_total) / mem_total * 100 < 5):
@@ -10272,6 +10333,15 @@ def _well_assess_machine_telemetry() -> dict[str, Any]:
         issues.append(f"Memory pressure CRITICAL: {mem_pressure}")
     elif mem_pressure > 10:
         warnings.append(f"Memory pressure elevated: {mem_pressure}")
+
+    # 2026-07-29 F13: Kernel entropy monitoring —
+    # Below 200 bits causes TLS/SSH handshake slowdowns. Below 100 is critical.
+    entropy_avail = ms.get("entropy_avail", None)
+    if entropy_avail is not None:
+        if entropy_avail < 100:
+            issues.append(f"Entropy CRITICAL: {entropy_avail} bits — TLS/SSH operations may hang")
+        elif entropy_avail < 200:
+            warnings.append(f"Entropy LOW: {entropy_avail} bits — cryptographic operations may be slow")
 
     dead_services = [k for k, v in services.items() if not v.get("active")]
     if dead_services:
@@ -10354,6 +10424,487 @@ def _telemetry_age_seconds(ms: dict) -> float:
         return max(0, _time.time() - ts)
     except Exception:
         return -1
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# M_WELL FIRST-CLASS TOOLS — Machine Substrate Diagnostics (forged 2026-07-29)
+# ═══════════════════════════════════════════════════════════════════════════════
+# These tools read machine_state.json (cron-collected /proc telemetry every 5 min)
+# and return DIAGNOSIS + ACTIONABLE RECOMMENDATIONS, not just state labels.
+# ADVISORY_ONLY — WELL mirrors, never mutates.
+
+
+@mcp.tool()
+def well_machine_diagnose(
+    ctx: Context | None = None,
+) -> dict[str, Any]:
+    """M-WELL MACHINE DIAGNOSTIC -- Full VPS health with actionable recommendations.
+
+    Reads machine_state.json (cron-collected /proc telemetry every 5 min).
+    Returns: CPU, RAM, swap, disk, PSI pressure, services, Docker, zombies.
+    Includes per-issue RECOMMENDATIONS suitable for A-FORGE routing.
+
+    This is the CANONICAL M_WELL diagnostic -- use this instead of
+    well_assess_reliability for VPS optimization workflows.
+    """
+    import json as _json_md
+    from pathlib import Path as _PathMd
+
+    state_path = _PathMd("/root/WELL/machine_state.json")
+    if not state_path.exists():
+        return _omega_well_output(
+            ok=False,
+            stage="M_DIAGNOSE",
+            lane="AGI",
+            verdict="HOLD",
+            error="machine_state.json not found — telemetry collector may be down",
+            recommendation="Run: python3 /root/WELL/scripts/machine_telemetry.py",
+        )
+
+    try:
+        ms = _json_md.loads(state_path.read_text())
+    except (_json_md.JSONDecodeError, OSError) as exc:
+        return _omega_well_output(
+            ok=False,
+            stage="M_DIAGNOSE",
+            lane="AGI",
+            verdict="HOLD",
+            error=f"machine_state.json corrupt: {exc}",
+        )
+
+    age_s = _telemetry_age_seconds(ms)
+    cpu = ms.get("cpu", {})
+    mem = ms.get("memory", {})
+    pressure = ms.get("pressure", {})
+    disk = ms.get("disk", {})
+    services = ms.get("services", {})
+    docker_list = ms.get("docker", [])
+    history = ms.get("history", [])
+    recent = history[-3:] if len(history) >= 3 else history
+    samples = len(recent)
+
+    # ── Build diagnostic sections with recommendations ──
+    recommendations: list[dict[str, str]] = []
+    issues: list[str] = []
+    severity: str = "GREEN"
+
+    # CPU
+    cpu_count = os.cpu_count() or 4
+    load_1m = cpu.get("load_1m", 0)
+    load_ratio = load_1m / cpu_count
+    iowait = cpu.get("iowait_pct", 0)
+    idle = cpu.get("idle_pct", 100)
+
+    cpu_status = {
+        "load_1m": load_1m,
+        "load_per_core": round(load_ratio, 2),
+        "idle_pct": idle,
+        "iowait_pct": iowait,
+        "steal_pct": cpu.get("steal_pct", 0),
+        "cores": cpu_count,
+    }
+
+    if load_ratio > 4 or iowait > 20:
+        severity = "AMBER"
+        issues.append(
+            f"CPU strained: load={load_1m:.1f} ({load_ratio:.1f}/core) iowait={iowait}%"
+        )
+        recommendations.append(
+            {
+                "issue": "High CPU load or I/O wait",
+                "action": "Identify top processes: ps aux --sort=-%cpu | head -10",
+                "blast_radius": "LOW",
+                "reversible": True,
+                "route_to": "A-FORGE forge_shell",
+            }
+        )
+    elif load_ratio > 2:
+        issues.append(f"CPU moderately loaded: {load_ratio:.1f}/core")
+
+    # Memory
+    total_kb = max(mem.get("total_kb", 1), 1)
+    avail_kb = mem.get("available_kb", 0)
+    avail_pct = avail_kb / total_kb * 100
+    swap_used_kb = mem.get("swap_used_kb", 0)
+    swap_total_kb = max(mem.get("swap_total_kb", 1), 1)
+    swap_pct = swap_used_kb / swap_total_kb * 100
+    mem_psi = max(
+        pressure.get("memory_some_avg10", 0),
+        pressure.get("memory_full_avg10", 0),
+    )
+
+    mem_status = {
+        "total_gb": round(total_kb / 1024**2, 1),
+        "available_gb": round(avail_kb / 1024**2, 1),
+        "available_pct": round(avail_pct, 1),
+        "swap_used_gb": round(swap_used_kb / 1024**2, 1),
+        "swap_total_gb": round(swap_total_kb / 1024**2, 1),
+        "swap_used_pct": round(swap_pct, 1),
+        "memory_psi_avg10": mem_psi,
+    }
+
+    if swap_pct > 30 and mem_psi < 5:
+        severity = "AMBER"
+        issues.append(
+            f"Swap {swap_pct:.0f}% used ({swap_used_kb / 1024**2:.1f}GB) but PSI={mem_psi:.1f} — safe to recover"
+        )
+        recommendations.append(
+            {
+                "issue": f"Stale swap ({swap_pct:.0f}%, {swap_used_kb / 1024**2:.1f}GB) with zero memory pressure",
+                "action": "swapoff -a && swapon -a  # PSI confirms safe — no memory thrashing",
+                "blast_radius": "LOW",
+                "reversible": True,
+                "route_to": "A-FORGE forge_shell",
+                "precondition": f"mem_psi_avg10={mem_psi:.1f} < 5 — confirmed safe",
+            }
+        )
+    elif swap_pct > 50:
+        severity = "RED"
+        issues.append(f"Swap CRITICAL: {swap_pct:.0f}% used, PSI={mem_psi:.1f}")
+        recommendations.append(
+            {
+                "issue": f"Critical swap ({swap_pct:.0f}%) with memory pressure",
+                "action": "Kill top memory consumers first: ps aux --sort=-%mem | head -5. Then swapoff -a && swapon -a.",
+                "blast_radius": "MEDIUM",
+                "reversible": True,
+                "route_to": "888_HOLD — requires arif_judge before killing processes",
+            }
+        )
+
+    if avail_pct < 10:
+        severity = "RED"
+        issues.append(f"Memory CRITICAL: {avail_pct:.0f}% available")
+
+    # Disk
+    disk_pct = disk.get("root_used_pct", 0)
+    disk_free_gb = disk.get("root_free_gb", 0)
+    disk_status = {"used_pct": disk_pct, "free_gb": disk_free_gb}
+
+    if disk_pct > 85:
+        severity = "AMBER"
+        issues.append(f"Disk {disk_pct}% used ({disk_free_gb}GB free)")
+        recommendations.append(
+            {
+                "issue": f"Disk at {disk_pct}%",
+                "action": "docker system prune -a --volumes (CAREFUL: destroys unused images). Safer: journalctl --vacuum-time=7d, apt-get clean, snap list --all | awk '/disabled/{print $1, $3}' | xargs -r snap remove",
+                "blast_radius": "HIGH for prune -a, LOW for journal/snap",
+                "reversible": False,
+                "route_to": "888_HOLD for docker system prune -a",
+            }
+        )
+
+    # PSI Pressure
+    psi_status = {
+        "cpu_some_avg10": pressure.get("cpu_some_avg10", 0),
+        "io_some_avg10": pressure.get("io_some_avg10", 0),
+        "memory_some_avg10": pressure.get("memory_some_avg10", 0),
+        "memory_full_avg10": pressure.get("memory_full_avg10", 0),
+    }
+
+    # Services
+    service_list = []
+    dead_services = []
+    for name, svc in sorted(services.items()):
+        active = svc.get("active", False)
+        restarts = svc.get("restart_count", 0)
+        service_list.append(
+            {
+                "name": name,
+                "active": active,
+                "restart_count": restarts,
+            }
+        )
+        if not active:
+            dead_services.append(name)
+            severity = "AMBER"
+            issues.append(f"Service DOWN: {name}")
+            recommendations.append(
+                {
+                    "issue": f"{name}.service is not active",
+                    "action": f"systemctl status {name}.service && journalctl -u {name}.service --no-pager -n 30",
+                    "blast_radius": "LOW",
+                    "reversible": True,
+                    "route_to": "A-FORGE forge_shell",
+                }
+            )
+        elif restarts > 5:
+            issues.append(f"Service {name}: {restarts} restarts (unstable)")
+
+    # Docker
+    docker_status = []
+    unhealthy_containers = []
+    for c in docker_list:
+        name = c.get("name", "?")
+        health = c.get("health_status", "unknown")
+        docker_status.append(
+            {"name": name, "health": health, "status": c.get("status", "?")}
+        )
+        if health == "unhealthy":
+            unhealthy_containers.append(name)
+            severity = "AMBER"
+            issues.append(f"Docker UNHEALTHY: {name}")
+            recommendations.append(
+                {
+                    "issue": f"Docker container {name} is unhealthy",
+                    "action": f"docker logs --tail 50 {name} && docker inspect {name} | jq '.[0].State.Health'",
+                    "blast_radius": "LOW",
+                    "reversible": True,
+                    "route_to": "A-FORGE forge_shell",
+                }
+            )
+
+    # ── Verdict ──
+    if severity == "RED":
+        verdict = "HOLD"
+        overall = "Machine requires immediate attention"
+    elif severity == "AMBER":
+        verdict = "REDUCE_LOAD"
+        overall = f"Machine operational but has {len(issues)} issues to address"
+    else:
+        verdict = "PROCEED"
+        overall = "Machine is healthy — no issues detected"
+
+    return _omega_well_output(
+        ok=(severity != "RED"),
+        stage="M_DIAGNOSE",
+        lane="AGI",
+        verdict=verdict,
+        data={
+            "overall": overall,
+            "severity": severity,
+            "verdict": verdict,
+            "telemetry_age_seconds": round(age_s, 1),
+            "telemetry_freshness": "FRESH"
+            if age_s < 600
+            else ("STALE" if age_s < 1800 else "EXPIRED"),
+            "samples_for_hysteresis": samples,
+            "issues": issues,
+            "recommendations": recommendations,
+            "recommendations_count": len(recommendations),
+            "cpu": cpu_status,
+            "memory": mem_status,
+            "disk": disk_status,
+            "pressure": psi_status,
+            "services": service_list,
+            "services_active": sum(1 for s in service_list if s["active"]),
+            "services_total": len(service_list),
+            "dead_services": dead_services,
+            "docker": docker_status,
+            "docker_healthy": sum(1 for d in docker_status if d["health"] == "healthy"),
+            "docker_unhealthy": unhealthy_containers,
+            "docker_total": len(docker_status),
+        },
+    )
+
+
+@mcp.tool()
+def well_machine_recommend(
+    issue_type: str = "swap",
+    ctx: Context | None = None,
+) -> dict[str, Any]:
+    """M-WELL RECOMMENDATION ENGINE — Get specific fix commands for machine issues.
+
+    Maps a diagnosis to concrete shell commands with risk assessment.
+    Modes: swap | memory | disk | service | docker | zombie | all
+
+    Returns commands suitable for A-FORGE forge_shell execution.
+    ADVISORY_ONLY — WELL does not execute.
+    """
+    import json as _json_mr
+    from pathlib import Path as _PathMr
+
+    state_path = _PathMr("/root/WELL/machine_state.json")
+    ms = {}
+    if state_path.exists():
+        try:
+            ms = _json_mr.loads(state_path.read_text())
+        except Exception:
+            pass
+
+    mem = ms.get("memory", {})
+    swap_pct = 0
+    swap_total = max(mem.get("swap_total_kb", 1), 1)
+    swap_used = mem.get("swap_used_kb", 0)
+    swap_pct = swap_used / swap_total * 100
+
+    pressure = ms.get("pressure", {})
+    mem_psi = max(
+        pressure.get("memory_some_avg10", 0),
+        pressure.get("memory_full_avg10", 0),
+    )
+
+    RECOMMENDATIONS = {
+        "swap": {
+            "condition": f"swap at {swap_pct:.0f}%, PSI={mem_psi:.1f}",
+            "safe": swap_pct > 10 and mem_psi < 5,
+            "commands": [
+                {
+                    "command": "swapoff -a && swapon -a",
+                    "description": "Cycle swap — drains all stale swap pages back to RAM. Safe only when PSI < 5.",
+                    "risk": "LOW" if mem_psi < 5 else "HIGH",
+                    "precondition": f"mem_psi_avg10={mem_psi:.1f} must be < 5",
+                    "blast_radius": "LOW",
+                    "reversible": True,
+                },
+                {
+                    "command": "sync && echo 3 > /proc/sys/vm/drop_caches",
+                    "description": "Drop page cache, dentries, and inodes — frees RAM for swap recovery.",
+                    "risk": "LOW",
+                    "blast_radius": "LOW",
+                    "reversible": True,
+                },
+            ],
+        },
+        "memory": {
+            "commands": [
+                {
+                    "command": "ps aux --sort=-%mem | head -12",
+                    "description": "Identify top memory consumers before killing anything.",
+                    "risk": "NONE",
+                    "blast_radius": "NONE",
+                    "reversible": True,
+                },
+                {
+                    "command": "sync && echo 3 > /proc/sys/vm/drop_caches",
+                    "description": "Drop page cache to free RAM.",
+                    "risk": "LOW",
+                    "blast_radius": "LOW",
+                    "reversible": True,
+                },
+            ],
+        },
+        "disk": {
+            "commands": [
+                {
+                    "command": "journalctl --vacuum-time=3d",
+                    "description": "Vacuum systemd journals older than 3 days.",
+                    "risk": "LOW",
+                    "blast_radius": "LOW",
+                    "reversible": False,
+                },
+                {
+                    "command": "apt-get clean && apt-get autoremove --purge -y",
+                    "description": "Clean APT package cache and remove unused packages.",
+                    "risk": "LOW",
+                    "blast_radius": "LOW",
+                    "reversible": False,
+                },
+                {
+                    "command": "docker system prune -f",
+                    "description": "Remove stopped containers, unused networks, dangling images.",
+                    "risk": "MEDIUM",
+                    "blast_radius": "MEDIUM",
+                    "reversible": False,
+                },
+                {
+                    "command": 'snap list --all | awk \'/disabled/{print $1, $3}\' | while read name rev; do snap remove "$name" --revision="$rev"; done',
+                    "description": "Remove disabled snap revisions (can free GBs).",
+                    "risk": "LOW",
+                    "blast_radius": "LOW",
+                    "reversible": False,
+                },
+            ],
+        },
+        "service": {
+            "commands": [
+                {
+                    "command": "systemctl --failed",
+                    "description": "List all failed systemd services.",
+                    "risk": "NONE",
+                    "blast_radius": "NONE",
+                    "reversible": True,
+                },
+                {
+                    "command": "journalctl -u <service> --no-pager -n 50",
+                    "description": "Read last 50 log lines for a failed service.",
+                    "risk": "NONE",
+                    "blast_radius": "NONE",
+                    "reversible": True,
+                },
+                {
+                    "command": "systemctl restart <service>",
+                    "description": "Restart a failed service. Only after diagnosing root cause.",
+                    "risk": "MEDIUM",
+                    "blast_radius": "MEDIUM",
+                    "reversible": True,
+                },
+            ],
+        },
+        "docker": {
+            "commands": [
+                {
+                    "command": "docker ps -a --filter 'status=exited' --format '{{.Names}}'",
+                    "description": "List exited containers for cleanup.",
+                    "risk": "NONE",
+                    "blast_radius": "NONE",
+                    "reversible": True,
+                },
+                {
+                    "command": "docker logs --tail 50 <container>",
+                    "description": "Read last 50 log lines from a container.",
+                    "risk": "NONE",
+                    "blast_radius": "NONE",
+                    "reversible": True,
+                },
+                {
+                    "command": "docker restart <container>",
+                    "description": "Restart a container. Safe — preserves volumes and state.",
+                    "risk": "LOW",
+                    "blast_radius": "LOW",
+                    "reversible": True,
+                },
+            ],
+        },
+        "zombie": {
+            "commands": [
+                {
+                    "command": "ps aux | awk '$8 ~ /Z/ {print $2, $11}'",
+                    "description": "List zombie processes by PID and name.",
+                    "risk": "NONE",
+                    "blast_radius": "NONE",
+                    "reversible": True,
+                },
+            ],
+        },
+    }
+
+    if issue_type == "all":
+        return _omega_well_output(
+            ok=True,
+            stage="M_RECOMMEND",
+            lane="AGI",
+            verdict="PROCEED",
+            data={
+                "recommendations": RECOMMENDATIONS,
+                "note": "ADVISORY_ONLY — route to A-FORGE forge_shell for execution",
+                "w0": "WELL recommends. arifOS judges. A-FORGE executes.",
+            },
+        )
+
+    recs = RECOMMENDATIONS.get(issue_type)
+    if recs is None:
+        return _omega_well_output(
+            ok=False,
+            stage="M_RECOMMEND",
+            lane="AGI",
+            verdict="HOLD",
+            error=f"Unknown issue_type '{issue_type}'. Valid: {list(RECOMMENDATIONS.keys())}",
+        )
+
+    return _omega_well_output(
+        ok=True,
+        stage="M_RECOMMEND",
+        lane="AGI",
+        verdict="PROCEED",
+        data={
+            "issue_type": issue_type,
+            "condition": recs.get("condition", "N/A"),
+            "safe_to_proceed": recs.get("safe", True),
+            "commands": recs["commands"],
+            "note": "ADVISORY_ONLY — route to A-FORGE forge_shell for execution",
+            "w0": "WELL recommends. arifOS judges. A-FORGE executes.",
+        },
+    )
 
 
 # ── ALIAS_REGISTRY — Ω-WELL stage aliases → canonical tool mappings ────────────
@@ -12738,7 +13289,6 @@ if __name__ == "__main__":
     # See /root/AAA/docs/AGENT_IDENTITY.md and /root/AAA/UNIFIED_AGENT.md.
     # Caddy routes /.well-known/agent.json → AAA for federation discovery.
     # WELL retains: /health, /ready, /tools, /api/build-info, MCP, OAuth.
-
 
     # Server start moved to end of file so canonical tools are registered before uvicorn blocks
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -16945,8 +17495,8 @@ def well_classify_state(
 #   well_guard_dignity         → CRITIQUE axis / meaning (arifOS 666_HEART)
 #   well_anchor_evidence       → SEAL axis / vault (arifOS 999_VAULT)
 SOMATIC_TOOLS = {
-    # ── Canonical Public Surface (8 tools) — 2026-07-17 registry drift fix ──
-    # Only these 8 tools are exposed on the default public MCP wire.
+    # ── Canonical Public Surface (10 tools) — 2026-07-29 M-WELL activation ──
+    # Only these 10 tools are exposed on the default public MCP wire.
     # All other @mcp.tool() functions remain callable internally but are
     # removed from the public surface by _enforce_somatic_boundary().
     "well_classify_substrate",
@@ -16957,10 +17507,13 @@ SOMATIC_TOOLS = {
     "well_assess_reliability",
     "well_guard_dignity",
     "well_registry_status",
+    "well_machine_diagnose",  # M-WELL: full VPS diagnostic with recommendations
+    "well_machine_recommend",  # M-WELL: concrete fix commands with risk assessment
 }
 # NOTE: well_registry_status is the canonical blueprint format tool.
 # well_system_registry_status is deprecated (internal only, no MCP registration).
-# diagnostic tools (no @mcp.tool decorator). Not part of public MCP surface.
+# Added 2026-07-29: well_machine_diagnose + well_machine_recommend (F13 directive).
+# These bridge M-WELL machine telemetry into the governed forge_shell workflow.
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -18102,8 +18655,8 @@ class OriginValidationMiddleware:
 # so FEDERATION_TOOLS only contains the public (somatic) surface.
 
 _WELL_SOMATIC_MANIFEST: list[dict[str, object]] = [
-    # ── Canonical Public Surface (8 tools) — 2026-07-17 registry drift fix ──
-    # Only these 8 tools are exposed on the default public MCP wire.
+    # ── Canonical Public Surface (10 tools) — 2026-07-29 M-WELL activation ──
+    # Only these 10 tools are exposed on the default public MCP wire.
     {"name": "well_classify_substrate", "axis": "identity", "expose": True},
     {"name": "well_trace_lineage", "axis": "trace", "expose": True},
     {"name": "well_assess_homeostasis", "axis": "vitality", "expose": True},
@@ -18112,6 +18665,8 @@ _WELL_SOMATIC_MANIFEST: list[dict[str, object]] = [
     {"name": "well_assess_reliability", "axis": "vitality", "expose": True},
     {"name": "well_guard_dignity", "axis": "critique", "expose": True},
     {"name": "well_registry_status", "axis": "identity", "expose": True},
+    {"name": "well_machine_diagnose", "axis": "vitality", "expose": True},
+    {"name": "well_machine_recommend", "axis": "repair", "expose": True},
     # ── Demoted to autonomic (callable internally, NOT on public wire) ──
     {"name": "well_health_check", "axis": "identity", "expose": False},
     {"name": "well_detect_boundary", "axis": "boundary", "expose": False},
@@ -18727,7 +19282,6 @@ if __name__ == "__main__":
     # (one canonical door). WELL becomes an internal endpoint.
 
     # A2A consolidation 2026-07-15: local card removed; canonical card owned by AAA/AGENT_IDENTITY.
-
 
     # ── MCP Session Enforcement Middleware (strict-organ doctrine) ─────
     # Domain operations require a valid Mcp-Session-Id. Always.

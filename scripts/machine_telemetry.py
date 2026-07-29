@@ -374,6 +374,9 @@ def collect() -> dict:
         "services": service_stats(),
         "docker": docker_stats(),
         "zombies": zombie_count(),
+        "entropy_avail": int(
+            read_file("/proc/sys/kernel/random/entropy_avail").strip() or "0"
+        ),
         "source": "/proc + systemctl + docker ps",
         "truth_status": "OBSERVED",
         "confidence": 0.95,
