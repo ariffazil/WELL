@@ -77,6 +77,122 @@ def get_band(score: int) -> tuple:
     return "UNKNOWN", "Score out of range"
 
 
+def probe_human() -> dict:
+    """H-WELL: Read human readiness from WELL organ (self-report allowed, HR3).
+
+    Constitutional:
+      HR1 — no biometric invention from this probe alone
+      HR3 — operator self-report may supply H when sensor telemetry is absent
+      F2  — label evidence_class SELF_REPORT | SENSOR | UNKNOWN
+
+    Returns {score, state, signals}. score is None only when WELL is unreachable
+    or returns no usable human field (true INSUFFICIENT_DATA).
+    """
+    signals: dict = {"evidence_class": "UNKNOWN"}
+    try:
+        r = subprocess.run(
+            ["curl", "-sf", "--max-time", "5", "http://127.0.0.1:18083/health"],
+            capture_output=True,
+            text=True,
+            timeout=8,
+        )
+        if r.returncode != 0 or not r.stdout.strip():
+            signals["probe"] = "WELL_UNREACHABLE"
+            return {"score": None, "state": "UNKNOWN", "signals": signals}
+
+        data = json.loads(r.stdout)
+        honesty = data.get("honesty") or {}
+        is_sensor = bool(honesty.get("is_sensor_verified") or data.get("has_verified_telemetry"))
+        is_self = bool(honesty.get("is_self_report") or data.get("truth_status") == "OPERATOR_REPORTED")
+        signals["evidence_class"] = "SENSOR" if is_sensor else ("SELF_REPORT" if is_self else "DERIVED")
+        signals["well_status"] = data.get("status")
+        signals["well_signal"] = data.get("well_signal")
+        signals["honesty_code"] = honesty.get("code")
+        signals["freshness"] = (data.get("freshness") or {}).get("status")
+
+        # Prefer explicit W³ human strength (0–1), then well_score (0–100)
+        h_strength = None
+        w3 = (data.get("apex_scalars") or {}).get("W3") or {}
+        strengths = w3.get("strengths") or {}
+        if strengths.get("H") is not None:
+            try:
+                h_strength = float(strengths["H"])
+                signals["h_strength"] = h_strength
+            except (TypeError, ValueError):
+                pass
+
+        well_score = data.get("well_score")
+        if well_score is not None:
+            try:
+                signals["well_score"] = round(float(well_score), 1)
+            except (TypeError, ValueError):
+                well_score = None
+
+        metrics = (data.get("metrics") or {}).get("cognitive") or {}
+        clarity = metrics.get("clarity", data.get("clarity"))
+        fatigue = metrics.get("decision_fatigue")
+        if clarity is not None:
+            signals["clarity"] = clarity
+        if fatigue is not None:
+            signals["decision_fatigue"] = fatigue
+
+        if h_strength is None and well_score is None and clarity is None:
+            signals["probe"] = "NO_HUMAN_FIELDS"
+            return {"score": None, "state": "UNKNOWN", "signals": signals}
+
+        # Compose score 0–100 (not a diagnosis — readiness index only)
+        if h_strength is not None:
+            score = int(round(max(0.0, min(1.0, h_strength)) * 100))
+        elif well_score is not None:
+            score = int(round(max(0.0, min(100.0, float(well_score)))))
+        else:
+            score = int(round(max(0.0, min(10.0, float(clarity))) * 10))
+
+        # Soft adjustments from cognitive self-report (bounded)
+        try:
+            if fatigue is not None and float(fatigue) >= 8.0:
+                score = max(0, score - 15)
+                signals["fatigue_penalty"] = 15
+            if clarity is not None and float(clarity) <= 4.0:
+                score = max(0, score - 10)
+                signals["clarity_penalty"] = 10
+        except (TypeError, ValueError):
+            pass
+
+        # Stale self-report: keep score but mark recovery posture
+        freshness = (data.get("freshness") or {}).get("status", "")
+        age_h = data.get("state_age_hours")
+        if freshness in ("stale", "expired") or (isinstance(age_h, (int, float)) and age_h > 12):
+            score = max(0, score - 10)
+            signals["stale_penalty"] = 10
+
+        score = max(0, min(100, score))
+
+        if score >= 80:
+            state = "READY"
+        elif score >= 70:
+            state = "STABLE"
+        elif score >= 50:
+            state = "BELOW_BASELINE"
+        elif score >= 30:
+            state = "STRAINED"
+        elif score >= 15:
+            state = "DEGRADED"
+        else:
+            state = "CRITICAL"
+
+        # Self-report never claims READY above STABLE without sensor (HR1 humility)
+        if not is_sensor and state == "READY":
+            state = "STABLE"
+            signals["capped_for_self_report"] = True
+
+        return {"score": score, "state": state, "signals": signals}
+
+    except Exception as e:
+        signals["probe_error"] = type(e).__name__
+        return {"score": None, "state": "UNKNOWN", "signals": signals}
+
+
 def probe_machine() -> dict:
     """M-WELL: Probe VPS health. Returns {score, state, signals}."""
     signals = {}
@@ -269,8 +385,17 @@ def compute_vps(
 ) -> dict:
     """Compute VPS with weakest-dimension override."""
 
-    # If any dimension is UNKNOWN, VPS is UNKNOWN
+    # If any dimension is UNKNOWN, VPS is UNKNOWN (do not invent)
     if any(s is None for s in [h_score, m_score, g_score, c_score]):
+        missing = []
+        if h_score is None:
+            missing.append("H_WELL")
+        if m_score is None:
+            missing.append("M_WELL")
+        if g_score is None:
+            missing.append("G_WELL")
+        if c_score is None:
+            missing.append("C_WELL")
         return {
             "score": None,
             "band": "UNKNOWN",
@@ -282,7 +407,7 @@ def compute_vps(
                 "governance": {"score": g_score, "state": g_state},
                 "coupling": {"score": c_score, "state": c_state},
             },
-            "primary_cause": "Insufficient evidence — H_WELL is UNKNOWN",
+            "primary_cause": f"Insufficient evidence — {', '.join(missing)} UNKNOWN",
             "evidence_confidence": "Low",
         }
 
@@ -397,10 +522,10 @@ def format_morning_brief(vps: dict) -> str:
 
 def main():
     """Compute VPS and output as JSON + formatted brief."""
-    # HR1: H = UNKNOWN until real human evidence exists
-    # No biometric data available → H is UNKNOWN
-    h_score = None
-    h_state = "UNKNOWN"
+    # H-WELL: live WELL organ (self-report OK under HR3; still UNKNOWN if empty)
+    h = probe_human()
+    h_score = h["score"]
+    h_state = h["state"]
 
     # M-WELL: Probe machine
     m = probe_machine()
@@ -422,7 +547,19 @@ def main():
         h_score, m_score, g_score, c_score, h_state, m_state, g_state, c_state
     )
 
+    # Evidence confidence: self-report is Medium, sensor High, missing Low
+    ev = (h.get("signals") or {}).get("evidence_class", "UNKNOWN")
+    if h_score is None:
+        vps["evidence_confidence"] = "Low"
+    elif ev == "SENSOR":
+        vps["evidence_confidence"] = "High"
+    elif ev == "SELF_REPORT":
+        vps["evidence_confidence"] = "Medium"
+    else:
+        vps["evidence_confidence"] = vps.get("evidence_confidence", "Medium")
+
     # Add raw signals
+    vps["human_signals"] = h["signals"]
     vps["machine_signals"] = m["signals"]
     vps["governance_signals"] = g["signals"]
     vps["coupling_signals"] = c["signals"]
