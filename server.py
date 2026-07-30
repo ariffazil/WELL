@@ -19060,7 +19060,9 @@ if __name__ == "__main__":
         # Prior broken model: W³ = h × a × e with h+a+e=1.0 → max = 1/27 ≈ 0.037.
         # That made W³ ≥ 0.95 mathematically impossible.
         _H_quality = max(0.0, min(1.0, (clarity or 5.0) / 10.0))
-        _A_quality = max(0.0, min(1.0, classification["well_score"] / 100.0))
+        _A_quality = max(
+            0.0, min(1.0, (classification.get("well_score") or 50.0) / 100.0)
+        )
         _E_quality_raw = _load_machine_telemetry_quality()
         _E_quality = max(0.3, min(1.0, _E_quality_raw))
         try:
