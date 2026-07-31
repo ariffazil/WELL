@@ -1,265 +1,75 @@
 <!-- SOT-MANIFEST
+owner: Muhammad Arif bin Fazil (F13 SOVEREIGN)
+last_verified: 2026-07-31T12:50:00Z
 federation_release: v2026.07.31
-last_verified: 2026-07-31T03:31:00Z
-live_commit: 7bd53cf
-port: 18083
-mcp_tools_live: 8
-authority: REFLECT_ONLY — never diagnose, never adjudicate
-health_status: DEGRADED (apex_scalars UNMEASURED — known, non-blocking)
-truth_rule: tools/list + /health beat any static count in prose
+live_commit: 60357b0
+live_port: 18083 (degraded — sovereign biometric state unknown)
+tools_loaded: 10
+canonical_tools: 10
+truth_rule: live :18083/health + tools/list beat any static count in prose
+owner_summary: YELLOW (sovereign_state_unknown, biometric_state_fresh_but_insufficient)
 -->
 
-**SOT:** 2026-07-28 | **seal_seq:** `7bd53cf`
+# 🫀 WELL — Human & Machine Readiness Reflection
 
-[![Agentic CI](https://github.com/ariffazil/well/actions/workflows/agentic-ci.yml/badge.svg?branch=main)](https://github.com/ariffazil/well/actions/workflows/agentic-ci.yml)
-[![🫀 REFLECT](https://img.shields.io/badge/%F0%9F%AB%80%20REFLECT-8%20tools-purple)](https://well.arif-fazil.com/mcp)
-[![Federation](https://img.shields.io/badge/Federation-v2026.07.28-0a7b83)](https://arifos.arif-fazil.com)
-[![License](https://img.shields.io/github/license/ariffazil/well?label=License)](LICENSE)
+[![Federation](https://img.shields.io/badge/Federation-v2026.07.31-0a7b83)](https://arifos.arif-fazil.com)
+[![🫀 WELL](https://img.shields.io/badge/%F0%9F%AB%80%20WELL-10%20Tools-coral)](https://well.arif-fazil.com/mcp)
+[![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](./LICENSE)
 
-# 🫀 WELL — Substrate Readiness Intelligence
+**WELL** is the universal substrate vitality mirror for the arifOS Federation. It reflects human and machine readiness — fatigue, dignity, consent, system health, and coupled risk. It does not diagnose, command, or override human choice.
 
-> **WELL reflects whether the substrate is ready. It never diagnoses.**
-> **Human testimony remains authoritative. Sensors are evidence, not truth.**
-> **DITEMPA BUKAN DIBERI**
+## The Boundary
 
----
-
-## TL;DR — Three Audiences
-
-**For human operators (Arif):** WELL is your readiness mirror — sleep, fatigue, cognitive clarity, dignity boundaries. It reflects your state. You interpret it. Never let WELL readings override what you know about yourself. [§1](#1-what-well-is)
-
-**For AI agents:** Before any irreversible action, probe WELL. GREEN → proceed. YELLOW → caution. RED → HOLD. Never treat WELL output as medical advice. [§8](#8-for-ai-agents)
-
-**For institutions:** WELL is the REFLECT_ONLY organ — it measures readiness across human, machine, and institutional substrates. Zero diagnostic authority. [§9](#9-for-institutions)
-
----
-
-## 1. What WELL Is
-
-WELL is the **substrate readiness organ** of the arifOS Federation. It reflects the condition of whatever is carrying the load — whether human, machine, institution, or agent — before irreversible action occurs.
-
-Many failures are not caused by bad geology or bad economics. They occur because the human, machine, or institution executing the decision was not ready. WELL exists to reflect readiness before the next step.
-
-| ✅ REFLECTS | ❌ NEVER |
-|-------------|---------|
-| Sleep quality, fatigue, stress load | Diagnoses medical conditions |
-| Cognitive clarity, decision fatigue | Prescribes treatments |
-| Dignity preservation, coercion signals | Overrides human self-reporting |
-| Machine/tool/institutional reliability | Makes claims about health |
-| Federation readiness (GREEN/YELLOW/RED) | Self-authorizes |
-
-**Domain law:** REFLECT_ONLY — reflect, never diagnose, never adjudicate.
-
-### Why WELL Exists
+WELL **reflects.** Arif **judges.** WELL never decides worth.
 
 ```
-GEOX asks:     What is real?              (truth of earth)
-WEALTH asks:   What are the consequences?  (truth of capital)
-WELL asks:     Can the substrate safely    (truth of readiness)
-               absorb the next action?
+H-WELL  — Human readiness: vitality, fatigue, dignity, consent
+M-WELL  — Machine readiness: system health, tool integrity, compute limits
+G-WELL  — Governance readiness: autonomic coherence, floor compliance
+C-WELL  — Coupled risk: human state × machine state interaction
+U-WELL  — Universal: substrate classification and vitality assessment
 ```
 
-Three organs. Three angles on the same question: *should we act?*
+WELL holds a mirror, not a veto. Operator sovereignty is invariant.
 
-### The Sovereignty Principle
+```
+WELL never:
+  - Diagnoses medical conditions
+  - Commands or overrides the human
+  - Issues constitutional verdicts (that's arifOS)
+  - Executes mutations (that's A-FORGE)
+  - Moves money (that's WEALTH's boundary)
+```
 
-> **Never override Arif's self-reported state with WELL readings.**
+## Honesty Banner
 
-Most systems treat sensors as superior to human testimony. WELL inverts this: human self-reporting is authoritative. Sensors are evidence — they may corroborate or challenge, but they never replace. This is the constitutional difference between a vitality mirror and a surveillance tool.
+WELL currently reports: **INSUFFICIENT — sovereign biometric state unknown.** This is correct behavior. WELL degrades honestly rather than fabricating data. Fresh biometric input or sensor feed required to restore full readiness assessment.
 
-### Substrates WELL Reflects
+## Tools
 
-WELL does not only reflect human state. It reflects readiness across:
+| Tool | Mode | Purpose |
+|------|------|---------|
+| `well_assess_homeostasis` | sleep, fatigue | Regulation and stability under change |
+| `well_validate_vitality` | readiness, niat | Vitality and intent validation |
+| `well_guard_dignity` | consent, boundary | Dignity, personhood, and consent protection |
+| `well_classify_substrate` | classification | Substrate identity and boundary sensing |
+| `well_trace_lineage` | recall, trend | Memory, trend, and vault chain tracing |
+| `well_check_repair` | precheck | Repair, recovery, and forge cycle integrity |
+| `well_assess_reliability` | health | Machine, tool, and operational reliability |
+| `well_machine_diagnose` | diagnostic | Full VPS health with actionable recommendations |
+| `well_machine_recommend` | recommendation | Specific fix commands for machine issues |
+| `well_registry_status` | status | Registry truth and drift diagnostic |
 
-| Substrate | What It Measures | Example Tools |
-|-----------|-----------------|---------------|
-| **Human** | Sleep, fatigue, stress, cognitive clarity, dignity | `well_assess_homeostasis`, `well_guard_dignity` |
-| **Machine** | Tool health, server reliability, drift detection | `well_assess_reliability`, `well_registry_status` |
-| **Institution** | Governance integrity, trust decay, boundary health | `well_classify_substrate` |
-| **Agent** | Decision readiness, authority boundaries, NIAT | `well_validate_vitality` |
+## Architecture
 
----
+WELL runs as a direct-repo MCP server on port 18083. It bridges to arifOS for constitutional governance and AAA for state visibility. All tools are read-only reflection — WELL provides evidence, never commands.
 
-## 2. The ABC Trinity
-
-WELL observes readiness through three lenses:
-
-| Lens | Question | Signals |
-|------|----------|---------|
-| **A — Autonomic** | Can the substrate sustain operation? | Sleep debt, HRV, stress load, chronic fatigue |
-| **B — Boundary** | Is dignity, consent, or coercion at risk? | Dignity preservation, coercion signals, reductionism risk |
-| **C — Cognitive** | Can the substrate reason clearly? | Cognitive clarity, decision fatigue, emotional state |
-
-These three dimensions form the organizing framework for every WELL assessment. A substrate that passes Autonomic but fails Boundary is not ready. A substrate that passes Cognitive but fails Autonomic is not ready. Readiness requires all three.
-
-```mermaid
-graph TB
-    subgraph ABC [🫀 WELL — ABC Trinity]
-        A[A — Autonomic<br/>Can the substrate sustain?<br/>Sleep · HRV · Stress · Fatigue]
-        B[B — Boundary<br/>Is dignity at risk?<br/>Consent · Coercion · Reductionism]
-        C[C — Cognitive<br/>Can it reason clearly?<br/>Clarity · Decision Fatigue · Emotional State]
-    end
-    A -->|probe| V{well_validate_vitality<br/>Readiness Verdict}
-    B -->|probe| V
-    C -->|probe| V
-    V -->|🟢 GREEN| PROCEED[✅ Proceed<br/>Substrate Ready]
-    V -->|🟡 YELLOW| CAUTION[⚠️ Caution<br/>Degraded — Surface to Human]
-    V -->|🔴 RED| HOLD[⛔ HOLD<br/>Do Not Proceed]
-    V -->|evidence| ARIFOS{⚖️ arifOS Judge}
-    ARIFOS --> VAULT[(VAULT999)]
-    
-    subgraph SUBSTRATES [Substrates Measured]
-        HUMAN[👤 Human] 
-        MACHINE[🖥️ Machine]
-        INST[🏛️ Institution]
-        AGENT[🤖 Agent]
-    end
-    HUMAN & MACHINE & INST & AGENT --> ABC
+```
+/health  → live status, tool registry, honesty banner, freshness band
+/tools/list → 10 governed MCP tools (REFLECT_ONLY)
 ```
 
 ---
 
-## 3. Federation Position
-
-```
-Arif (F13) → AAA → arifOS → Domain Organs → A-FORGE → VAULT999
-                                ↑
-                           WELL (:18083)
-                           Reflects, never diagnoses
-```
-
-### Federation Identity
-
-| Organ | Domain | Question | Law |
-|-------|--------|----------|-----|
-| **GEOX** | Earth Intelligence | What is real? | Evidence-only |
-| **WEALTH** | Capital Intelligence | What are the consequences? | Compute, never allocate |
-| **WELL** | Readiness Intelligence | Can the substrate proceed? | Reflect, never diagnose |
-
----
-
-## 4. Tools (8 Public Canonical)
-
-| Category | Tools | Purpose |
-|----------|-------|---------|
-| **Homeostasis** | `well_assess_homeostasis` | Sleep, fatigue, stress, emotional state |
-| **Vitality** | `well_validate_vitality` | Readiness verdict, NIAT, GREEN/YELLOW/RED |
-| **Substrate** | `well_classify_substrate` | Boundary sensing, substrate classification |
-| **Dignity** | `well_guard_dignity` | Consent, coercion signals, reductionism risk |
-| **Trace** | `well_trace_lineage` | Memory, trend, ledger, vault chain tracing |
-| **Reliability** | `well_assess_reliability` | Machine, tool, and institutional reliability |
-| **Repair** | `well_check_repair` | Recovery, resilience, forge cycle integrity |
-| **Registry** | `well_registry_status` | Tool surface truth diagnostic |
-
----
-
-## 5. Quick Start
-
-```bash
-# Health
-curl -s http://localhost:18083/health | python3 -m json.tool
-
-# MCP connection
-# Endpoint: https://well.arif-fazil.com/mcp
-
-# Install + test
-cd /root/WELL && pip install -e .
-pytest tests/ -q --tb=short
-```
-
----
-
-## 6. Constitutional Binding
-
-WELL enforces the **medical boundary** — `tests/test_medical_boundary.py` verifies that no `well_assess_*` tool ever emits a diagnosis. This is a hard constitutional gate. WELL reflects readiness; it does not interpret health.
-
-| Floor | Application |
-|-------|------------|
-| F2 TRUTH | Every reflection carries epistemic label (OBS/DER/INT) |
-| F6 MARUAH | Dignity-first — ASEAN/MY human context, consent, coercion awareness |
-| F9 ANTI-HANTU | No medical claims, no phantom authority, no diagnostic speech |
-| F10 ONTOLOGY | Reflects substrate state, never claims knowledge of personhood |
-
----
-
-## 7. Federation Cross-Reference
-
-| Organ | Role | Port | Repo |
-|-------|------|------|------|
-| arifOS | Constitutional kernel | 8088 | [ariffazil/arifos](https://github.com/ariffazil/arifos) |
-| AAA | State + cockpit | 3001 | [ariffazil/AAA](https://github.com/ariffazil/AAA) |
-| A-FORGE | Execution shell | 7071 | [ariffazil/A-FORGE](https://github.com/ariffazil/A-FORGE) |
-| GEOX | Earth intelligence | 8081 | [ariffazil/geox](https://github.com/ariffazil/geox) |
-| WEALTH | Capital intelligence | 18082 | [ariffazil/wealth](https://github.com/ariffazil/wealth) |
-| HERMES | Multi-modal bridge + Telegram relay | 8644 | [ariffazil/HERMES](https://github.com/ariffazil/HERMES) |
-| **WELL** | Readiness intelligence | 18083 | ← you are here |
-
----
-
-## 8. Build, Test, Deploy
-
-```bash
-pip install -e .
-pytest tests/ -q --tb=short
-systemctl restart well
-curl -s http://localhost:18083/health | python3 -m json.tool
-```
-
----
-
-## 9. For AI Agents
-
-1. Probe WELL before any irreversible action — `well_validate_vitality(mode="readiness")`
-2. GREEN → proceed · YELLOW → caution · RED → HOLD
-3. Never interpret WELL output as medical truth
-4. **Never override Arif's self-reported state with WELL readings**
-5. `well_medical_boundary()` is called before any "is X healthy?" question
-6. Readiness across all substrates: a healthy human on a failing machine is not ready
-
----
-
-## 10. For Institutions
-
-| Property | How WELL delivers |
-|----------|------------------|
-| **REFLECT_ONLY** | Zero diagnostic authority — hard constitutional boundary |
-| **Medical boundary tested** | `test_medical_boundary.py` verifies no diagnosis emission |
-| **Multi-substrate** | Human, machine, institutional, and agent readiness |
-| **Dignity-first** | ASEAN/MY cultural context — maruah, consent, coercion awareness |
-| **Sovereign authority** | Human self-reporting always beats sensor readings |
-
----
-
-## 🔗 Federation Architecture & Navigation
-
-WELL operates as the Substrate Readiness & Vitality Organ for the **arifOS Federation**. Every organ maintains distinct boundaries and capabilities:
-
-| Organ | Domain Role | Port | Repo | Live MCP | Health Witness | Machine Spec |
-|:---|:---|:---:|:---|:---|:---|:---|
-| **arifOS** | Constitutional Kernel & Judge | 8088 | [repo](https://github.com/ariffazil/arifos) | [mcp](https://mcp.arif-fazil.com/mcp) | [health](https://arifos.arif-fazil.com/health) | [llms.txt](https://arifos.arif-fazil.com/llms.txt) |
-| **A-FORGE** | Governed Execution Engine | 7071 / 7072 | [repo](https://github.com/ariffazil/A-FORGE) | [mcp](https://forge.arif-fazil.com/mcp) | [health](https://forge.arif-fazil.com/health) | [llms.txt](https://forge.arif-fazil.com/llms.txt) |
-| **AAA** | Institution, Control Plane & A2A | 3001 | [repo](https://github.com/ariffazil/AAA) | — | [health](https://aaa.arif-fazil.com/health) | [llms.txt](https://aaa.arif-fazil.com/llms.txt) |
-| **GEOX** | Earth Intelligence (Subsurface) | 8081 | [repo](https://github.com/ariffazil/GEOX) | [mcp](https://geox.arif-fazil.com/mcp) | [health](https://geox.arif-fazil.com/health) | [llms.txt](https://geox.arif-fazil.com/llms.txt) |
-| **WEALTH** | Capital Intelligence (Compute) | 18082 | [repo](https://github.com/ariffazil/WEALTH) | [mcp](https://wealth.arif-fazil.com/mcp) | [health](https://wealth.arif-fazil.com/health) | [llms.txt](https://wealth.arif-fazil.com/llms.txt) |
-| **WELL** | Vitality & Readiness Guard | 18083 | [repo](https://github.com/ariffazil/WELL) | [mcp](https://well.arif-fazil.com/mcp) | [health](https://well.arif-fazil.com/health) | [llms.txt](https://well.arif-fazil.com/llms.txt) |
-| **HERMES** | Multi-Modal Bridge & Telegram Relay | 8644 | [repo](https://github.com/ariffazil/HERMES) | — | — | — |
-
-**Public Domain:** [arif-fazil.com](https://arif-fazil.com) · **Federation Root:** [arifos.arif-fazil.com](https://arifos.arif-fazil.com)
-
----
-
-## 11. License & Sovereignty
-
-**AGPL-3.0.** WELL reflects under sovereign authority. It never diagnoses.
-
-**Muhammad Arif bin Fazil** is F13 SOVEREIGN. Only he knows his own state.
-
-```
-WELL · Port 18083 · 8 tools · REFLECT_ONLY · AGPL-3.0
-Reflects, never diagnoses. DITEMPA BUKAN DIBERI.
-```
-
----
-
-*Maintained under F13 SOVEREIGN by Muhammad Arif bin Fazil.*
-*DITEMPA BUKAN DIBERI — Readiness is reflected, never diagnosed.*
+**DITEMPA BUKAN DIBERI — Forged, Not Given.**
+**WELL reflects. Arif decides. The mirror never commands.**
