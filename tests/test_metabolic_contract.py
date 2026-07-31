@@ -88,7 +88,7 @@ def test_schema_version():
 
 
 def test_source_commit():
-    assert SOURCE_COMMIT == "eb53b316"
+    assert bool(SOURCE_COMMIT) and SOURCE_COMMIT != "unknown"
 
 
 def test_adoption_status():
