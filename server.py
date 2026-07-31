@@ -10458,6 +10458,7 @@ def well_machine_diagnose(
     well_assess_reliability for VPS optimization workflows.
     """
     import json as _json_md
+    import os as _os_md
     from pathlib import Path as _PathMd
 
     state_path = _PathMd("/root/WELL/machine_state.json")
@@ -10466,6 +10467,7 @@ def well_machine_diagnose(
             ok=False,
             stage="M_DIAGNOSE",
             lane="AGI",
+            mode="M_DIAGNOSE",
             verdict="HOLD",
             error="machine_state.json not found -- telemetry collector may be down",
             recommendation="Run: python3 /root/WELL/scripts/machine_telemetry.py",
@@ -10478,6 +10480,7 @@ def well_machine_diagnose(
             ok=False,
             stage="M_DIAGNOSE",
             lane="AGI",
+            mode="M_DIAGNOSE",
             verdict="HOLD",
             error=f"machine_state.json corrupt: {exc}",
         )
@@ -10499,7 +10502,7 @@ def well_machine_diagnose(
     severity: str = "GREEN"
 
     # CPU
-    cpu_count = os.cpu_count() or 4
+    cpu_count = _os_md.cpu_count() or 4
     load_1m = cpu.get("load_1m", 0)
     load_ratio = load_1m / cpu_count
     iowait = cpu.get("iowait_pct", 0)
@@ -10678,6 +10681,7 @@ def well_machine_diagnose(
         ok=(severity != "RED"),
         stage="M_DIAGNOSE",
         lane="AGI",
+        mode="M_DIAGNOSE",
         verdict=verdict,
         data={
             "overall": overall,
