@@ -1,18 +1,18 @@
 <!-- SOT-MANIFEST
 owner: Muhammad Arif bin Fazil (F13 SOVEREIGN)
-last_verified: 2026-07-31T12:50:00Z
-federation_release: v2026.07.31
-live_commit: 60357b0
-live_port: 18083 (degraded — sovereign biometric state unknown)
+last_verified: 2026-08-01T00:45:00Z
+federation_release: v2026.08.01
+live_commit: 7b2b85b
+live_port: 18083 (degraded — sovereign biometric override active)
 tools_loaded: 10
 canonical_tools: 10
 truth_rule: live :18083/health + tools/list beat any static count in prose
-owner_summary: YELLOW (sovereign_state_unknown, biometric_state_fresh_but_insufficient)
+owner_summary: YELLOW (biometric_override, vitality_degraded)
 -->
 
 # 🫀 WELL — Human & Machine Readiness Reflection
 
-[![Federation](https://img.shields.io/badge/Federation-v2026.07.31-0a7b83)](https://arifos.arif-fazil.com)
+[![Federation](https://img.shields.io/badge/Federation-v2026.08.01-0a7b83)](https://arifos.arif-fazil.com)
 [![🫀 WELL](https://img.shields.io/badge/%F0%9F%AB%80%20WELL-10%20Tools-coral)](https://well.arif-fazil.com/mcp)
 [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](./LICENSE)
 
@@ -43,7 +43,7 @@ WELL never:
 
 ## Honesty Banner
 
-WELL currently reports: **INSUFFICIENT — sovereign biometric state unknown.** This is correct behavior. WELL degrades honestly rather than fabricating data. Fresh biometric input or sensor feed required to restore full readiness assessment.
+WELL currently reports: **DEGRADED — sovereign biometric override active (W3=0.73).** This is correct behavior. WELL degrades honestly rather than fabricating data. Fresh biometric sensor input required to restore full autonomous readiness.
 
 ## Tools
 
@@ -68,6 +68,23 @@ WELL runs as a direct-repo MCP server on port 18083. It bridges to arifOS for co
 /health  → live status, tool registry, honesty banner, freshness band
 /tools/list → 10 governed MCP tools (REFLECT_ONLY)
 ```
+
+---
+
+## 🔗 Federation Navigation
+
+WELL operates as a Vitality Guard organ within the **arifOS Federation**:
+
+| Organ | Domain Role | Port | Repo | Live MCP | Health |
+|:---|:---|:---:|:---|:---|:---|
+| **arifOS** | Constitutional Kernel & Judge | 8088 | [repo](https://github.com/ariffazil/arifos) | [mcp](https://mcp.arif-fazil.com/mcp) | [health](https://arifos.arif-fazil.com/health) |
+| **A-FORGE** | Governed Execution Engine | 7071 / 7072 | [repo](https://github.com/ariffazil/A-FORGE) | [mcp](https://forge.arif-fazil.com/mcp) | [health](https://forge.arif-fazil.com/health) |
+| **AAA** | Institution, Control Plane & A2A | 3001 | [repo](https://github.com/ariffazil/AAA) | — | [health](https://aaa.arif-fazil.com/health) |
+| **GEOX** | Earth Intelligence (Subsurface) | 8081 | [repo](https://github.com/ariffazil/GEOX) | [mcp](https://geox.arif-fazil.com/mcp) | [health](https://geox.arif-fazil.com/health) |
+| **WEALTH** | Capital Intelligence (Compute) | 18082 | [repo](https://github.com/ariffazil/WEALTH) | [mcp](https://wealth.arif-fazil.com/mcp) | [health](https://wealth.arif-fazil.com/health) |
+| **WELL** | Vitality & Readiness Guard | 18083 | [repo](https://github.com/ariffazil/WELL) | [mcp](https://well.arif-fazil.com/mcp) | [health](https://well.arif-fazil.com/health) |
+
+**Public Domain:** [arif-fazil.com](https://arif-fazil.com) · **Federation Root:** [arifos.arif-fazil.com](https://arifos.arif-fazil.com)
 
 ---
 
