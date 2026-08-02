@@ -18895,6 +18895,123 @@ if _REFLECT_LOADED and _wrap_canonical_tools is not None:
 else:  # pragma: no cover
     _wrapped_count = 0
 
+# ══════════════════════════════════════════════════════════════════════════════
+# System Pulse Tool — Federation Vitality Signal
+# Forged 2026-08-02 by 333-AGI (Δ MIND) under F13 SOVEREIGN directive
+# ══════════════════════════════════════════════════════════════════════════════
+
+
+@mcp.tool()
+def well_system_pulse(
+    ctx: Context | None = None,
+) -> dict[str, Any]:
+    """
+    Ω-WELL-PULSE: Federation-wide system vitality pulse.
+
+    Probes arifFLOW FQ (Flow Quotient) + all 8 organ health endpoints.
+    Returns structured pulse: STABLE | FQ_ALERT | ORGAN_DOWN | CRITICAL.
+
+    External AI platforms can call this via WELL MCP (port 18083) to
+    determine federation readiness before dispatching work.
+
+    WELL reflects. arifOS judges. A-FORGE acts.
+    """
+    import time as _time
+    import urllib.request as _urllib
+
+    _start = _time.time()
+    _organs = {
+        "arifOS": 8088,
+        "A-FORGE": 7071,
+        "A-FORGE-MCP": 7072,
+        "arifFLOW": 7073,
+        "AAA": 3001,
+        "GEOX": 8081,
+        "WEALTH": 18082,
+        "WELL": 18083,
+    }
+
+    _results: dict[str, Any] = {}
+    _down_count = 0
+    _fq_data: dict[str, Any] = {}
+
+    for _name, _port in _organs.items():
+        try:
+            _req = _urllib.Request(f"http://127.0.0.1:{_port}/health")
+            with _urllib.urlopen(_req, timeout=3) as _resp:
+                _body = _resp.read().decode("utf-8")
+                _status = _resp.status
+                _healthy = _status == 200
+
+                # Parse JSON if possible
+                _detail: dict[str, Any] = {}
+                try:
+                    import json as _json
+
+                    _detail = _json.loads(_body)
+                except Exception:
+                    _detail = {"raw": _body[:200]}
+
+                # Extract FQ if arifFLOW
+                if _name == "arifFLOW":
+                    _fq_raw = _detail.get("fq", {})
+                    _fq_data = {
+                        "quotient": _fq_raw.get("quotient"),
+                        "verdict": _fq_raw.get("verdict"),
+                        "execute_count": _fq_raw.get("execute_count"),
+                        "verify_count": _fq_raw.get("verify_count"),
+                    }
+
+                _results[_name] = {
+                    "healthy": _healthy,
+                    "status_code": _status,
+                    "latency_ms": round((_time.time() - _start) * 1000),
+                }
+
+                if not _healthy:
+                    _down_count += 1
+
+        except Exception as _exc:
+            _results[_name] = {
+                "healthy": False,
+                "error": f"{type(_exc).__name__}: {str(_exc)[:100]}",
+            }
+            _down_count += 1
+
+    # ── Determine pulse verdict ──────────────────────────────────────────
+    _fq_verdict = _fq_data.get("verdict", "UNKNOWN")
+    _fq_quotient = _fq_data.get("quotient")
+
+    if _down_count >= 4:
+        _pulse = "CRITICAL"
+    elif _down_count >= 2:
+        _pulse = "ORGAN_DOWN"
+    elif _fq_verdict in ("STUCK", "PARALYZED"):
+        _pulse = "FQ_ALERT"
+    elif _fq_verdict in ("OVERHEAT",) or (
+        _fq_quotient is not None and _fq_quotient > 10.0
+    ):
+        _pulse = "FQ_ALERT"
+    else:
+        _pulse = "STABLE"
+
+    _elapsed = round((_time.time() - _start) * 1000, 1)
+
+    return {
+        "pulse": _pulse,
+        "timestamp_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        "elapsed_ms": _elapsed,
+        "organs": _results,
+        "organs_total": len(_organs),
+        "organs_down": _down_count,
+        "flow_quotient": _fq_data,
+        "signal": _pulse.lower(),
+        "ok": _pulse == "STABLE",
+        "epistemic_tag": "CLAIM" if _pulse == "STABLE" else "HYPOTHESIS",
+        "evidence_quality": round(max(0.5, 1.0 - (_down_count / len(_organs))), 4),
+    }
+
+
 if __name__ == "__main__":
     # ── Transport mode selection (fallback entry) ────────────────────────
     import argparse
