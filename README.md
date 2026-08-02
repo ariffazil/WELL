@@ -1,8 +1,8 @@
 <!-- SOT-MANIFEST
 owner: Muhammad Arif bin Fazil (F13 SOVEREIGN)
-last_verified: 2026-08-01T00:45:00Z
-federation_release: v2026.08.01
-live_commit: 7b2b85b
+last_verified: 2026-08-02T06:19:13Z
+federation_release: v2026.08.02
+live_commit: ca3bffb
 live_port: 18083 (degraded — sovereign biometric override active)
 tools_loaded: 10
 canonical_tools: 10
