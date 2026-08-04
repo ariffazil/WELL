@@ -8725,7 +8725,7 @@ async def well_000_init(
 # AAA: Task Discovery + Federation Manifest
 
 
-@mcp.tool()  # Alias -- deprecated; use well_classify_substrate
+# @mcp.tool() REMOVED — KUTIP SAMPAH W3 numerological alias()  # Alias -- deprecated; use well_classify_substrate
 def well_111_sense(
     mode: str = "classify",
     subject: str = "",
@@ -8826,7 +8826,7 @@ def well_111_sense(
 # AAA: Evidence Receipt + Witness Lock
 
 
-@mcp.tool()  # Alias -- deprecated; use well_measure_gradient
+# @mcp.tool() REMOVED — KUTIP SAMPAH W3 numerological alias()  # Alias -- deprecated; use well_measure_gradient
 def well_222_fetch(
     mode: str = "evidence",
     evidence_source: str = "unknown",
@@ -8918,7 +8918,7 @@ def well_222_fetch(
 # AAA: Risk Assessment + Governance Adapter
 
 
-@mcp.tool()  # Alias -- deprecated; use well_assess_metabolism / well_assess_livelihood
+# @mcp.tool() REMOVED — KUTIP SAMPAH W3 numerological alias()  # Alias -- deprecated; use well_assess_metabolism / well_assess_livelihood
 def well_333_mind(
     mode: str = "human",
     subject: str | None = None,
@@ -9131,7 +9131,7 @@ def well_333_mind(
 # AAA: Governance Adapter + Routing Decision
 
 
-@mcp.tool()  # Alias -- deprecated; use well_reflect_intelligence
+# @mcp.tool() REMOVED — KUTIP SAMPAH W3 numerological alias()  # Alias -- deprecated; use well_reflect_intelligence
 def well_444_kernel(
     mode: str = "route",
     task_description: str | None = None,
@@ -9258,7 +9258,7 @@ def well_444_kernel(
 # AAA: Event Store + Audit Trail
 
 
-@mcp.tool()  # Alias -- deprecated; use well_trace_lineage
+# @mcp.tool() REMOVED — KUTIP SAMPAH W3 numerological alias()  # Alias -- deprecated; use well_trace_lineage
 def well_555_memory(
     mode: str = "recall",
     limit: int = 10,
@@ -9329,7 +9329,7 @@ def well_555_memory(
 # AAA: Escalation Rules + Empathy Scan
 
 
-@mcp.tool()  # Alias -- deprecated; use well_assess_homeostasis / well_guard_dignity
+# @mcp.tool() REMOVED — KUTIP SAMPAH W3 numerological alias()  # Alias -- deprecated; use well_assess_homeostasis / well_guard_dignity
 def well_666_heart(
     mode: str = "critique",
     subject: str | None = None,
@@ -9481,7 +9481,7 @@ def well_666_heart(
 # AAA: A-FORGE Bridge + Execution Mode
 
 
-@mcp.tool()  # Alias -- deprecated; use well_check_repair
+# @mcp.tool() REMOVED — KUTIP SAMPAH W3 numerological alias()  # Alias -- deprecated; use well_check_repair
 def well_777_forge(
     mode: str = "precheck",
     task_description: str | None = None,
@@ -9592,7 +9592,7 @@ def well_777_forge(
 # AAA: 888_JUDGE Gate + Constitutional Arbitration
 
 
-@mcp.tool()  # Alias -- deprecated; use well_validate_vitality
+# @mcp.tool() REMOVED — KUTIP SAMPAH W3 numerological alias()  # Alias -- deprecated; use well_validate_vitality
 def well_888_judge(
     mode: str = "readiness",
     intent: str | None = None,
@@ -9764,7 +9764,7 @@ async def well_999_vault(
 # AAA: Cockpit Dashboard + Federation Handoff
 
 
-@mcp.tool()  # Alias -- deprecated; use well_anchor_evidence
+# @mcp.tool() REMOVED — KUTIP SAMPAH W3 numerological alias()  # Alias -- deprecated; use well_anchor_evidence
 def well_444_reply(
     mode: str = "packet",
     target: str = "arifos",
@@ -9846,7 +9846,7 @@ def well_444_reply(
 # AAA: A2A Gateway + Agent Card Dispatch
 
 
-@mcp.tool()  # Alias -- deprecated; use well_detect_boundary / AAA gateway status
+# @mcp.tool() REMOVED — KUTIP SAMPAH W3 numerological alias()  # Alias -- deprecated; use well_detect_boundary / AAA gateway status
 def well_444_gateway(
     mode: str = "status",
     peer: str | None = None,
@@ -10107,7 +10107,7 @@ def _read_machine_state_delta(field: str, default: Any = None) -> Any:
     return _read_machine_state_field(field, default)
 
 
-@mcp.tool()
+# @mcp.tool() REMOVED — KUTIP SAMPAH W3 numerological alias()
 def well_000_ops(
     mode: str = "health",
     ctx: Context | None = None,
@@ -16479,7 +16479,7 @@ async def well_anchor_evidence(
 
 
 # DEPRECATED: Governance assessment now handled by arifOS constitutional kernel.
-# @mcp.tool() removed -- internal use only (used by well_validate_vitality path).
+# # @mcp.tool() REMOVED — KUTIP SAMPAH: internal/deprecated() removed -- internal use only (used by well_validate_vitality path).
 def well_assess_governance(
     mode: str = "coherence",
     target: str = "local",
