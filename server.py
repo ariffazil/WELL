@@ -2932,9 +2932,9 @@ def _compose_verdict(
 
 
 # DEPRECATED: Use well_validate_vitality(mode="state") instead.
-# @mcp.tool() REMOVED by FORGE entropy audit 2026-07-03 -- reduces callable surface from 27→26.
-# Internal callers use well_validate_vitality directly. Legacy bridge in compatibility.py.
-@mcp.tool()
+# @mcp.tool() REMOVED by FORGE entropy audit 2026-07-03 — re-removed 2026-08-05 (W-06).
+# Internal callers use well_validate_vitality directly.
+# W-06: @mcp.tool() removed to reduce callable surface. Function remains as internal helper.
 def well_state(include: str = "full", ctx: Context | None = None) -> dict[str, Any]:
     """
     Get the current WELL state -- biological telemetry snapshot for operator Arif.
@@ -4949,7 +4949,9 @@ TTL_WARN = 24  # hours -- YELLOW
 TTL_STALE = 48  # hours -- RED/STALE
 
 
-@mcp.tool()
+# LEGACY ALIAS (deprecated 2026-07-12) → well_validate_vitality(mode="readiness").
+# @mcp.tool() removed 2026-08-05 (W-06) — reduce callable surface.
+# Function remains as internal helper used by canonical tools.
 def well_readiness(
     detail: Literal["summary", "full"] = "full",
     ctx: Context | None = None,
