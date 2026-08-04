@@ -3379,7 +3379,7 @@ async def well_anchor(
 
 
 # internal -- not MCP-facing (collapsed 2026-05-26)
-@mcp.tool()
+# @mcp.tool() REMOVED — KUTIP SAMPAH: internal/superseded()
 def well_check_floors(ctx: Context | None = None) -> dict[str, Any]:
     """
     [DEPRECATED -- use well_validate_vitality(mode='floors')]
@@ -3605,7 +3605,7 @@ def well_get_readiness(ctx: Context | None = None) -> dict[str, Any]:
 
 
 # internal -- not MCP-facing (collapsed 2026-05-26)
-@mcp.tool()
+# @mcp.tool() REMOVED — KUTIP SAMPAH: internal/superseded()
 def well_check_floor(
     floor_id: str | None = None, ctx: Context | None = None
 ) -> dict[str, Any]:
@@ -6461,7 +6461,7 @@ def well_get_state(
 
 # ── WELL-03 well_check_invariant ──────────────────────────────────────────────
 # internal -- not MCP-facing (collapsed 2026-05-26)
-@mcp.tool()
+# @mcp.tool() REMOVED — KUTIP SAMPAH: internal/superseded()
 def well_check_invariant(
     floor_id: str | None = None, ctx: Context | None = None
 ) -> dict[str, Any]:
@@ -6651,7 +6651,7 @@ async def well_log_signal(
 
 # ── WELL-05 well_list_events ──────────────────────────────────────────────────
 # internal -- not MCP-facing (collapsed 2026-05-26)
-@mcp.tool()
+# @mcp.tool() REMOVED — KUTIP SAMPAH: internal/superseded()
 def well_list_events(
     limit: int = 10, redact: bool = True, ctx: Context | None = None
 ) -> dict[str, Any]:
@@ -11099,7 +11099,7 @@ def well_13_signal_coverage(
     }
 
 
-@mcp.tool()
+# @mcp.tool() REMOVED — KUTIP SAMPAH: internal/superseded()
 def well_signal_coverage(
     operator_id: str | None = None,
     ctx: Context | None = None,
@@ -12774,7 +12774,7 @@ def _extract_mcp_text_payload(mcp_result: dict) -> dict:
 
 
 # ── 1. WELL → arifOS 888_JUDGE explicit handoff for S12 dignity ──────────────
-@mcp.tool()
+# @mcp.tool() REMOVED — KUTIP SAMPAH: internal/superseded()
 def well_handoff_dignity_to_arifos(
     coercion_signals: list[str] | None = None,
     dignity_preservation: float | None = None,
@@ -12837,7 +12837,7 @@ def well_handoff_dignity_to_arifos(
 
 
 # ── 2. WELL → WEALTH explicit handoff for S13 livelihood ────────────────────
-@mcp.tool()
+# @mcp.tool() REMOVED — KUTIP SAMPAH: internal/superseded()
 def well_handoff_livelihood_to_wealth(
     duty_load: float | None = None,
     cashflow_status: str | None = None,
@@ -12896,7 +12896,7 @@ def well_handoff_livelihood_to_wealth(
 
 
 # ── 3. WELL → arifOS organ_attest (active federation heartbeat) ────────────
-@mcp.tool()
+# @mcp.tool() REMOVED — KUTIP SAMPAH: internal/superseded()
 def well_attest_to_kernel(
     actor_id: str = "well-system",
     ctx: Context | None = None,
@@ -14012,7 +14012,7 @@ def well_trace_lineage(
     )
 
 
-@mcp.tool()
+# @mcp.tool() REMOVED — KUTIP SAMPAH: internal/superseded()
 def well_detect_boundary(
     mode: str = "boundary",
     subject: str = "",
@@ -16553,7 +16553,7 @@ def well_assess_governance(
     )
 
 
-@mcp.tool()
+# @mcp.tool() REMOVED — KUTIP SAMPAH: internal/superseded()
 def well_trace_decision(
     decision_id: str | None = None,
     lookback_hours: float = 24,
