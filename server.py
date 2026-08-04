@@ -1745,11 +1745,23 @@ class WellSessionValidationMiddleware(_MiddlewareBase):
                     f"Provide a valid session token. http_status=400"
                 )
 
-        # Strip session_id from arguments before tool dispatch
-        # (tools don't declare it; it's middleware-only metadata)
+        # W-07 FIX (2026-08-05): Strip session_id only for tools that
+        # don't declare it. Tools like well_registry_status echo session_id
+        # for audit trail. Others would reject it as unexpected kwarg.
+        _SID_AWARE_TOOLS = frozenset(
+            {
+                "well_registry_status",
+                "well_health_check",
+                "well_contrast_report",
+                "well_symbolic_domain_check",
+                "well_tree777_scar",
+                "well_machine_health_probe",
+            }
+        )
         if isinstance(arguments, dict) and "session_id" in arguments:
-            cleaned = {k: v for k, v in arguments.items() if k != "session_id"}
-            context.message.arguments = cleaned
+            if tool_name not in _SID_AWARE_TOOLS:
+                cleaned = {k: v for k, v in arguments.items() if k != "session_id"}
+                context.message.arguments = cleaned
 
         result = await call_next(context)
 
