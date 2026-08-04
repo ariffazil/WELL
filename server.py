@@ -1745,9 +1745,20 @@ class WellSessionValidationMiddleware(_MiddlewareBase):
                     f"Provide a valid session token. http_status=400"
                 )
 
-        # W-07 FIX (2026-08-05): Strip session_id only for tools that
-        # don't declare it. Tools like well_registry_status echo session_id
-        # for audit trail. Others would reject it as unexpected kwarg.
+        # W-07 (2026-08-05): Preserve caller identity for post-response stamp.
+        # Some tool signatures reject unexpected kwargs; others declare session_id.
+        # Either way the RESPONSE must echo the session the caller bound (F11).
+        # Strip only for tools that would pydantic-reject unknown fields — but
+        # always re-inject session_id/actor_id into the JSON body after call_next.
+        _caller_session_id = None
+        _caller_actor_id = None
+        if isinstance(arguments, dict):
+            _caller_session_id = arguments.get("session_id") or session_id
+            _caller_actor_id = arguments.get("actor_id")
+        else:
+            _caller_session_id = session_id
+        # Prefer schema-aware pass-through: only strip when tool has no session_id param
+        # AND no **kwargs. Conservative allowlist of tools known to accept session_id.
         _SID_AWARE_TOOLS = frozenset(
             {
                 "well_registry_status",
@@ -1756,14 +1767,54 @@ class WellSessionValidationMiddleware(_MiddlewareBase):
                 "well_symbolic_domain_check",
                 "well_tree777_scar",
                 "well_machine_health_probe",
+                "well_classify_substrate",
+                "well_assess_homeostasis",
+                "well_check_repair",
+                "well_validate_vitality",
+                "well_guard_dignity",
             }
         )
         if isinstance(arguments, dict) and "session_id" in arguments:
             if tool_name not in _SID_AWARE_TOOLS:
                 cleaned = {k: v for k, v in arguments.items() if k != "session_id"}
-                context.message.arguments = cleaned
+                try:
+                    context.message.arguments = cleaned
+                except Exception:
+                    pass
 
         result = await call_next(context)
+
+        # W-07 stamp: always surface session_id/actor_id on the wire when known.
+        # Does not invent identity — only echoes what the caller supplied.
+        try:
+            import json as _json_w07
+
+            _tc = getattr(result, "content", None) or []
+            if _tc and hasattr(_tc[0], "text") and isinstance(_tc[0].text, str):
+                _dom = _json_w07.loads(_tc[0].text)
+                if isinstance(_dom, dict):
+                    _changed = False
+                    if _caller_session_id and not _dom.get("session_id"):
+                        _dom["session_id"] = _caller_session_id
+                        _changed = True
+                    if _caller_actor_id and not _dom.get("actor_id"):
+                        _dom["actor_id"] = _caller_actor_id
+                        _changed = True
+                    if _changed:
+                        _tc[0].text = _json_w07.dumps(_dom, default=str)
+                        if getattr(result, "structured_content", None) is not None and isinstance(
+                            result.structured_content, dict
+                        ):
+                            result.structured_content = {
+                                **result.structured_content,
+                                **{
+                                    k: _dom[k]
+                                    for k in ("session_id", "actor_id")
+                                    if k in _dom
+                                },
+                            }
+        except Exception:
+            pass  # never break tool path for identity stamp
 
         # P1 CONFORMANCE (2026-07-26): Inject ClaimState/WitnessType/OrganType
         # into every WELL tool response by wrapping content text JSON.
