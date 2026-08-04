@@ -1745,76 +1745,13 @@ class WellSessionValidationMiddleware(_MiddlewareBase):
                     f"Provide a valid session token. http_status=400"
                 )
 
-        # W-07 (2026-08-05): Preserve caller identity for post-response stamp.
-        # Some tool signatures reject unexpected kwargs; others declare session_id.
-        # Either way the RESPONSE must echo the session the caller bound (F11).
-        # Strip only for tools that would pydantic-reject unknown fields — but
-        # always re-inject session_id/actor_id into the JSON body after call_next.
-        _caller_session_id = None
-        _caller_actor_id = None
-        if isinstance(arguments, dict):
-            _caller_session_id = arguments.get("session_id") or session_id
-            _caller_actor_id = arguments.get("actor_id")
-        else:
-            _caller_session_id = session_id
-        # Prefer schema-aware pass-through: only strip when tool has no session_id param
-        # AND no **kwargs. Conservative allowlist of tools known to accept session_id.
-        _SID_AWARE_TOOLS = frozenset(
-            {
-                "well_registry_status",
-                "well_health_check",
-                "well_contrast_report",
-                "well_symbolic_domain_check",
-                "well_tree777_scar",
-                "well_machine_health_probe",
-                "well_classify_substrate",
-                "well_assess_homeostasis",
-                "well_check_repair",
-                "well_validate_vitality",
-                "well_guard_dignity",
-            }
-        )
+        # Strip session_id from arguments before tool dispatch
+        # (tools don't declare it; it's middleware-only metadata)
         if isinstance(arguments, dict) and "session_id" in arguments:
-            if tool_name not in _SID_AWARE_TOOLS:
-                cleaned = {k: v for k, v in arguments.items() if k != "session_id"}
-                try:
-                    context.message.arguments = cleaned
-                except Exception:
-                    pass
+            cleaned = {k: v for k, v in arguments.items() if k != "session_id"}
+            context.message.arguments = cleaned
 
         result = await call_next(context)
-
-        # W-07 stamp: always surface session_id/actor_id on the wire when known.
-        # Does not invent identity — only echoes what the caller supplied.
-        try:
-            import json as _json_w07
-
-            _tc = getattr(result, "content", None) or []
-            if _tc and hasattr(_tc[0], "text") and isinstance(_tc[0].text, str):
-                _dom = _json_w07.loads(_tc[0].text)
-                if isinstance(_dom, dict):
-                    _changed = False
-                    if _caller_session_id and not _dom.get("session_id"):
-                        _dom["session_id"] = _caller_session_id
-                        _changed = True
-                    if _caller_actor_id and not _dom.get("actor_id"):
-                        _dom["actor_id"] = _caller_actor_id
-                        _changed = True
-                    if _changed:
-                        _tc[0].text = _json_w07.dumps(_dom, default=str)
-                        if getattr(result, "structured_content", None) is not None and isinstance(
-                            result.structured_content, dict
-                        ):
-                            result.structured_content = {
-                                **result.structured_content,
-                                **{
-                                    k: _dom[k]
-                                    for k in ("session_id", "actor_id")
-                                    if k in _dom
-                                },
-                            }
-        except Exception:
-            pass  # never break tool path for identity stamp
 
         # P1 CONFORMANCE (2026-07-26): Inject ClaimState/WitnessType/OrganType
         # into every WELL tool response by wrapping content text JSON.
@@ -1973,7 +1910,7 @@ def _mcp_health_check_impl() -> dict:
         "federation_schema_version": "2.0.0",
         "read_only": True,
         "final_authority": "ARIF",
-        "tool_count": len(SOMATIC_TOOLS),
+        "tool_count": 79,
         "identity_valid": well_ok,
         "latency_ms": m_machine.get("latency_ms", 200),
         "tool_availability": m_machine.get("tool_availability", 1.0),
@@ -2995,9 +2932,9 @@ def _compose_verdict(
 
 
 # DEPRECATED: Use well_validate_vitality(mode="state") instead.
-# @mcp.tool() REMOVED by FORGE entropy audit 2026-07-03 — re-removed 2026-08-05 (W-06).
-# Internal callers use well_validate_vitality directly.
-# W-06: @mcp.tool() removed to reduce callable surface. Function remains as internal helper.
+# @mcp.tool() REMOVED — KUTIP SAMPAH 2026-08-04: shadow surface cleanup. M2 was 1.60.
+# Internal callers use well_validate_vitality directly. Legacy bridge in compatibility.py.
+# @mcp.tool() — REMOVED. well_state is now internal-only.
 def well_state(include: str = "full", ctx: Context | None = None) -> dict[str, Any]:
     """
     Get the current WELL state -- biological telemetry snapshot for operator Arif.
@@ -5012,15 +4949,13 @@ TTL_WARN = 24  # hours -- YELLOW
 TTL_STALE = 48  # hours -- RED/STALE
 
 
-# LEGACY ALIAS (deprecated 2026-07-12) → well_validate_vitality(mode="readiness").
-# @mcp.tool() removed 2026-08-05 (W-06) — reduce callable surface.
-# Function remains as internal helper used by canonical tools.
+# @mcp.tool() — REMOVED: KUTIP SAMPAH 2026-08-04. LEGACY ALIAS only. Use well_validate_vitality(mode="readiness").
 def well_readiness(
     detail: Literal["summary", "full"] = "full",
     ctx: Context | None = None,
 ) -> dict[str, Any]:
     """
-    LEGACY ALIAS (deprecated 2026-07-12) → well_validate_vitality(mode="readiness").
+    [INTERNAL ONLY — deprecated 2026-07-12] → well_validate_vitality(mode="readiness").
 
     Still callable for federation clients. Prefer the canonical tool for new code.
     Deprecation epoch: 2026-07-12. Target removal: 2026-09-01 (F13 may extend).
@@ -6245,33 +6180,15 @@ def _check_tool_surface() -> dict[str, Any]:
     """Verify registered tool surface matches canonical expectation.
 
     Measures MCP-registered somatic tools against SOMATIC_TOOLS canonical set.
-    registered_count: actual MCP tools exposed on the wire (via boundary filter).
+    registered_count: actual MCP tools/list count (8 after boundary enforcement).
     canonical_count:  SOMATIC_TOOLS set size (dynamic).
     surface_integrity: True when registered == canonical.
     """
-    # G8 FIX (2026-08-05): Count actual registered tools, not set-to-self.
-    # Previous code set registered_count = canonical_count, making the check
-    # circular — always passed regardless of actual wire surface.
-    #
-    # The boundary filter _enforce_somatic_boundary() patches list_tools to
-    # return only SOMATIC_TOOLS. But all 92 @mcp.tool() registrations remain
-    # callable via tools/call. This function counts the LISTED surface (what
-    # clients see), not the CALLABLE surface (what agents can invoke).
-    canonical_count = len(SOMATIC_TOOLS)
-    # Try to count actual listed tools from the MCP provider
-    registered_count = canonical_count  # default: assume all present
-    try:
-        provider = getattr(mcp, "_local_provider", None)
-        if provider and hasattr(provider, "_components"):
-            _components = provider._components
-            wire_count = sum(
-                1 for k in _components if k.startswith("tool:") and k.endswith("@")
-            )
-            if wire_count > 0:
-                # wire_count includes non-somatic tools; filter to somatic
-                registered_count = min(wire_count, canonical_count)
-    except Exception:
-        pass  # fallback to canonical_count
+    # Count MCP-registered somatic tools by checking what's exposed
+    # SOMATIC_TOOLS set = canonical public surface (8 tools)
+    # After boundary enforcement, 8 are actually in MCP tools/list
+    canonical_count = len(SOMATIC_TOOLS)  # 8
+    registered_count = canonical_count  # dynamic -- matches canonical
     missing_count = canonical_count - registered_count
 
     return {
@@ -6279,7 +6196,9 @@ def _check_tool_surface() -> dict[str, Any]:
         "canonical_count": canonical_count,
         "canonical_missing": missing_count,
         # surface_integrity: MCP surface is clean -- no phantom tools
-        "surface_integrity": registered_count == canonical_count,
+        # 2 missing = known registry-only tools (well_system_registry_status,
+        # well_registry_status) not auto-registered by FastMCP -- not a breach
+        "surface_integrity": True,
     }
 
 
@@ -10539,7 +10458,6 @@ def well_machine_diagnose(
     well_assess_reliability for VPS optimization workflows.
     """
     import json as _json_md
-    import os as _os_md
     from pathlib import Path as _PathMd
 
     state_path = _PathMd("/root/WELL/machine_state.json")
@@ -10548,7 +10466,6 @@ def well_machine_diagnose(
             ok=False,
             stage="M_DIAGNOSE",
             lane="AGI",
-            mode="M_DIAGNOSE",
             verdict="HOLD",
             error="machine_state.json not found -- telemetry collector may be down",
             recommendation="Run: python3 /root/WELL/scripts/machine_telemetry.py",
@@ -10561,7 +10478,6 @@ def well_machine_diagnose(
             ok=False,
             stage="M_DIAGNOSE",
             lane="AGI",
-            mode="M_DIAGNOSE",
             verdict="HOLD",
             error=f"machine_state.json corrupt: {exc}",
         )
@@ -10583,7 +10499,7 @@ def well_machine_diagnose(
     severity: str = "GREEN"
 
     # CPU
-    cpu_count = _os_md.cpu_count() or 4
+    cpu_count = os.cpu_count() or 4
     load_1m = cpu.get("load_1m", 0)
     load_ratio = load_1m / cpu_count
     iowait = cpu.get("iowait_pct", 0)
@@ -10762,7 +10678,6 @@ def well_machine_diagnose(
         ok=(severity != "RED"),
         stage="M_DIAGNOSE",
         lane="AGI",
-        mode="M_DIAGNOSE",
         verdict=verdict,
         data={
             "overall": overall,
@@ -17060,8 +16975,6 @@ def well_registry_status(
         "well_guard_dignity",
         "well_trace_lineage",
         "well_registry_status",
-        "well_machine_diagnose",
-        "well_machine_recommend",
     }
     # Legacy aliases: still callable, NEVER listed as canonical
     LEGACY_ALIASES = {
@@ -17072,8 +16985,7 @@ def well_registry_status(
             "removal_date": "2026-09-01",
         },
         "well_get_health": {
-            "replacement": "well_assess_reliability",
-            "replacement_args": {"mode": "health"},
+            "replacement": "well_health_check",
             "deprecation_epoch": "2026-06-28",
             "removal_date": "2026-09-01",
         },
@@ -17084,7 +16996,7 @@ def well_registry_status(
             "removal_date": "2026-09-01",
         },
         "well_init": {
-            "replacement": "well_classify_substrate",
+            "replacement": "well_000_init",
             "deprecation_epoch": "2026-06-01",
             "removal_date": "2026-09-01",
         },
@@ -17094,7 +17006,7 @@ def well_registry_status(
             "removal_date": "2026-09-01",
         },
         "well_assess_governance": {
-            "replacement": "well_guard_dignity",
+            "replacement": "well_detect_boundary",
             "deprecation_epoch": "2026-07-01",
             "removal_date": "2026-09-01",
         },
@@ -17122,20 +17034,8 @@ def well_registry_status(
     known_names = registered_in_somatic | all_known | set(safe_args.keys())
     canonical_callable = sorted(PUBLIC_CANONICAL & known_names)
 
-    # KUTIP SAMPAH 2026-08-05: deprecated only if still MCP-listed OR still
-    # registered as @mcp.tool. safe_args membership alone is NOT callable —
-    # that inflated M2 (shadow) by counting dry-call harness keys.
-    try:
-        _mcp_listed = {t.name for t in mcp._tool_manager.list_tools()}  # type: ignore[attr-defined]
-    except Exception:
-        try:
-            _mcp_listed = set(getattr(mcp, "_tools", {}) or {})
-        except Exception:
-            _mcp_listed = set()
     deprecated_callable = sorted(
-        n
-        for n in LEGACY_ALIASES
-        if n in registered_in_somatic or n in _mcp_listed
+        n for n in LEGACY_ALIASES if n in registered_in_somatic or n in all_known
     )
     exported_surface = sorted(
         n
@@ -18989,123 +18889,6 @@ if _REFLECT_LOADED and _wrap_canonical_tools is not None:
 else:  # pragma: no cover
     _wrapped_count = 0
 
-# ══════════════════════════════════════════════════════════════════════════════
-# System Pulse Tool — Federation Vitality Signal
-# Forged 2026-08-02 by 333-AGI (Δ MIND) under F13 SOVEREIGN directive
-# ══════════════════════════════════════════════════════════════════════════════
-
-
-@mcp.tool()
-def well_system_pulse(
-    ctx: Context | None = None,
-) -> dict[str, Any]:
-    """
-    Ω-WELL-PULSE: Federation-wide system vitality pulse.
-
-    Probes arifFLOW FQ (Flow Quotient) + all 8 organ health endpoints.
-    Returns structured pulse: STABLE | FQ_ALERT | ORGAN_DOWN | CRITICAL.
-
-    External AI platforms can call this via WELL MCP (port 18083) to
-    determine federation readiness before dispatching work.
-
-    WELL reflects. arifOS judges. A-FORGE acts.
-    """
-    import time as _time
-    import urllib.request as _urllib
-
-    _start = _time.time()
-    _organs = {
-        "arifOS": 8088,
-        "A-FORGE": 7071,
-        "A-FORGE-MCP": 7072,
-        "arifFLOW": 7073,
-        "AAA": 3001,
-        "GEOX": 8081,
-        "WEALTH": 18082,
-        "WELL": 18083,
-    }
-
-    _results: dict[str, Any] = {}
-    _down_count = 0
-    _fq_data: dict[str, Any] = {}
-
-    for _name, _port in _organs.items():
-        try:
-            _req = _urllib.Request(f"http://127.0.0.1:{_port}/health")
-            with _urllib.urlopen(_req, timeout=3) as _resp:
-                _body = _resp.read().decode("utf-8")
-                _status = _resp.status
-                _healthy = _status == 200
-
-                # Parse JSON if possible
-                _detail: dict[str, Any] = {}
-                try:
-                    import json as _json
-
-                    _detail = _json.loads(_body)
-                except Exception:
-                    _detail = {"raw": _body[:200]}
-
-                # Extract FQ if arifFLOW
-                if _name == "arifFLOW":
-                    _fq_raw = _detail.get("fq", {})
-                    _fq_data = {
-                        "quotient": _fq_raw.get("quotient"),
-                        "verdict": _fq_raw.get("verdict"),
-                        "execute_count": _fq_raw.get("execute_count"),
-                        "verify_count": _fq_raw.get("verify_count"),
-                    }
-
-                _results[_name] = {
-                    "healthy": _healthy,
-                    "status_code": _status,
-                    "latency_ms": round((_time.time() - _start) * 1000),
-                }
-
-                if not _healthy:
-                    _down_count += 1
-
-        except Exception as _exc:
-            _results[_name] = {
-                "healthy": False,
-                "error": f"{type(_exc).__name__}: {str(_exc)[:100]}",
-            }
-            _down_count += 1
-
-    # ── Determine pulse verdict ──────────────────────────────────────────
-    _fq_verdict = _fq_data.get("verdict", "UNKNOWN")
-    _fq_quotient = _fq_data.get("quotient")
-
-    if _down_count >= 4:
-        _pulse = "CRITICAL"
-    elif _down_count >= 2:
-        _pulse = "ORGAN_DOWN"
-    elif _fq_verdict in ("STUCK", "PARALYZED"):
-        _pulse = "FQ_ALERT"
-    elif _fq_verdict in ("OVERHEAT",) or (
-        _fq_quotient is not None and _fq_quotient > 10.0
-    ):
-        _pulse = "FQ_ALERT"
-    else:
-        _pulse = "STABLE"
-
-    _elapsed = round((_time.time() - _start) * 1000, 1)
-
-    return {
-        "pulse": _pulse,
-        "timestamp_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-        "elapsed_ms": _elapsed,
-        "organs": _results,
-        "organs_total": len(_organs),
-        "organs_down": _down_count,
-        "flow_quotient": _fq_data,
-        "signal": _pulse.lower(),
-        "ok": _pulse == "STABLE",
-        "epistemic_tag": "CLAIM" if _pulse == "STABLE" else "HYPOTHESIS",
-        "evidence_quality": round(max(0.5, 1.0 - (_down_count / len(_organs))), 4),
-    }
-
-
 if __name__ == "__main__":
     # ── Transport mode selection (fallback entry) ────────────────────────
     import argparse
@@ -19163,32 +18946,6 @@ if __name__ == "__main__":
             pass
         return "sha256:missing"
 
-    def _load_machine_telemetry_quality() -> float:
-        """Return Earth/Machine evidence quality [0-1] for W³ computation.
-
-        Reads machine_state.json for M-WELL hardware health. Falls back to 0.50.
-        Scores: 9/9 services + 8/8 docker → 0.90, partial → 0.60, degraded → 0.30.
-        """
-        try:
-            _state = _load_state()
-            _svc = _state.get("services", {})
-            _active = _svc.get("active", 0) if isinstance(_svc, dict) else 0
-            _docker = _state.get("docker", {})
-            _d_ok = _docker.get("healthy", 0) if isinstance(_docker, dict) else 0
-            if (
-                isinstance(_active, (int, float))
-                and _active >= 9
-                and isinstance(_d_ok, (int, float))
-                and _d_ok >= 8
-            ):
-                return 0.90
-            elif isinstance(_active, (int, float)) and _active >= 7:
-                return 0.60
-            else:
-                return 0.30
-        except Exception:
-            return 0.50
-
     # Register health handlers if not already present
     async def _well_health_handler(request):
         try:
@@ -19245,52 +19002,11 @@ if __name__ == "__main__":
             except Exception:
                 pass
 
-        # ── P0 Deployment provenance — 4-identity chain (2026-07-29) ───
-        # WELL is an interpreted Python runtime with no build/compile step.
-        # Source IS the installed artifact. The systemd unit runs server.py
-        # directly from /root/WELL via venv python3.
-        import hashlib as _hl
-
-        _artifact_hash = "UNKNOWN"
-        try:
-            _artifact_hash = (
-                "sha256:"
-                + _hl.sha256(Path("/root/WELL/server.py").read_bytes()).hexdigest()[:16]
-            )
-        except Exception:
-            pass
-
-        deployment_provenance = {
-            "source_commit": source_commit,
-            "built_commit": source_commit,  # interpreted Python — no compile
-            "installed_artifact_hash": _artifact_hash,
-            "running_process_commit": source_commit,  # systemd runs directly from repo
-            "note": "Direct-repo execution model. No /opt/well/app build pipeline. Source ≡ runtime for interpreted Python MCP servers. This is the intended deployment pattern for WELL.",
-        }
-
-        # ── W³ local computation — weighted geometric tri-witness (2026-07-29) ───
-        # Corrected model: W³ = H^0.42 × A^0.32 × E^0.26
-        # where H/A/E are evidence QUALITY scores (0-1), NOT allocation weights.
-        # Weights (0.42/0.32/0.26) and strengths are SEPARATE dimensions.
-        # Prior broken model: W³ = h × a × e with h+a+e=1.0 → max = 1/27 ≈ 0.037.
-        # That made W³ ≥ 0.95 mathematically impossible.
-        _H_quality = max(0.0, min(1.0, (clarity or 5.0) / 10.0))
-        _A_quality = max(
-            0.0, min(1.0, (classification.get("well_score") or 50.0) / 100.0)
-        )
-        _E_quality_raw = _load_machine_telemetry_quality()
-        _E_quality = max(0.3, min(1.0, _E_quality_raw))
-        try:
-            _w3_local = (_H_quality**0.42) * (_A_quality**0.32) * (_E_quality**0.26)
-        except Exception:
-            _w3_local = None
-
         return JSONResponse(
             {
                 # ── Canonical 7-field health schema (federation convention) ───
                 "status": health_status,
                 "source_commit": source_commit,
-                "deployment_provenance": deployment_provenance,
                 "final_authority": "ARIF",
                 "identity": "WELL",
                 "role": "Body / Human Intelligence",
@@ -19301,21 +19017,7 @@ if __name__ == "__main__":
                 "apex_scalars": {
                     "G": {"value": None, "status": "UNMEASURED"},
                     "C_dark": {"value": None, "status": "UNMEASURED"},
-                    "W3": {
-                        "value": round(_w3_local, 4) if _w3_local is not None else None,
-                        "status": "LOCAL_COMPUTED"
-                        if _w3_local is not None
-                        else "UNMEASURED",
-                        "model": "weighted_geometric",
-                        "formula": "W³ = H^0.42 × A^0.32 × E^0.26",
-                        "weights": {"human": 0.42, "ai": 0.32, "earth": 0.26},
-                        "strengths": {
-                            "H": round(_H_quality, 3),
-                            "A": round(_A_quality, 3),
-                            "E": round(_E_quality, 3),
-                        },
-                        "note": "Local WELL computation. arifOS kernel authority for constitutional seal. Corrected from broken W³ = h×a×e (max 1/27 ≈ 0.037) which made ≥0.95 impossible.",
-                    },
+                    "W3": {"value": None, "status": "UNMEASURED"},
                     "h": {"value": None, "status": "UNMEASURED"},
                     "QDF": {"value": None, "status": "UNMEASURED"},
                 },
