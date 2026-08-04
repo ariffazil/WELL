@@ -1926,7 +1926,7 @@ def _mcp_health_check_impl() -> dict:
     }
 
 
-@mcp.tool()
+# @mcp.tool() REMOVED — KUTIP SAMPAH: redundant with canonical tool()
 def well_health_check(
     include_federation: bool = True,
     session_id: str | None = None,
@@ -3541,7 +3541,7 @@ def well_log_state(
 
 
 # internal -- not MCP-facing (collapsed 2026-05-26)
-@mcp.tool()
+# @mcp.tool() REMOVED — KUTIP SAMPAH: redundant with canonical tool()
 def well_get_readiness(ctx: Context | None = None) -> dict[str, Any]:
     """
     Return current readiness score + W-floor status (Phase 2).
@@ -3708,7 +3708,7 @@ def well_check_floor(
 
 
 # internal -- not MCP-facing (collapsed 2026-05-26)
-@mcp.tool()
+# @mcp.tool() REMOVED — KUTIP SAMPAH: redundant with canonical tool()
 def well_list_log(limit: int = 10, ctx: Context | None = None) -> dict[str, Any]:
     """List recent biological state log entries (Phase 1/2)."""
     if not EVENTS_PATH.exists():
@@ -6415,7 +6415,7 @@ def well_get_health(ctx: Context | None = None) -> dict[str, Any]:
 
 # ── WELL-02 well_get_state ────────────────────────────────────────────────────
 # internal -- not MCP-facing (collapsed 2026-05-26)
-@mcp.tool()
+# @mcp.tool() REMOVED — KUTIP SAMPAH: redundant with canonical tool()
 def well_get_state(
     domain: str | None = None, ctx: Context | None = None
 ) -> dict[str, Any]:
@@ -6670,7 +6670,7 @@ def well_list_events(
 
 
 # ── WELL-06 well_reflect_trend ────────────────────────────────────────────────
-@mcp.tool()
+# @mcp.tool() REMOVED — KUTIP SAMPAH: redundant with canonical tool()
 def well_reflect_trend(
     lookback_days: int = 30, ctx: Context | None = None
 ) -> dict[str, Any]:
@@ -6681,7 +6681,7 @@ def well_reflect_trend(
 
 
 # ── WELL-07 well_reflect_readiness ────────────────────────────────────────────
-@mcp.tool()
+# @mcp.tool() REMOVED — KUTIP SAMPAH: redundant with canonical tool()
 def well_reflect_readiness(
     domain: str = "coupled",
     task_type: str | None = None,
@@ -6732,13 +6732,13 @@ def well_suggest_mode(
 # ── WELL-09 well_suggest_recovery ─────────────────────────────────────────────
 # [INTERNAL] Suggest non-medical stabilizing actions. Suggest, not prescribe.
 # Use well_recovery_protocol(ctx=ctx) directly instead.
-@mcp.tool()
+# @mcp.tool() REMOVED — KUTIP SAMPAH: redundant with canonical tool()
 def well_suggest_recovery(ctx: Context | None = None) -> dict[str, Any]:
     return well_recovery_protocol(ctx=ctx)
 
 
 # ── WELL-10 well_reflect_niat ─────────────────────────────────────────────────
-@mcp.tool()
+# @mcp.tool() REMOVED — KUTIP SAMPAH: redundant with canonical tool()
 def well_reflect_niat(
     intent: str,
     context: str | None = None,
@@ -6754,7 +6754,7 @@ def well_reflect_niat(
 
 
 # ── WELL-11 well_classify_task ────────────────────────────────────────────────
-@mcp.tool()
+# @mcp.tool() REMOVED — KUTIP SAMPAH: redundant with canonical tool()
 def well_classify_task(
     task_description: str | None = None,
     decision_class: str | None = None,
@@ -6770,7 +6770,7 @@ def well_classify_task(
 
 # ── WELL-12 well_get_packet ───────────────────────────────────────────────────
 # internal -- not MCP-facing (collapsed 2026-05-26)
-@mcp.tool()
+# @mcp.tool() REMOVED — KUTIP SAMPAH: redundant with canonical tool()
 def well_get_packet(
     target: str = "arifos",
     detail: str = "standard",
@@ -15589,7 +15589,7 @@ def well_assess_livelihood(
     )
 
 
-@mcp.tool(name="well_daily_checkin")
+# @mcp.tool() REMOVED — KUTIP SAMPAH: redundant with canonical tool(name="well_daily_checkin")
 def well_daily_checkin(
     energy_level: float = 7.0,
     hours_slept: float = 7.0,
@@ -16739,7 +16739,7 @@ def well_validate_consensus(
 # well_registry_status. Keep both available so the advertised surface matches
 # what the connector can dispatch.
 # P0.5 fix: hidden-internal-alias classification for well_system_registry_status.
-@mcp.tool()
+# @mcp.tool() REMOVED — KUTIP SAMPAH: redundant with canonical tool()
 def well_system_registry_status() -> dict[str, Any]:
     """WELL registry truth probe -- somatic surface vs autonomic internals.
 
@@ -17368,7 +17368,7 @@ def _well_modulate_posture(
     return mod
 
 
-@mcp.tool()
+# @mcp.tool() REMOVED — KUTIP SAMPAH: redundant with canonical tool()
 def well_classify_state(
     message: str,
     session_id: str = "",
@@ -17745,7 +17745,7 @@ def well_regulation_recovery(
 # See: GENESIS/049, 050, 051. Benchmark: WELL_DEPTH_TRIAD_V1.
 
 
-@mcp.tool()
+# @mcp.tool() REMOVED — KUTIP SAMPAH: redundant with canonical tool()
 def well_assess_readiness(
     case: dict[str, Any] | None = None,
     mode: str = "depth",
