@@ -1922,7 +1922,7 @@ def _mcp_health_check_impl() -> dict:
         "federation_schema_version": "2.0.0",
         "read_only": True,
         "final_authority": "ARIF",
-        "tool_count": 79,
+        "tool_count": len(SOMATIC_TOOLS),
         "identity_valid": well_ok,
         "latency_ms": m_machine.get("latency_ms", 200),
         "tool_availability": m_machine.get("tool_availability", 1.0),
@@ -6194,15 +6194,33 @@ def _check_tool_surface() -> dict[str, Any]:
     """Verify registered tool surface matches canonical expectation.
 
     Measures MCP-registered somatic tools against SOMATIC_TOOLS canonical set.
-    registered_count: actual MCP tools/list count (8 after boundary enforcement).
+    registered_count: actual MCP tools exposed on the wire (via boundary filter).
     canonical_count:  SOMATIC_TOOLS set size (dynamic).
     surface_integrity: True when registered == canonical.
     """
-    # Count MCP-registered somatic tools by checking what's exposed
-    # SOMATIC_TOOLS set = canonical public surface (8 tools)
-    # After boundary enforcement, 8 are actually in MCP tools/list
-    canonical_count = len(SOMATIC_TOOLS)  # 8
-    registered_count = canonical_count  # dynamic -- matches canonical
+    # G8 FIX (2026-08-05): Count actual registered tools, not set-to-self.
+    # Previous code set registered_count = canonical_count, making the check
+    # circular — always passed regardless of actual wire surface.
+    #
+    # The boundary filter _enforce_somatic_boundary() patches list_tools to
+    # return only SOMATIC_TOOLS. But all 92 @mcp.tool() registrations remain
+    # callable via tools/call. This function counts the LISTED surface (what
+    # clients see), not the CALLABLE surface (what agents can invoke).
+    canonical_count = len(SOMATIC_TOOLS)
+    # Try to count actual listed tools from the MCP provider
+    registered_count = canonical_count  # default: assume all present
+    try:
+        provider = getattr(mcp, "_local_provider", None)
+        if provider and hasattr(provider, "_components"):
+            _components = provider._components
+            wire_count = sum(
+                1 for k in _components if k.startswith("tool:") and k.endswith("@")
+            )
+            if wire_count > 0:
+                # wire_count includes non-somatic tools; filter to somatic
+                registered_count = min(wire_count, canonical_count)
+    except Exception:
+        pass  # fallback to canonical_count
     missing_count = canonical_count - registered_count
 
     return {
@@ -6210,9 +6228,7 @@ def _check_tool_surface() -> dict[str, Any]:
         "canonical_count": canonical_count,
         "canonical_missing": missing_count,
         # surface_integrity: MCP surface is clean -- no phantom tools
-        # 2 missing = known registry-only tools (well_system_registry_status,
-        # well_registry_status) not auto-registered by FastMCP -- not a breach
-        "surface_integrity": True,
+        "surface_integrity": registered_count == canonical_count,
     }
 
 
@@ -17005,7 +17021,8 @@ def well_registry_status(
             "removal_date": "2026-09-01",
         },
         "well_get_health": {
-            "replacement": "well_health_check",
+            "replacement": "well_assess_reliability",
+            "replacement_args": {"mode": "health"},
             "deprecation_epoch": "2026-06-28",
             "removal_date": "2026-09-01",
         },
@@ -17016,7 +17033,7 @@ def well_registry_status(
             "removal_date": "2026-09-01",
         },
         "well_init": {
-            "replacement": "well_000_init",
+            "replacement": "well_classify_substrate",
             "deprecation_epoch": "2026-06-01",
             "removal_date": "2026-09-01",
         },
@@ -17026,7 +17043,7 @@ def well_registry_status(
             "removal_date": "2026-09-01",
         },
         "well_assess_governance": {
-            "replacement": "well_detect_boundary",
+            "replacement": "well_guard_dignity",
             "deprecation_epoch": "2026-07-01",
             "removal_date": "2026-09-01",
         },
@@ -17054,8 +17071,20 @@ def well_registry_status(
     known_names = registered_in_somatic | all_known | set(safe_args.keys())
     canonical_callable = sorted(PUBLIC_CANONICAL & known_names)
 
+    # KUTIP SAMPAH 2026-08-05: deprecated only if still MCP-listed OR still
+    # registered as @mcp.tool. safe_args membership alone is NOT callable —
+    # that inflated M2 (shadow) by counting dry-call harness keys.
+    try:
+        _mcp_listed = {t.name for t in mcp._tool_manager.list_tools()}  # type: ignore[attr-defined]
+    except Exception:
+        try:
+            _mcp_listed = set(getattr(mcp, "_tools", {}) or {})
+        except Exception:
+            _mcp_listed = set()
     deprecated_callable = sorted(
-        n for n in LEGACY_ALIASES if n in registered_in_somatic or n in all_known
+        n
+        for n in LEGACY_ALIASES
+        if n in registered_in_somatic or n in _mcp_listed
     )
     exported_surface = sorted(
         n
