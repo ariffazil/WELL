@@ -1834,6 +1834,117 @@ class WellSessionValidationMiddleware(_MiddlewareBase):
         return result
 
 
+# ── Deprecation Header Middleware (FORGED 2026-08-05) ──────────────────────────
+# Per F13 SOVEREIGN directive (Option c) ratified 2026-08-05T12:39Z: emit a
+# migration signal on calls to deprecated tools so callers (Hermes, OpenCode,
+# A2A agents) have a 27-day window to migrate before hard removal 2026-09-01.
+
+DEPRECATED_TOOLS_MAP: dict[str, dict[str, Any]] = {
+    "well_readiness": {
+        "replacement": "well_validate_vitality",
+        "replacement_args": {"mode": "readiness"},
+        "deprecation_epoch": "2026-07-12",
+        "removal_date": "2026-09-01",
+    },
+    "well_get_health": {
+        "replacement": "well_assess_reliability",
+        "replacement_args": {"mode": "health"},
+        "deprecation_epoch": "2026-06-28",
+        "removal_date": "2026-09-01",
+    },
+    "well_state": {
+        "replacement": "well_validate_vitality",
+        "replacement_args": {"mode": "state"},
+        "deprecation_epoch": "2026-06-01",
+        "removal_date": "2026-09-01",
+    },
+    "well_init": {
+        "replacement": "well_000_init",
+        "replacement_args": {},
+        "deprecation_epoch": "2026-06-01",
+        "removal_date": "2026-09-01",
+    },
+    "well_machine_state": {
+        "replacement": "well_assess_reliability",
+        "replacement_args": {},
+        "deprecation_epoch": "2026-06-01",
+        "removal_date": "2026-09-01",
+    },
+    "well_assess_governance": {
+        "replacement": "well_detect_boundary",
+        "replacement_args": {},
+        "deprecation_epoch": "2026-07-01",
+        "removal_date": "2026-09-01",
+    },
+}
+
+
+class WellDeprecationHeaderMiddleware(_MiddlewareBase):
+    """Inject `deprecated` body field for the 6 legacy tools.
+
+    Per F13 Option (c) chosen 2026-08-05: emit migration signal on every
+    call to a deprecated tool. Idempotent — won't overwrite an inline field
+    if one already exists (e.g. well_readiness already emits its own).
+
+    HTTP X-WELL-Deprecated header emission requires a separate Starlette
+    middleware (follow-up ticket). For now, body-level emission is portable
+    across all MCP clients.
+    """
+
+    async def on_call_tool(self, context, call_next):
+        tool_name = getattr(context.message, "name", "")
+        result = await call_next(context)
+
+        if tool_name not in DEPRECATED_TOOLS_MAP:
+            return result
+
+        info = DEPRECATED_TOOLS_MAP[tool_name]
+        try:
+            import json as _json_dep
+
+            tc = getattr(result, "content", [])
+            if not (tc and hasattr(tc[0], "text")):
+                return result
+
+            body = (
+                _json_dep.loads(tc[0].text)
+                if isinstance(tc[0].text, str)
+                else tc[0].text
+            )
+            if not isinstance(body, dict):
+                return result
+
+            if "deprecated" in body:
+                return result  # already has inline deprecation field
+
+            body["deprecated"] = True
+            body["deprecation_epoch"] = info["deprecation_epoch"]
+            body["removal_date"] = info["removal_date"]
+            body["replacement"] = info["replacement"]
+            body["replacement_args"] = info["replacement_args"]
+            tc[0].text = _json_dep.dumps(body)
+        except Exception as _dep_exc:
+            logger.warning(
+                "WELL_DEPRECATION: tool=%s middleware failed: %s",
+                tool_name,
+                _dep_exc,
+            )
+
+        return result
+
+
+try:
+    mcp.add_middleware(WellDeprecationHeaderMiddleware())
+    logger.info(
+        "WellDeprecationHeaderMiddleware armed -- %d deprecated tools emit migration signals",
+        len(DEPRECATED_TOOLS_MAP),
+    )
+except Exception as _dep_mw_exc:
+    logger.warning(
+        "WellDeprecationHeaderMiddleware failed to load: %s", _dep_mw_exc
+    )
+
+
 try:
     mcp.add_middleware(WellSessionValidationMiddleware())
     logger.info("WellSessionValidationMiddleware armed -- anonymous reads blocked")
@@ -10466,6 +10577,7 @@ def well_machine_diagnose(
             ok=False,
             stage="M_DIAGNOSE",
             lane="AGI",
+            mode="diagnose",
             verdict="HOLD",
             error="machine_state.json not found -- telemetry collector may be down",
             recommendation="Run: python3 /root/WELL/scripts/machine_telemetry.py",
@@ -10499,7 +10611,7 @@ def well_machine_diagnose(
     severity: str = "GREEN"
 
     # CPU
-    cpu_count = os.cpu_count() or 4
+    cpu_count = _os.cpu_count() or 4
     load_1m = cpu.get("load_1m", 0)
     load_ratio = load_1m / cpu_count
     iowait = cpu.get("iowait_pct", 0)
@@ -10678,6 +10790,7 @@ def well_machine_diagnose(
         ok=(severity != "RED"),
         stage="M_DIAGNOSE",
         lane="AGI",
+        mode="diagnose",
         verdict=verdict,
         data={
             "overall": overall,
@@ -10722,6 +10835,8 @@ def well_machine_recommend(
     """
     import json as _json_mr
     from pathlib import Path as _PathMr
+
+    issue_type = issue_type or "swap"  # defensive default for FastMCP unmarshal gap
 
     state_path = _PathMr("/root/WELL/machine_state.json")
     ms = {}
@@ -10883,6 +10998,7 @@ def well_machine_recommend(
             ok=True,
             stage="M_RECOMMEND",
             lane="AGI",
+            mode="recommend",
             verdict="PROCEED",
             data={
                 "recommendations": RECOMMENDATIONS,
@@ -10897,14 +11013,16 @@ def well_machine_recommend(
             ok=False,
             stage="M_RECOMMEND",
             lane="AGI",
+            mode="recommend",
             verdict="HOLD",
-            error=f"Unknown issue_type '{issue_type}'. Valid: {list(RECOMMENDATIONS.keys())}",
+            error=f"Unknown issue_type {issue_type!r}. Valid: {list(RECOMMENDATIONS.keys())}",
         )
 
     return _omega_well_output(
         ok=True,
         stage="M_RECOMMEND",
         lane="AGI",
+        mode="recommend",
         verdict="PROCEED",
         data={
             "issue_type": issue_type,
