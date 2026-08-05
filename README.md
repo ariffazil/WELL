@@ -2,7 +2,7 @@
 owner: Muhammad Arif bin Fazil (F13 SOVEREIGN)
 last_verified: 2026-08-04T20:23:33Z
 federation_release: v2026.08.04
-live_commit: pending
+live_commit: d5b7dd4 (safe_to_proceed logic — swap_pct gate removed)
 live_port: 18083
 tools_loaded: 10
 canonical_tools: 10
@@ -90,6 +90,20 @@ curl -s http://127.0.0.1:18083/health | jq .    # Live status + honesty banner
 | **🔮 HERMES** | Multi-Modal Bridge — Telegram relay | 8644 | [repo](https://github.com/ariffazil/HERMES) | — | — | — |
 | **🌐 arif-fazil.com** | Public Web Surface — one domain | 443 | [repo](https://github.com/ariffazil/arif-fazil.com) | — | [verify](https://arif-fazil.com/999/verify) | — |
 | **💀 VAULT999** | Immutable Seal — append-only receipt chain | fs | [repo](https://github.com/ariffazil/arifOS/VAULT999) | — | [verify](https://arifos.arif-fazil.com/health) | — |
+
+---
+
+## 📡 MCP Registries
+
+WELL is registered as an MCP server on the federation registries. Discovery metadata is exposed at each endpoint.
+
+| Registry | Server | Manifest |
+|----------|--------|----------|
+| **Glama** | [glama.ai/mcp/servers/ariffazil/well](https://glama.ai/mcp/servers/ariffazil/well) | `https://well.arif-fazil.com/.well-known/glama.json` |
+| **Smithery** | [smithery.ai/server/well](https://smithery.ai/server/well) | `https://well.arif-fazil.com/.well-known/smithery.yaml` |
+| **mcp.so** | [mcp.so/server/ariffazil/well](https://mcp.so/server/ariffazil/well) | `https://well.arif-fazil.com/.well-known/mcp-so.json` |
+
+Discovery endpoint: `GET https://well.arif-fazil.com/.well-known/mcp/server.json`
 
 ---
 
