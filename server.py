@@ -1940,9 +1940,7 @@ try:
         len(DEPRECATED_TOOLS_MAP),
     )
 except Exception as _dep_mw_exc:
-    logger.warning(
-        "WellDeprecationHeaderMiddleware failed to load: %s", _dep_mw_exc
-    )
+    logger.warning("WellDeprecationHeaderMiddleware failed to load: %s", _dep_mw_exc)
 
 
 try:
@@ -10861,7 +10859,8 @@ def well_machine_recommend(
     RECOMMENDATIONS = {
         "swap": {
             "condition": f"swap at {swap_pct:.0f}%, PSI={mem_psi:.1f}",
-            "safe": swap_pct > 10 and mem_psi < 5,
+            "safe": mem_psi
+            < 5,  # Safe when pressure low; swap_pct gates applicability, not safety
             "commands": [
                 {
                     "command": "swapoff -a && swapon -a",
