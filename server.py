@@ -16975,6 +16975,8 @@ def well_registry_status(
         "well_guard_dignity",
         "well_trace_lineage",
         "well_registry_status",
+        "well_machine_diagnose",
+        "well_machine_recommend",
     }
     # Legacy aliases: still callable, NEVER listed as canonical
     LEGACY_ALIASES = {
@@ -16985,7 +16987,8 @@ def well_registry_status(
             "removal_date": "2026-09-01",
         },
         "well_get_health": {
-            "replacement": "well_health_check",
+            "replacement": "well_assess_reliability",
+            "replacement_args": {"mode": "health"},
             "deprecation_epoch": "2026-06-28",
             "removal_date": "2026-09-01",
         },
@@ -17056,12 +17059,16 @@ def well_registry_status(
         canonical_callable = sorted(set(canonical_callable) - dual)
 
     intended_count = len(PUBLIC_CANONICAL)
+    # W-06 FIX (2026-08-05): REGISTRY_PASS impossible when deprecated tools remain
+    # callable. callable≠exported is a shadow surface.
+    callable_count = len(canonical_callable) + len(deprecated_callable)
     surface_aligned = (
         len(phantom_tools) == 0
         and not dual
         and not missing_public_tools
         and not unexpected_public_tools
         and not deprecated_exported
+        and len(deprecated_callable) == 0  # callable must equal exported
     )
     verdict = "REGISTRY_PASS" if surface_aligned else "REGISTRY_DRIFT"
 
