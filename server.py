@@ -12694,7 +12694,7 @@ try:
 
             if "/root/AAA" not in _sys.path:
                 _sys.path.insert(0, "/root/AAA")
-            from governance.federation_sct import gate_tool_ingress
+            from governance.federation_act import gate_tool_ingress
 
             _meta = (
                 arguments.get("_meta")
