@@ -17032,14 +17032,14 @@ def well_registry_status(
         "well_compute_metabolic_flux": {"mode": "status"},
         "well_guard_dignity": {},
         "well_system_registry_status": {},
-        # Legacy / aliases
-        "well_get_health": {},
-        "well_state": {},
-        "well_readiness": {},
-        "well_init": {},
-        "well_machine_state": {},
+        # Legacy / aliases (W-A5-FIX 2026-08-08: 6 entries removed; @mcp.tool() decorators already gone)
+        # well_get_health → replaced by well_assess_reliability (deprecated 2026-06-28)
+        # well_state → replaced by well_validate_vitality mode=state (deprecated 2026-06-01)
+        # well_readiness → replaced by well_validate_vitality mode=readiness (deprecated 2026-07-12)
+        # well_init → replaced by well_000_init (deprecated 2026-06-01)
+        # well_machine_state → replaced by well_assess_reliability mode=state (deprecated 2026-06-01)
+        # well_assess_governance → replaced by well_detect_boundary (deprecated 2026-07-01)
         "well_get_packet": {"target": "unified"},
-        "well_assess_governance": {},
         "well_000_init": {},
         "well_medical_boundary": {},
         # Ω-WELL aliases

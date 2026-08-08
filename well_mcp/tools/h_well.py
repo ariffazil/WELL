@@ -43,6 +43,21 @@ async def well_assess_homeostasis(
     an OPERATOR_REPORTED assessment with capped confidence instead of UNKNOWN.
     Health Connect telemetry integration is still pending.
     """
+    # WELL-A4-FIX (2026-08-08): stub deactivated.
+    # The canonical implementation lives in /root/WELL/server.py:15298
+    # (and related lines). The well_mcp module was a Phase 2 stub
+    # awaiting Health Connect wiring (TODO: P2). The 1mcp aggregator
+    # was accidentally wiring THIS stub as the canonical surface,
+    # which caused the "byte-identical replies" audit finding.
+    # This stub now raises NotImplementedError to fail loudly when
+    # wired, so callers route to the canonical server.py surface.
+    raise NotImplementedError(
+        "well_mcp stub deactivated 2026-08-08. "
+        "Use the canonical WELL surface at http://127.0.0.1:18083/mcp "
+        "or the server.py:15298 implementation. "
+        "See receipt 15653492-c703-4f89-984f-606aefbeb997."
+    )
+
     # Check if any self-report data was provided
     has_self_report = (
         sleep_hours is not None
@@ -212,6 +227,21 @@ async def well_assess_livelihood(
     voluntary: Optional[bool] = None,
 ) -> dict:
     """Assess human wellness, role, dignity, support, and meaning."""
+    # WELL-A4-FIX (2026-08-08): stub deactivated.
+    # The canonical implementation lives in /root/WELL/server.py:15298
+    # (and related lines). The well_mcp module was a Phase 2 stub
+    # awaiting Health Connect wiring (TODO: P2). The 1mcp aggregator
+    # was accidentally wiring THIS stub as the canonical surface,
+    # which caused the "byte-identical replies" audit finding.
+    # This stub now raises NotImplementedError to fail loudly when
+    # wired, so callers route to the canonical server.py surface.
+    raise NotImplementedError(
+        "well_mcp stub deactivated 2026-08-08. "
+        "Use the canonical WELL surface at http://127.0.0.1:18083/mcp "
+        "or the server.py:15298 implementation. "
+        "See receipt 15653492-c703-4f89-984f-606aefbeb997."
+    )
+
     result = build_unknown_result(
         "well_assess_livelihood",
         missing=[
@@ -257,6 +287,21 @@ async def well_assess_sovereign_entropy(
     refusal_patterns: Optional[float] = None,
 ) -> dict:
     """Measure the sovereign's resistance to behavioral modeling."""
+    # WELL-A4-FIX (2026-08-08): stub deactivated.
+    # The canonical implementation lives in /root/WELL/server.py:15298
+    # (and related lines). The well_mcp module was a Phase 2 stub
+    # awaiting Health Connect wiring (TODO: P2). The 1mcp aggregator
+    # was accidentally wiring THIS stub as the canonical surface,
+    # which caused the "byte-identical replies" audit finding.
+    # This stub now raises NotImplementedError to fail loudly when
+    # wired, so callers route to the canonical server.py surface.
+    raise NotImplementedError(
+        "well_mcp stub deactivated 2026-08-08. "
+        "Use the canonical WELL surface at http://127.0.0.1:18083/mcp "
+        "or the server.py:15298 implementation. "
+        "See receipt 15653492-c703-4f89-984f-606aefbeb997."
+    )
+
     result = build_unknown_result(
         "well_assess_sovereign_entropy",
         missing=["behavioral_signals", "digital_footprint", "paradox_density"],
@@ -293,6 +338,21 @@ async def well_guard_dignity(
     reductionism_risk: Optional[float] = None,
 ) -> dict:
     """Guard soul, personhood, meaning, and symbolic boundaries."""
+    # WELL-A4-FIX (2026-08-08): stub deactivated.
+    # The canonical implementation lives in /root/WELL/server.py:15298
+    # (and related lines). The well_mcp module was a Phase 2 stub
+    # awaiting Health Connect wiring (TODO: P2). The 1mcp aggregator
+    # was accidentally wiring THIS stub as the canonical surface,
+    # which caused the "byte-identical replies" audit finding.
+    # This stub now raises NotImplementedError to fail loudly when
+    # wired, so callers route to the canonical server.py surface.
+    raise NotImplementedError(
+        "well_mcp stub deactivated 2026-08-08. "
+        "Use the canonical WELL surface at http://127.0.0.1:18083/mcp "
+        "or the server.py:15298 implementation. "
+        "See receipt 15653492-c703-4f89-984f-606aefbeb997."
+    )
+
     result = build_unknown_result(
         "well_guard_dignity",
         missing=["consent_record", "coercion_scan", "dignity_preservation_score"],
@@ -328,6 +388,21 @@ async def well_validate_vitality(
     decision_class: Optional[str] = None,
 ) -> dict:
     """Validate vitality, readiness, and NIAT."""
+    # WELL-A4-FIX (2026-08-08): stub deactivated.
+    # The canonical implementation lives in /root/WELL/server.py:15298
+    # (and related lines). The well_mcp module was a Phase 2 stub
+    # awaiting Health Connect wiring (TODO: P2). The 1mcp aggregator
+    # was accidentally wiring THIS stub as the canonical surface,
+    # which caused the "byte-identical replies" audit finding.
+    # This stub now raises NotImplementedError to fail loudly when
+    # wired, so callers route to the canonical server.py surface.
+    raise NotImplementedError(
+        "well_mcp stub deactivated 2026-08-08. "
+        "Use the canonical WELL surface at http://127.0.0.1:18083/mcp "
+        "or the server.py:15298 implementation. "
+        "See receipt 15653492-c703-4f89-984f-606aefbeb997."
+    )
+
     result = build_unknown_result(
         "well_validate_vitality",
         missing=["biometric_telemetry", "readiness_self_report", "fatigue_assessment"],
@@ -359,6 +434,21 @@ async def well_medical_boundary(
     include_score: bool = True,
 ) -> dict:
     """Explicit non-diagnosis guard for WELL."""
+    # WELL-A4-FIX (2026-08-08): stub deactivated.
+    # The canonical implementation lives in /root/WELL/server.py:15298
+    # (and related lines). The well_mcp module was a Phase 2 stub
+    # awaiting Health Connect wiring (TODO: P2). The 1mcp aggregator
+    # was accidentally wiring THIS stub as the canonical surface,
+    # which caused the "byte-identical replies" audit finding.
+    # This stub now raises NotImplementedError to fail loudly when
+    # wired, so callers route to the canonical server.py surface.
+    raise NotImplementedError(
+        "well_mcp stub deactivated 2026-08-08. "
+        "Use the canonical WELL surface at http://127.0.0.1:18083/mcp "
+        "or the server.py:15298 implementation. "
+        "See receipt 15653492-c703-4f89-984f-606aefbeb997."
+    )
+
     return {
         "boundary": "NON_DIAGNOSTIC",
         "message": "WELL is not a doctor, therapist, or diagnostic authority. For severe, persistent, or urgent symptoms, recommend professional care.",
@@ -374,6 +464,21 @@ async def well_classify_state(
     stated_intent: Optional[str] = None,
 ) -> dict:
     """Classify human psychological state from message."""
+    # WELL-A4-FIX (2026-08-08): stub deactivated.
+    # The canonical implementation lives in /root/WELL/server.py:15298
+    # (and related lines). The well_mcp module was a Phase 2 stub
+    # awaiting Health Connect wiring (TODO: P2). The 1mcp aggregator
+    # was accidentally wiring THIS stub as the canonical surface,
+    # which caused the "byte-identical replies" audit finding.
+    # This stub now raises NotImplementedError to fail loudly when
+    # wired, so callers route to the canonical server.py surface.
+    raise NotImplementedError(
+        "well_mcp stub deactivated 2026-08-08. "
+        "Use the canonical WELL surface at http://127.0.0.1:18083/mcp "
+        "or the server.py:15298 implementation. "
+        "See receipt 15653492-c703-4f89-984f-606aefbeb997."
+    )
+
     result = build_unknown_result(
         "well_classify_state",
         missing=["message_history", "baseline_profile", "clinical_context"],
@@ -405,6 +510,21 @@ async def well_dark_geometry_mirror(
     vitality_signals: Optional[dict] = None,
 ) -> dict:
     """Mirror language and behavioral signals for dark geometry patterns."""
+    # WELL-A4-FIX (2026-08-08): stub deactivated.
+    # The canonical implementation lives in /root/WELL/server.py:15298
+    # (and related lines). The well_mcp module was a Phase 2 stub
+    # awaiting Health Connect wiring (TODO: P2). The 1mcp aggregator
+    # was accidentally wiring THIS stub as the canonical surface,
+    # which caused the "byte-identical replies" audit finding.
+    # This stub now raises NotImplementedError to fail loudly when
+    # wired, so callers route to the canonical server.py surface.
+    raise NotImplementedError(
+        "well_mcp stub deactivated 2026-08-08. "
+        "Use the canonical WELL surface at http://127.0.0.1:18083/mcp "
+        "or the server.py:15298 implementation. "
+        "See receipt 15653492-c703-4f89-984f-606aefbeb997."
+    )
+
     result = build_unknown_result(
         "well_dark_geometry_mirror",
         missing=["text_corpus", "behavioral_baseline", "vitality_signals"],
@@ -438,6 +558,21 @@ async def well_sabar_latency(
     baseline_revision_latency: Optional[float] = None,
 ) -> dict:
     """Measure temporal compression between stimulus and response."""
+    # WELL-A4-FIX (2026-08-08): stub deactivated.
+    # The canonical implementation lives in /root/WELL/server.py:15298
+    # (and related lines). The well_mcp module was a Phase 2 stub
+    # awaiting Health Connect wiring (TODO: P2). The 1mcp aggregator
+    # was accidentally wiring THIS stub as the canonical surface,
+    # which caused the "byte-identical replies" audit finding.
+    # This stub now raises NotImplementedError to fail loudly when
+    # wired, so callers route to the canonical server.py surface.
+    raise NotImplementedError(
+        "well_mcp stub deactivated 2026-08-08. "
+        "Use the canonical WELL surface at http://127.0.0.1:18083/mcp "
+        "or the server.py:15298 implementation. "
+        "See receipt 15653492-c703-4f89-984f-606aefbeb997."
+    )
+
     result = build_unknown_result(
         "well_sabar_latency",
         missing=["event_timestamps", "baseline_latency", "response_log"],
@@ -468,6 +603,21 @@ async def well_trust_compression(
     baseline_trust_diversity: Optional[float] = None,
 ) -> dict:
     """Detect narrowing trust patterns."""
+    # WELL-A4-FIX (2026-08-08): stub deactivated.
+    # The canonical implementation lives in /root/WELL/server.py:15298
+    # (and related lines). The well_mcp module was a Phase 2 stub
+    # awaiting Health Connect wiring (TODO: P2). The 1mcp aggregator
+    # was accidentally wiring THIS stub as the canonical surface,
+    # which caused the "byte-identical replies" audit finding.
+    # This stub now raises NotImplementedError to fail loudly when
+    # wired, so callers route to the canonical server.py surface.
+    raise NotImplementedError(
+        "well_mcp stub deactivated 2026-08-08. "
+        "Use the canonical WELL surface at http://127.0.0.1:18083/mcp "
+        "or the server.py:15298 implementation. "
+        "See receipt 15653492-c703-4f89-984f-606aefbeb997."
+    )
+
     result = build_unknown_result(
         "well_trust_compression",
         missing=["trust_events", "baseline_diversity", "interaction_log"],
@@ -499,6 +649,21 @@ async def well_niat_impact_mirror(
     witness_acceptance: Optional[str] = None,
 ) -> dict:
     """Compare declared niat with acknowledged impact."""
+    # WELL-A4-FIX (2026-08-08): stub deactivated.
+    # The canonical implementation lives in /root/WELL/server.py:15298
+    # (and related lines). The well_mcp module was a Phase 2 stub
+    # awaiting Health Connect wiring (TODO: P2). The 1mcp aggregator
+    # was accidentally wiring THIS stub as the canonical surface,
+    # which caused the "byte-identical replies" audit finding.
+    # This stub now raises NotImplementedError to fail loudly when
+    # wired, so callers route to the canonical server.py surface.
+    raise NotImplementedError(
+        "well_mcp stub deactivated 2026-08-08. "
+        "Use the canonical WELL surface at http://127.0.0.1:18083/mcp "
+        "or the server.py:15298 implementation. "
+        "See receipt 15653492-c703-4f89-984f-606aefbeb997."
+    )
+
     result = build_unknown_result(
         "well_niat_impact_mirror",
         missing=["declared_niat", "acknowledged_impact", "witness_acceptance"],
@@ -529,6 +694,21 @@ async def well_correction_capacity(
     baseline_capacity: Optional[float] = None,
 ) -> dict:
     """Score observable correctability."""
+    # WELL-A4-FIX (2026-08-08): stub deactivated.
+    # The canonical implementation lives in /root/WELL/server.py:15298
+    # (and related lines). The well_mcp module was a Phase 2 stub
+    # awaiting Health Connect wiring (TODO: P2). The 1mcp aggregator
+    # was accidentally wiring THIS stub as the canonical surface,
+    # which caused the "byte-identical replies" audit finding.
+    # This stub now raises NotImplementedError to fail loudly when
+    # wired, so callers route to the canonical server.py surface.
+    raise NotImplementedError(
+        "well_mcp stub deactivated 2026-08-08. "
+        "Use the canonical WELL surface at http://127.0.0.1:18083/mcp "
+        "or the server.py:15298 implementation. "
+        "See receipt 15653492-c703-4f89-984f-606aefbeb997."
+    )
+
     result = build_unknown_result(
         "well_correction_capacity",
         missing=["correction_events", "baseline_capacity"],
