@@ -2019,6 +2019,9 @@ def _mcp_health_check_impl() -> dict:
         "federation_schema_version": "2.0.0",
         "read_only": True,
         "final_authority": "ARIF",
+        # F2-fidelity fix (MCP-PROBE-2026-08-08): declare authority_ceiling.
+        # Per ORGAN.md, WELL = REFLECT_ONLY.
+        "authority_ceiling": "REFLECT_ONLY",
         "tool_count": 79,
         "identity_valid": well_ok,
         "latency_ms": m_machine.get("latency_ms", 200),
@@ -19135,6 +19138,11 @@ if __name__ == "__main__":
                 "identity": "WELL",
                 "role": "Body / Human Intelligence",
                 "authority": "REFLECT_ONLY",
+                # F2-fidelity fix (MCP-PROBE-2026-08-08): declare authority_ceiling
+                # as a top-level canonical key. The legacy "authority" field above
+                # also reports the same value for backwards compat. See
+                # R2-CONTRADICTION-REGISTER C13.
+                "authority_ceiling": "REFLECT_ONLY",
                 "identity_hash": identity_hash,
                 # T5 2026-07-17 -- apex_scalars + federation_geometry required.
                 # Domain data readiness stays separate via honesty_* (MOCK/STALE).
