@@ -1,3 +1,8 @@
+---
+name: well-governance-ops
+description: "WELL Governance Ops — reference copy of the WELL organ governance skill. Canonical source at /root/.config/opencode/skills/well-governance-ops/SKILL.md. Use when auditing WELL docs, planning constitutional changes, or harmonizing terminology. WELL informs; it does not judge, veto, execute, diagnose, or self-authorize."
+license: MIT
+---
 # WELL Governance Ops Skill
 
 > Skill definition for well-governance-ops.
