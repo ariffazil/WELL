@@ -1,0 +1,27 @@
+{
+  "timestamp": "2026-04-30T00:00:00+00:00",
+  "operator_id": "arif",
+  "metrics": {
+    "cognitive": {
+      "clarity": 10,
+      "decision_fatigue": 8.799999999999985
+    }
+  },
+  "well_score": 82.39999999999975,
+  "floors_violated": [],
+  "backend_status": "STABLE",
+  "last_successful_read": "2026-04-30T00:00:00+00:00",
+  "last_successful_write": "2026-04-30T00:00:00+00:00",
+  "state_file_access": "PASS",
+  "vault_access": "OK",
+  "test_contamination": "NO",
+  "contamination_quarantined": false,
+  "confidence": "HIGH",
+  "freshness": "FRESH",
+  "environment": "TEST",
+  "telemetry_confidence": "HIGH",
+  "reason": "Mocked healthy state for test session",
+  "safe_mode": "off",
+  "arif_decision_required": false,
+  "w0": "OPERATOR_VETO_INTACT / HIERARCHY_INVARIANT"
+}
