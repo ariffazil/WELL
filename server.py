@@ -2844,8 +2844,11 @@ def _save_state(state: dict[str, Any]) -> None:
 
 def _append_event(event: dict[str, Any]) -> None:
     event["epoch"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
-    with open(EVENTS_PATH, "a") as f:
-        f.write(json.dumps(event) + "\n")
+    try:
+        with open(EVENTS_PATH, "a") as f:
+            f.write(json.dumps(event) + "\n")
+    except (PermissionError, OSError):
+        pass
 
 
 def _compute_score(metrics: dict[str, Any]) -> tuple[float, list[str]]:

@@ -11,6 +11,7 @@ on:
 
 jobs:
   copilot-setup-steps:
+    if: github.actor != 'dependabot[bot]' && github.actor != 'app/dependabot'
     name: "WELL — Pre-install human readiness organ dependencies"
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -24,7 +25,11 @@ jobs:
       - name: Install WELL dependencies
         run: pip install -e . -q
       - name: Verify server.py imports
-        run: python3 -c "import server; print('[PASS] WELL server loaded')" || python3 -c "import importlib.util; spec=importlib.util.spec_from_file_location('server','server.py'); mod=importlib.util.module_from_spec(spec); print('[PASS] WELL server.py parseable')"
+        run: python3 -c "import server; print('[PASS] WELL server loaded')" || 
+          python3 -c "import importlib.util; 
+          spec=importlib.util.spec_from_file_location('server','server.py'); 
+          mod=importlib.util.module_from_spec(spec); print('[PASS] WELL 
+          server.py parseable')"
         env:
           ARIFOS_ENV: ci
           WELL_STATE_PATH: /tmp/well-state-ci.json
