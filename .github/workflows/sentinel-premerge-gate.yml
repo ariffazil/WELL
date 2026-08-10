@@ -23,6 +23,7 @@ concurrency:
 
 jobs:
   q1-boundary:
+    if: github.actor != 'dependabot[bot]' && github.actor != 'app/dependabot'
     name: "Q1 — REFLECT_ONLY Boundary"
     runs-on: ubuntu-latest
     steps:
@@ -40,6 +41,7 @@ jobs:
           echo "✅ Q1 PASS — REFLECT_ONLY boundary intact"
 
   q2-dignity:
+    if: github.actor != 'dependabot[bot]' && github.actor != 'app/dependabot'
     name: "Q2 — Dignity Gate"
     runs-on: ubuntu-latest
     steps:
@@ -50,6 +52,7 @@ jobs:
           python3 -c "import ast; ast.parse(open('gate/dignity_shadow.py').read())" 2>/dev/null && echo "✅ dignity_shadow.py syntax OK" || echo "⚠️ syntax check failed (non-blocking)"
 
   q3-test:
+    if: github.actor != 'dependabot[bot]' && github.actor != 'app/dependabot'
     name: "Q3 — Tests"
     runs-on: ubuntu-latest
     steps:
@@ -63,10 +66,11 @@ jobs:
         run: pytest tests/ -q --tb=short
 
   sentinel-gate:
+    if: (always()) && (github.actor != 'dependabot[bot]' && github.actor != 
+      'app/dependabot')
     name: "✅ Sentinel Gate"
     needs: [q1-boundary, q2-dignity, q3-test]
     runs-on: ubuntu-latest
-    if: always()
     steps:
       - name: Gate verdict
         run: |
