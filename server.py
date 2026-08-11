@@ -1627,6 +1627,10 @@ WELL_PUBLIC_ORIGINS: tuple[str, ...] = (
     "https://aaa.arif-fazil.com",
     "https://chatgpt.com",
     "https://chat.openai.com",
+    # MCPJam Inspector — official MCP dev tool
+    "https://app.mcpjam.com",
+    "https://mcpjam.com",
+    "https://*.mcpjam.com",
 )
 
 
