@@ -1635,7 +1635,13 @@ WELL_PUBLIC_ORIGINS: tuple[str, ...] = (
 
 
 def _apply_public_host_allowlist(app: Any) -> Any:
-    """Extend FastMCP HostOriginGuardMiddleware allowlists for public ingress."""
+    """Extend FastMCP HostOriginGuardMiddleware allowlists for public ingress.
+
+    FastMCP's _validate_origin (mcp/server/transport_security.py) only does
+    exact-match checks and port-pattern matches (`*` suffix). It does NOT
+    understand subdomain wildcards like `https://*.mcpjam.com`. This shim
+    expands all `*` subdomain wildcards to concrete entries before injection.
+    """
     middleware_list = getattr(app, "user_middleware", None) or []
     for mw in middleware_list:
         cls = getattr(mw, "cls", None)
@@ -1651,8 +1657,14 @@ def _apply_public_host_allowlist(app: Any) -> Any:
         kwargs["allowed_hosts"] = hosts
         origins = list(kwargs.get("allowed_origins") or [])
         for o in WELL_PUBLIC_ORIGINS:
-            if o not in origins:
-                origins.append(o)
+            # FastMCP only matches exact strings or `host:*` (port patterns).
+            # Subdomain wildcards like `https://*.mcpjam.com` would not match.
+            # Resolve to the bare host (without `*.`) so the exact-match path
+            # is used at request time.
+            bare = o.replace("https://*.", "https://") if o.startswith("https://*.") else None
+            for entry in ([o] + ([bare] if bare and bare != o else [])):
+                if entry not in origins:
+                    origins.append(entry)
         kwargs["allowed_origins"] = origins
     return app
 
@@ -18753,7 +18765,14 @@ class OriginValidationMiddleware:
 
     ALLOWED_ORIGIN_PREFIXES: tuple[str, ...] = (
         "https://well.arif-fazil.com",
+        "https://mcp.arif-fazil.com",
         "https://arif-fazil.com",
+        "https://aaa.arif-fazil.com",
+        "https://chatgpt.com",
+        "https://chat.openai.com",
+        # MCPJam Inspector — official MCP dev tool
+        "https://app.mcpjam.com",
+        "https://mcpjam.com",
         "http://localhost",
         "https://localhost",
         "http://127.0.0.1",
