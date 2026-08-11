@@ -23,15 +23,24 @@ owner_summary: YELLOW (biometric_override, vitality_degraded)
 
 ---
 
-## The Five WELL Axes
+## The Five WELL Axes — Inner Loop
 
+```mermaid
+flowchart LR
+    SENSE["Sense<br/>H · M · G · C · U axes"] --> ASSESS["well_assess_homeostasis<br/>well_assess_reliability"]
+    ASSESS --> VALIDATE["well_validate_vitality<br/>well_guard_dignity"]
+    VALIDATE --> CLASSIFY["well_classify_substrate<br/>well_trace_lineage"]
+    CLASSIFY --> MIRROR["Reflect to Arif / arifOS<br/>never commands, never diagnoses"]
+    MIRROR -.->|next cycle| SENSE
 ```
-H-WELL  — Human readiness: vitality, fatigue, dignity, consent
-M-WELL  — Machine readiness: system health, tool integrity, compute limits
-G-WELL  — Governance readiness: autonomic coherence, floor compliance
-C-WELL  — Coupled risk: human state × machine state interaction
-U-WELL  — Universal: substrate classification and vitality assessment
-```
+
+| Axis | Meaning |
+|------|---------|
+| **H-WELL** | Human readiness: vitality, fatigue, dignity, consent |
+| **M-WELL** | Machine readiness: system health, tool integrity, compute limits |
+| **G-WELL** | Governance readiness: autonomic coherence, floor compliance |
+| **C-WELL** | Coupled risk: human state × machine state interaction |
+| **U-WELL** | Universal: substrate classification and vitality assessment |
 
 ```
 WELL holds a mirror, not a veto. Operator sovereignty is invariant.
@@ -43,6 +52,46 @@ WELL NEVER:
   - Executes mutations (→ A-FORGE)
   - Moves money or allocates capital (→ WEALTH)
 ```
+
+---
+
+## 🌐 Federation — Outer Loop
+
+WELL's mirror loop above feeds the federation's outer loop as a readiness signal —
+the whole linked state, one diagram:
+
+```mermaid
+flowchart TB
+    ARIF["👑 ARIF — F13 SOVEREIGN<br/>purpose, irreversible consent, final veto"]
+    ARIFOS["⚖️ arifOS :8088<br/>judges — never executes"]
+    AAA["🏛️ AAA :3001<br/>routes & displays — never adjudicates"]
+    GEOX["🌍 GEOX :8081<br/>earth evidence"]
+    WEALTH["💰 WEALTH :18082<br/>capital evidence"]
+    WELL["🫀 WELL :18083<br/>vitality mirror"]
+    FORGE["⚒️ A-FORGE :7071/72<br/>executes — only after SEAL"]
+    VAULT["💀 VAULT999<br/>immutable seal chain"]
+
+    ARIF -->|purpose, veto| ARIFOS
+    ARIFOS -->|444 route| AAA
+    AAA --> GEOX
+    AAA --> WEALTH
+    AAA --> WELL
+    GEOX -->|evidence| ARIFOS
+    WEALTH -->|evidence| ARIFOS
+    WELL -->|readiness mirror| ARIFOS
+    ARIFOS -->|888 SEAL/HOLD/VOID → 777 forge| FORGE
+    FORGE -->|999 receipt| VAULT
+    VAULT -->|immutable record| ARIF
+
+    classDef here fill:#0a7b83,color:#fff,stroke:#063f43,stroke-width:2px
+    class WELL here
+```
+
+**Linked state:** [arifOS](https://github.com/ariffazil/arifos#-federation--outer-loop) ·
+[A-FORGE](https://github.com/ariffazil/A-FORGE#-federation--outer-loop) ·
+[GEOX](https://github.com/ariffazil/GEOX#-federation--outer-loop) ·
+[WEALTH](https://github.com/ariffazil/WEALTH#-federation--outer-loop) ·
+full contract: [`FEDERATION_CONTRACT.md`](./FEDERATION_CONTRACT.md)
 
 ---
 
