@@ -15,7 +15,7 @@ Optimised environment without agency, privacy, territory, role, and
 meaning is not wellness.
 ```
 
-Calhoun's "behavioral sink" came from rodent overpopulation experiments
+Calhoun's "governance drift" came from rodent overpopulation experiments
 where abundant food/water and enclosed "utopia" conditions still led to
 social breakdown. **Universe 25** became famous as a mouse "utopia" that
 collapsed despite material abundance. The collapse was not starvation.
