@@ -19,6 +19,11 @@ owner_summary: YELLOW (biometric_override, vitality_degraded)
 > **WELL reflects. Arif judges. WELL never decides worth.**
 > **DITEMPA BUKAN DIBERI — Forged, Not Given.**
 
+<!-- RULE-5 First Fold -->
+> **What?** Universal substrate vitality mirror — reflects human readiness, machine health, and coupled risk.
+> **Why?** Operators can't govern what they can't see; WELL makes the invisible visible.
+> **Care?** WELL holds a mirror, never a veto. Your sovereignty is invariant — you see your state, you decide.
+
 **WELL** is the universal substrate vitality mirror for the arifOS Federation. It reflects human readiness (fatigue, dignity, consent), machine health (system telemetry, tool integrity), and coupled risk across five axes.
 
 ---
