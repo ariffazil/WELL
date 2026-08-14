@@ -1661,8 +1661,12 @@ def _apply_public_host_allowlist(app: Any) -> Any:
             # Subdomain wildcards like `https://*.mcpjam.com` would not match.
             # Resolve to the bare host (without `*.`) so the exact-match path
             # is used at request time.
-            bare = o.replace("https://*.", "https://") if o.startswith("https://*.") else None
-            for entry in ([o] + ([bare] if bare and bare != o else [])):
+            bare = (
+                o.replace("https://*.", "https://")
+                if o.startswith("https://*.")
+                else None
+            )
+            for entry in [o] + ([bare] if bare and bare != o else []):
                 if entry not in origins:
                     origins.append(entry)
         kwargs["allowed_origins"] = origins
@@ -11625,6 +11629,7 @@ def _well_tree777_index() -> dict[str, Any]:
 
     return {
         "domain": "well",
+        "_supersession": "tree777:// namespace is owned by tree777-service v2.0 (port 18077). WELL well/* grammar retained as alias for one deprecation window per DECISION_TREE777_GO_2026-08-14.",
         "skills": skills,
         "concepts": concepts,
         "scars": scars,
