@@ -26,7 +26,10 @@ from typing import Any
 # ── Configuration ────────────────────────────────────────────────────────────
 ARIFOS_URL = "http://127.0.0.1:8088"
 SESSION_TTL_SECONDS = 300  # 5 minutes
-REQUEST_TIMEOUT_S = 3.0
+# KRT-2026-08-15 F5: 3.0s → 10.0s. 2-3s budgets timed out against a busy
+# single-worker kernel and reported "arifOS bridge unreachable" while the
+# kernel was healthy — a false-negative bridge verdict.
+REQUEST_TIMEOUT_S = 10.0
 
 # ── Thread-safe session cache ────────────────────────────────────────────────
 _cache_lock = threading.Lock()

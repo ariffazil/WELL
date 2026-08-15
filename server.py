@@ -2123,7 +2123,7 @@ def well_health_check(
                 "Accept": "application/json, text/event-stream",
             },
         )
-        with urllib.request.urlopen(_init_req, timeout=2.0) as _init_resp:
+        with urllib.request.urlopen(_init_req, timeout=10.0) as _init_resp:  # KRT-2026-08-15 F5: 2s→10s, busy-kernel false negatives
             _session_id = _init_resp.headers.get("mcp-session-id")
         if _session_id:
             # Step 2: tools/call with session id
@@ -2147,7 +2147,7 @@ def well_health_check(
                     "mcp-session-id": _session_id,
                 },
             )
-            with urllib.request.urlopen(_call_req, timeout=2.0) as _resp:
+            with urllib.request.urlopen(_call_req, timeout=10.0) as _resp:  # KRT-2026-08-15 F5
                 _arif_json = json.loads(_resp.read().decode("utf-8"))
             for _c in _arif_json.get("result", {}).get("content", []):
                 if _c.get("type") != "text":
@@ -6491,7 +6491,7 @@ def well_get_health(ctx: Context | None = None) -> dict[str, Any]:
                 "Accept": "application/json, text/event-stream",
             },
         )
-        with urllib.request.urlopen(_init_req, timeout=2.0) as _init_resp:
+        with urllib.request.urlopen(_init_req, timeout=10.0) as _init_resp:  # KRT-2026-08-15 F5: 2s→10s, busy-kernel false negatives
             _session_id = _init_resp.headers.get("mcp-session-id")
         if _session_id:
             # Step 2: tools/call with session id
@@ -6515,7 +6515,7 @@ def well_get_health(ctx: Context | None = None) -> dict[str, Any]:
                     "mcp-session-id": _session_id,
                 },
             )
-            with urllib.request.urlopen(_call_req, timeout=2.0) as _resp:
+            with urllib.request.urlopen(_call_req, timeout=10.0) as _resp:  # KRT-2026-08-15 F5
                 _arif_json = json.loads(_resp.read().decode("utf-8"))
             for _c in _arif_json.get("result", {}).get("content", []):
                 if _c.get("type") != "text":
