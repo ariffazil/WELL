@@ -2123,7 +2123,9 @@ def well_health_check(
                 "Accept": "application/json, text/event-stream",
             },
         )
-        with urllib.request.urlopen(_init_req, timeout=10.0) as _init_resp:  # KRT-2026-08-15 F5: 2s→10s, busy-kernel false negatives
+        with urllib.request.urlopen(
+            _init_req, timeout=10.0
+        ) as _init_resp:  # KRT-2026-08-15 F5: 2s→10s, busy-kernel false negatives
             _session_id = _init_resp.headers.get("mcp-session-id")
         if _session_id:
             # Step 2: tools/call with session id
@@ -2147,7 +2149,9 @@ def well_health_check(
                     "mcp-session-id": _session_id,
                 },
             )
-            with urllib.request.urlopen(_call_req, timeout=10.0) as _resp:  # KRT-2026-08-15 F5
+            with urllib.request.urlopen(
+                _call_req, timeout=10.0
+            ) as _resp:  # KRT-2026-08-15 F5
                 _arif_json = json.loads(_resp.read().decode("utf-8"))
             for _c in _arif_json.get("result", {}).get("content", []):
                 if _c.get("type") != "text":
@@ -6491,7 +6495,9 @@ def well_get_health(ctx: Context | None = None) -> dict[str, Any]:
                 "Accept": "application/json, text/event-stream",
             },
         )
-        with urllib.request.urlopen(_init_req, timeout=10.0) as _init_resp:  # KRT-2026-08-15 F5: 2s→10s, busy-kernel false negatives
+        with urllib.request.urlopen(
+            _init_req, timeout=10.0
+        ) as _init_resp:  # KRT-2026-08-15 F5: 2s→10s, busy-kernel false negatives
             _session_id = _init_resp.headers.get("mcp-session-id")
         if _session_id:
             # Step 2: tools/call with session id
@@ -6515,7 +6521,9 @@ def well_get_health(ctx: Context | None = None) -> dict[str, Any]:
                     "mcp-session-id": _session_id,
                 },
             )
-            with urllib.request.urlopen(_call_req, timeout=10.0) as _resp:  # KRT-2026-08-15 F5
+            with urllib.request.urlopen(
+                _call_req, timeout=10.0
+            ) as _resp:  # KRT-2026-08-15 F5
                 _arif_json = json.loads(_resp.read().decode("utf-8"))
             for _c in _arif_json.get("result", {}).get("content", []):
                 if _c.get("type") != "text":
@@ -14320,6 +14328,41 @@ def _get_live_G() -> tuple[float | str | None, str | None]:
         return "UNMEASURED", f"arifOS kernel unreachable: {exc}"
 
 
+def _get_live_apex_scalars() -> dict:
+    """Live-mirror apex scalars (G, C_dark, W3, h, QDF) from arifOS kernel /health.
+
+    Extends the _get_live_G() pattern (P0.0 apex mirror) to all five scalars in
+    one kernel round-trip. Kernel unreachable -> UNMEASURED with note;
+    non-blocking (WELL is REFLECT_ONLY, lower criticality than the kernel).
+    """
+    _keys = ("G", "C_dark", "W3", "h", "QDF")
+    scalars: dict = {}
+    try:
+        import httpx as _httpx
+
+        resp = _httpx.get("http://localhost:8088/health", timeout=5.0)
+        resp.raise_for_status()
+        _apex = resp.json().get("apex_scalars", {}) or {}
+        for _key in _keys:
+            _val = (_apex.get(_key) or {}).get("value")
+            if _val is not None:
+                scalars[_key] = {"value": float(_val), "status": "MEASURED"}
+            else:
+                scalars[_key] = {
+                    "value": None,
+                    "status": "UNMEASURED",
+                    "note": f"{_key} present in kernel apex_scalars but value is None.",
+                }
+    except Exception as exc:  # noqa: BLE001 — mirror must never block /health
+        for _key in _keys:
+            scalars[_key] = {
+                "value": None,
+                "status": "UNMEASURED",
+                "note": f"arifOS kernel unreachable: {exc}",
+            }
+    return scalars
+
+
 @mcp.tool()
 def well_assess_homeostasis(
     mode: str = "sleep",  # CHAOS FIX: "empathize" not in VALID_MODES ["sleep","cognitive","stress","vitality","circadian","fatigue"]; sleep is implemented
@@ -19177,13 +19220,7 @@ if __name__ == "__main__":
                 "identity_hash": identity_hash,
                 # T5 2026-07-17 -- apex_scalars + federation_geometry required.
                 # Domain data readiness stays separate via honesty_* (MOCK/STALE).
-                "apex_scalars": {
-                    "G": {"value": None, "status": "UNMEASURED"},
-                    "C_dark": {"value": None, "status": "UNMEASURED"},
-                    "W3": {"value": None, "status": "UNMEASURED"},
-                    "h": {"value": None, "status": "UNMEASURED"},
-                    "QDF": {"value": None, "status": "UNMEASURED"},
-                },
+                "apex_scalars": _get_live_apex_scalars(),
                 "federation_geometry": {
                     "status": "enabled",
                     "subjects": 0,
