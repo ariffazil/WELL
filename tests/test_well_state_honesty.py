@@ -225,3 +225,12 @@ def test_honesty_block_stale_banner():
     assert h["is_stale"] is True
     assert h["code"] == "STALE"
     assert "STALE" in h["banner"]
+
+
+def test_machine_substrate_health_does_not_invent_score():
+    from server import _machine_substrate_health
+
+    block = _machine_substrate_health()
+    assert "well_score" not in block
+    assert block["source"] == "machine_state.json"
+    assert block["status"] in {"healthy", "degraded", "unavailable"}

@@ -1997,6 +1997,8 @@ try:
 
     register_legacy_tools(mcp)
     logger.info("WELL compatibility stubs registered successfully.")
+except ImportError:
+    pass
 except Exception as _e:
     logger.error("Failed to register WELL compatibility stubs: %s", _e)
 
@@ -2635,6 +2637,44 @@ def _state_is_insufficient(state: dict[str, Any]) -> tuple[bool, list[str]]:
         reasons.append("no_verified_telemetry")
 
     return bool(reasons), reasons
+
+
+def _machine_substrate_health() -> dict[str, Any]:
+    """Freshness of machine_state.json only. Never a human well_score."""
+    path = Path("/root/WELL/machine_state.json")
+    if not path.exists():
+        return {
+            "status": "unavailable",
+            "source": "machine_state.json",
+            "collector": "well-machine-telemetry.timer",
+            "note": "collector file missing",
+        }
+    try:
+        ms = json.loads(path.read_text())
+        ts = ms.get("timestamp")
+        dt = datetime.datetime.fromisoformat(str(ts).replace("Z", "+00:00"))
+        age = (
+            datetime.datetime.now(datetime.timezone.utc) - dt
+        ).total_seconds()
+        band = (
+            "FRESH" if age < 3600 else "AGED" if age < 14400 else "STALE"
+        )
+        return {
+            "status": "healthy" if band == "FRESH" else "degraded",
+            "source": "machine_state.json",
+            "collector": "well-machine-telemetry.timer",
+            "timestamp": ts,
+            "age_seconds": round(age, 1),
+            "freshness_band": band,
+            "note": "machine substrate only; not human biometrics",
+        }
+    except Exception as exc:
+        return {
+            "status": "unavailable",
+            "source": "machine_state.json",
+            "collector": "well-machine-telemetry.timer",
+            "error": str(exc)[:200],
+        }
 
 
 def _classify_well_state(state: dict[str, Any]) -> dict[str, Any]:
@@ -19261,6 +19301,18 @@ if __name__ == "__main__":
                 # F2 honesty surface -- permanent STALE/MOCK/SELF-REPORT banner
                 "honesty": classification.get("honesty"),
                 "honesty_banner": classification.get("honesty_banner"),
+                # Two clocks: machine collector vs human inject. Do not conflate.
+                "machine_substrate": _machine_substrate_health(),
+                "human_substrate": {
+                    "status": classification["truth_status"],
+                    "source": "state.json",
+                    "honesty": (classification.get("honesty") or {}).get("code"),
+                    "freshness_band": classification["freshness_band"],
+                    "age_hours": classification["state_age_hours"],
+                    "blocked_on": "sovereign biometric inject or Google Fit OAuth",
+                    "inject": "/root/WELL/scripts/biometric_inject.sh",
+                    "note": "do not invent well_score from mock/test state",
+                },
                 # Boundary disclaimer
                 "boundary_notice": "Not diagnosis. Not therapy. Reflective readiness only. Arif remains final judge.",
             }
