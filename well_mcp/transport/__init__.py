@@ -76,20 +76,9 @@ def run_loop(
     return stamp_egress(judged)
 
 
-def register_transport(mcp: Any) -> list[str]:
-    """Register transport loop diagnostic resource with FastMCP."""
-    @mcp.resource("well://transport/stages")
-    def transport_stages() -> str:
-        """The 5 transport stages for the WELL reaction loop."""
-        return "ingress -> encode -> metabolize -> judge -> egress"
-
-    return ["well://transport/stages"]
-
-
 __all__ = [
     "STAGE_NAMES",
     "run_loop",
-    "register_transport",
     "stamp_ingress",
     "stamp_encode",
     "stamp_metabolize",
