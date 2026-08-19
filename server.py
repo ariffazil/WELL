@@ -180,6 +180,18 @@ import os as _os
 
 STATE_PATH = Path(_os.environ.get("WELL_STATE_PATH", "/root/WELL/state.json"))
 EVENTS_PATH = Path(_os.environ.get("WELL_EVENTS_PATH", "/root/WELL/events.jsonl"))
+
+# Falsifiability loop (ZEN 2026-08-19): every gate verdict is appended
+# to this JSONL so subsequent outcomes can contradict or confirm.
+# started from now — no backfill. Each line:
+#   {ts, verdict, weakest_substrate, evidence, actor,
+#    subsequent_outcome:null, outcome_ts:null, outcome_class:null}
+VERDICT_OUTCOMES_PATH = Path(
+    _os.environ.get(
+        "WELL_VERDICT_OUTCOMES_PATH",
+        "/root/VAULT999/well/verdict-outcomes.jsonl",
+    )
+)
 VAULT_LEDGER_PATH = Path(
     _os.environ.get("WELL_VAULT_PATH", "/root/WELL/vault_ledger.jsonl")
 )
@@ -1857,44 +1869,44 @@ class WellSessionValidationMiddleware(_MiddlewareBase):
 # ── Deprecation Header Middleware (FORGED 2026-08-05) ──────────────────────────
 # Per F13 SOVEREIGN directive (Option c) ratified 2026-08-05T12:39Z: emit a
 # migration signal on calls to deprecated tools so callers (Hermes, OpenCode,
-# A2A agents) have a 27-day window to migrate before hard removal 2026-09-01.
+# A2A agents) have a 137-day window to migrate before hard removal 2026-12-01.
 
 DEPRECATED_TOOLS_MAP: dict[str, dict[str, Any]] = {
     "well_readiness": {
         "replacement": "well_validate_vitality",
         "replacement_args": {"mode": "readiness"},
         "deprecation_epoch": "2026-07-12",
-        "removal_date": "2026-09-01",
+        "removal_date": "2026-12-01",
     },
     "well_get_health": {
         "replacement": "well_assess_reliability",
         "replacement_args": {"mode": "health"},
         "deprecation_epoch": "2026-06-28",
-        "removal_date": "2026-09-01",
+        "removal_date": "2026-12-01",
     },
     "well_state": {
         "replacement": "well_validate_vitality",
         "replacement_args": {"mode": "state"},
         "deprecation_epoch": "2026-06-01",
-        "removal_date": "2026-09-01",
+        "removal_date": "2026-12-01",
     },
     "well_init": {
         "replacement": "well_000_init",
         "replacement_args": {},
         "deprecation_epoch": "2026-06-01",
-        "removal_date": "2026-09-01",
+        "removal_date": "2026-12-01",
     },
     "well_machine_state": {
         "replacement": "well_assess_reliability",
         "replacement_args": {},
         "deprecation_epoch": "2026-06-01",
-        "removal_date": "2026-09-01",
+        "removal_date": "2026-12-01",
     },
     "well_assess_governance": {
         "replacement": "well_detect_boundary",
         "replacement_args": {},
         "deprecation_epoch": "2026-07-01",
-        "removal_date": "2026-09-01",
+        "removal_date": "2026-12-01",
     },
 }
 
@@ -5137,7 +5149,7 @@ def well_readiness(
     [INTERNAL ONLY — deprecated 2026-07-12] → well_validate_vitality(mode="readiness").
 
     Still callable for federation clients. Prefer the canonical tool for new code.
-    Deprecation epoch: 2026-07-12. Target removal: 2026-09-01 (F13 may extend).
+    Deprecation epoch: 2026-07-12. Target removal: 2026-12-01 (F13 may extend).
 
     Runtime marker (forged 2026-07-12): emits a logger.warning each call
     and adds `_deprecated: {epoch, replacement, removal}` to the response so
@@ -5149,7 +5161,7 @@ def well_readiness(
     logger.warning(
         "well_readiness is deprecated 2026-07-12; "
         "callers should use well_validate_vitality(mode='readiness'). "
-        "Removal scheduled 2026-09-01."
+        "Removal scheduled 2026-12-01."
     )
     state = _load_state()
     score = _state_score(state) or 0
@@ -5302,7 +5314,7 @@ def well_readiness(
         "replacement": "well_validate_vitality",
         "replacement_args": {"mode": "readiness"},
         "deprecation_epoch": "2026-07-12",
-        "removal_date": "2026-09-01",
+        "removal_date": "2026-12-01",
         "readiness_envelope": envelope.get("readiness")
         if isinstance(envelope, dict)
         else None,
@@ -10737,31 +10749,56 @@ def well_machine_diagnose(
         "memory_psi_avg10": mem_psi,
     }
 
-    if swap_pct > 30 and mem_psi < 5:
+    from well_machine_physics import assess_swap_cycle, live_tmpfs_ram
+
+    swap_gate = assess_swap_cycle(avail_kb, swap_used_kb, mem_psi)
+    mem_status["swap_cycle"] = {
+        "safe": swap_gate["safe"],
+        "reason": swap_gate["reason"],
+        "deficit_gb": swap_gate["deficit_gb"],
+        "precondition": swap_gate["precondition"],
+    }
+
+    if swap_pct > 30 and swap_gate["safe"]:
         severity = "AMBER"
         issues.append(
-            f"Swap {swap_pct:.0f}% used ({swap_used_kb / 1024**2:.1f}GB) but PSI={mem_psi:.1f} -- safe to recover"
+            f"Swap {swap_pct:.0f}% used ({swap_gate['swap_used_gb']}GB) and "
+            f"fits in MemAvailable ({swap_gate['available_gb']}GB) with PSI="
+            f"{mem_psi:.1f} -- cycle is physically safe"
         )
         recommendations.append(
             {
-                "issue": f"Stale swap ({swap_pct:.0f}%, {swap_used_kb / 1024**2:.1f}GB) with zero memory pressure",
-                "action": "swapoff -a && swapon -a  # PSI confirms safe -- no memory thrashing",
+                "issue": f"Stale swap ({swap_pct:.0f}%, {swap_gate['swap_used_gb']}GB) with RAM headroom",
+                "action": "swapoff -a && swapon -a",
                 "blast_radius": "LOW",
                 "reversible": True,
                 "route_to": "A-FORGE forge_shell",
-                "precondition": f"mem_psi_avg10={mem_psi:.1f} < 5 -- confirmed safe",
+                "precondition": swap_gate["precondition"],
             }
         )
-    elif swap_pct > 50:
-        severity = "RED"
-        issues.append(f"Swap CRITICAL: {swap_pct:.0f}% used, PSI={mem_psi:.1f}")
+    elif swap_pct > 30:
+        severity = "AMBER" if swap_gate["psi_quiet"] else "RED"
+        issues.append(
+            f"Swap {swap_pct:.0f}% used ({swap_gate['swap_used_gb']}GB) — "
+            f"HOLD swapoff ({swap_gate['reason']}, deficit="
+            f"{swap_gate['deficit_gb']}GB)"
+        )
         recommendations.append(
             {
-                "issue": f"Critical swap ({swap_pct:.0f}%) with memory pressure",
-                "action": "Kill top memory consumers first: ps aux --sort=-%mem | head -5. Then swapoff -a && swapon -a.",
-                "blast_radius": "MEDIUM",
-                "reversible": True,
-                "route_to": "888_HOLD -- requires arif_judge before killing processes",
+                "issue": (
+                    f"Swap {swap_pct:.0f}% used but MemAvailable "
+                    f"{swap_gate['available_gb']}GB cannot absorb "
+                    f"{swap_gate['swap_used_gb']}GB + 1GB margin"
+                ),
+                "action": (
+                    "HOLD swapoff. Free RAM first (idle agents, tmpfs /tmp). "
+                    "Re-run well_machine_diagnose. Do not swapoff until "
+                    "MemAvailable >= SwapUsed + 1GB."
+                ),
+                "blast_radius": "HIGH if swapoff is forced",
+                "reversible": False,
+                "route_to": "888_HOLD",
+                "precondition": swap_gate["precondition"],
             }
         )
 
@@ -10780,12 +10817,43 @@ def well_machine_diagnose(
         recommendations.append(
             {
                 "issue": f"Disk at {disk_pct}%",
-                "action": "docker system prune -a --volumes (CAREFUL: destroys unused images). Safer: journalctl --vacuum-time=7d, apt-get clean, snap list --all | awk '/disabled/{print $1, $3}' | xargs -r snap remove",
-                "blast_radius": "HIGH for prune -a, LOW for journal/snap",
+                "action": (
+                    "Probe yield first: journalctl --disk-usage, docker system df, "
+                    "du -sh /var/cache/apt. Vacuum/apt-clean only if those show "
+                    "reclaimable GB. docker system prune -a is 888_HOLD "
+                    "(destroys unused images; active images free 0B)."
+                ),
+                "blast_radius": "HIGH for prune -a, LOW for journal/apt after yield probe",
                 "reversible": False,
-                "route_to": "888_HOLD for docker system prune -a",
+                "route_to": "probe then A-FORGE; 888_HOLD for docker prune -a",
             }
         )
+
+    try:
+        tmpfs = live_tmpfs_ram()
+        if tmpfs.get("tmp_used_gb", 0) >= 1.0:
+            issues.append(
+                f"/tmp tmpfs holding {tmpfs['tmp_used_gb']}GB RAM "
+                "(not disk). Do not treat as journal/apt reclaim."
+            )
+            recommendations.append(
+                {
+                    "issue": f"/tmp tmpfs {tmpfs['tmp_used_gb']}GB of RAM",
+                    "action": (
+                        "List /tmp by size. Named holds (HERMES-purge) stay. "
+                        "Empty files/dirs and expired caches only. No rm -rf."
+                    ),
+                    "blast_radius": "LOW for empty-file cleanup, HIGH for named holds",
+                    "reversible": False,
+                    "route_to": "A-FORGE after named-hold check",
+                }
+            )
+            mem_status["tmpfs"] = {
+                "tmp_used_gb": tmpfs["tmp_used_gb"],
+                "total_used_gb": tmpfs["total_used_gb"],
+            }
+    except Exception:
+        pass
 
     # PSI Pressure
     psi_status = {
@@ -10930,28 +10998,63 @@ def well_machine_recommend(
         pressure.get("memory_full_avg10", 0),
     )
 
+    from well_machine_physics import assess_swap_cycle
+
+    avail_kb = mem.get("available_kb", 0)
+    swap_gate = assess_swap_cycle(avail_kb, swap_used, mem_psi)
+
+    if swap_gate["safe"]:
+        swap_commands = [
+            {
+                "command": "swapoff -a && swapon -a",
+                "description": (
+                    "Cycle swap — pages fit in MemAvailable + 1GB margin "
+                    "and PSI is quiet."
+                ),
+                "risk": "LOW",
+                "precondition": swap_gate["precondition"],
+                "blast_radius": "LOW",
+                "reversible": True,
+            }
+        ]
+    else:
+        swap_commands = [
+            {
+                "command": (
+                    "echo HOLD_SWAPOFF deficit_gb="
+                    f"{swap_gate['deficit_gb']} reason={swap_gate['reason']}"
+                ),
+                "description": (
+                    "Do not swapoff. PSI-quiet is not enough. "
+                    f"MemAvailable {swap_gate['available_gb']}GB cannot absorb "
+                    f"SwapUsed {swap_gate['swap_used_gb']}GB + 1GB margin "
+                    f"(deficit {swap_gate['deficit_gb']}GB)."
+                ),
+                "risk": "HIGH",
+                "precondition": swap_gate["precondition"],
+                "blast_radius": "HIGH",
+                "reversible": False,
+            },
+            {
+                "command": "ps aux --sort=-%mem | head -12",
+                "description": "Identify RAM consumers before any swap cycle.",
+                "risk": "NONE",
+                "blast_radius": "NONE",
+                "reversible": True,
+            },
+        ]
+
     RECOMMENDATIONS = {
         "swap": {
-            "condition": f"swap at {swap_pct:.0f}%, PSI={mem_psi:.1f}",
-            "safe": mem_psi
-            < 5,  # Safe when pressure low; swap_pct gates applicability, not safety
-            "commands": [
-                {
-                    "command": "swapoff -a && swapon -a",
-                    "description": "Cycle swap -- drains all stale swap pages back to RAM. Safe only when PSI < 5.",
-                    "risk": "LOW" if mem_psi < 5 else "HIGH",
-                    "precondition": f"mem_psi_avg10={mem_psi:.1f} must be < 5",
-                    "blast_radius": "LOW",
-                    "reversible": True,
-                },
-                {
-                    "command": "sync && echo 3 > /proc/sys/vm/drop_caches",
-                    "description": "Drop page cache, dentries, and inodes -- frees RAM for swap recovery.",
-                    "risk": "LOW",
-                    "blast_radius": "LOW",
-                    "reversible": True,
-                },
-            ],
+            "condition": (
+                f"swap at {swap_pct:.0f}%, PSI={mem_psi:.1f}, "
+                f"MemAvailable={swap_gate['available_gb']}GB, "
+                f"SwapUsed={swap_gate['swap_used_gb']}GB"
+            ),
+            "safe": swap_gate["safe"],
+            "reason": swap_gate["reason"],
+            "deficit_gb": swap_gate["deficit_gb"],
+            "commands": swap_commands,
         },
         "memory": {
             "commands": [
@@ -10963,8 +11066,8 @@ def well_machine_recommend(
                     "reversible": True,
                 },
                 {
-                    "command": "sync && echo 3 > /proc/sys/vm/drop_caches",
-                    "description": "Drop page cache to free RAM.",
+                    "command": "echo HOLD_DROP_CACHES — page cache is already in MemAvailable; dropping it does not create swapoff headroom",
+                    "description": "Do not drop_caches as a swap-recovery step. MemAvailable already counts reclaimable cache.",
                     "risk": "LOW",
                     "blast_radius": "LOW",
                     "reversible": True,
@@ -10974,31 +11077,24 @@ def well_machine_recommend(
         "disk": {
             "commands": [
                 {
-                    "command": "journalctl --vacuum-time=3d",
-                    "description": "Vacuum systemd journals older than 3 days.",
+                    "command": "journalctl --disk-usage; docker system df; du -sh /var/cache/apt/archives 2>/dev/null",
+                    "description": "Probe reclaimable yield before vacuum/prune. Do not vacuum if journals < 200MB.",
+                    "risk": "NONE",
+                    "blast_radius": "NONE",
+                    "reversible": True,
+                },
+                {
+                    "command": "journalctl --vacuum-time=7d",
+                    "description": "Vacuum journals only after --disk-usage shows material GB. Live test 2026-08-19 freed 0B.",
                     "risk": "LOW",
                     "blast_radius": "LOW",
                     "reversible": False,
                 },
                 {
-                    "command": "apt-get clean && apt-get autoremove --purge -y",
-                    "description": "Clean APT package cache and remove unused packages.",
-                    "risk": "LOW",
-                    "blast_radius": "LOW",
-                    "reversible": False,
-                },
-                {
-                    "command": "docker system prune -f",
-                    "description": "Remove stopped containers, unused networks, dangling images.",
-                    "risk": "MEDIUM",
-                    "blast_radius": "MEDIUM",
-                    "reversible": False,
-                },
-                {
-                    "command": 'snap list --all | awk \'/disabled/{print $1, $3}\' | while read name rev; do snap remove "$name" --revision="$rev"; done',
-                    "description": "Remove disabled snap revisions (can free GBs).",
-                    "risk": "LOW",
-                    "blast_radius": "LOW",
+                    "command": "echo HOLD docker system prune -a — requires 888; prune -f only dangling/exited",
+                    "description": "Active images reclaim 0B. prune -a is irreversible.",
+                    "risk": "HIGH",
+                    "blast_radius": "HIGH",
                     "reversible": False,
                 },
             ],
@@ -15558,6 +15654,94 @@ def well_validate_vitality(
                 "verdict": "UNAVAILABLE",
                 "error": str(_gate_err),
             }
+    # ── ZEN SUBTRACTION PASS (2026-08-19) — Z1, Z2, Z3 ──────────────────
+    # Z1: one canonical readiness object. Strip the duplicated envelope
+    #     and the duplicate vitality_gate at top-level of handoff_payload.
+    # Z2: delete the self-referential deprecation block (well_validate_vitality
+    #     telling the caller to call itself). Carried over from the
+    #     well_readiness alias. The Z5 alias extension (2026-12-01) makes
+    #     this noise even worse — purge it.
+    # Z3: collapse 8 verdict-shaped fields to 1 (vitality_gate.verdict).
+    #     Strip the redundant risk_level at handoff_payload.risk_level.
+    hpo = ((result or {}).get("metabolic", {}) or {}).get(
+        "cross_organ_handoff", {}
+    ).get("handoff_payload", {}) or {}
+    # Z2 — deprecation block (5 keys)
+    for _k in (
+        "deprecated",
+        "replacement",
+        "replacement_args",
+        "deprecation_epoch",
+        "removal_date",
+    ):
+        hpo.pop(_k, None)
+    # Z3 — collapse verdict-shaped fields. Keep only the canonical
+    #     vitality_gate.verdict (hpo.vitality_gate.verdict is the
+    #     top-level gate envelope; readiness_envelope.vitality_gate.verdict
+    #     is the nested one — they carry the same information; we keep
+    #     the outer one and strip the inner block).
+    hpo.pop("risk_level", None)  # Z3: redundant with vitality_gate.verdict
+    env = hpo.get("readiness_envelope", {}) or {}
+    if isinstance(env, dict) and "vitality_gate" in env and "vitality_gate" in hpo:
+        # Z1: drop the inner vitality_gate to avoid duplication
+        env.pop("vitality_gate", None)
+
+    # Falsifiability loop: append this verdict to the outcome log so a
+    # subsequent observation can either confirm or contradict it.
+    # Backfill: nothing. Started from now.
+    try:
+        import sys as _sys_fl
+        VERDICT_OUTCOMES_PATH.parent.mkdir(parents=True, exist_ok=True)
+        # Path: metabolic.cross_organ_handoff.handoff_payload.{readiness_envelope.substrates, vitality_gate, ...}
+        hpo = ((result or {}).get("metabolic", {}) or {}).get(
+            "cross_organ_handoff", {}
+        ).get("handoff_payload", {}) or {}
+        env = hpo.get("readiness_envelope", {}) or {}
+        substrates = env.get("substrates", {}) or {}
+        # vitality_gate sits in two places: hpo.vitality_gate and env.vitality_gate
+        gate = hpo.get("vitality_gate") or env.get("vitality_gate") or {}
+        gate_verdict = gate.get("verdict", "UNAVAILABLE")
+        # weakest substrate: H, M, G(interaction), C — pick the lowest-ranked state
+        _rank_map = {
+            "READY": 4, "PROCEED": 4, "OPTIMAL": 4, "HEALTHY": 4, "COHERENT": 4,
+            "BELOW_BASELINE": 3, "FUNCTIONAL": 3, "MEDIUM_RISK": 3,
+            "DEGRADED": 2, "DRIFTING": 2,
+            "CRITICAL": 1, "REDUCE_LOAD": 1, "HIGH_RISK": 1,
+            "UNKNOWN": 0, "STALE": 0, "VOID": 0,
+            "UNAVAILABLE": -1, "UNMEASURED": -2,
+        }
+        substrate_aliases = (
+            ("H_WELL", "human"),
+            ("M_WELL", "machine"),
+            ("G_WELL", "governance"),
+            ("C_WELL", "interaction"),
+        )
+        weakest_name, weakest_state, weakest_rank = None, None, 999
+        for alias, key in substrate_aliases:
+            sub = substrates.get(key) or {}
+            if not isinstance(sub, dict):
+                continue
+            state_name = sub.get("state", "UNKNOWN")
+            r = _rank_map.get(state_name, 0)
+            if r < weakest_rank:
+                weakest_name, weakest_state, weakest_rank = alias, state_name, r
+        if weakest_name is None:
+            weakest_name, weakest_state = "unknown", "UNKNOWN"
+        line = {
+            "ts": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            "verdict": gate_verdict,
+            "weakest_substrate": f"{weakest_name}={weakest_state}",
+            "evidence": (gate.get("evidence", "") or "")[:300],
+            "actor": "well_validate_vitality",
+            "subsequent_outcome": None,
+            "outcome_ts": None,
+            "outcome_class": None,
+            "source_commit": ((result or {}).get("metabolic", {}) or {}).get("source_commit", "unknown"),
+        }
+        with VERDICT_OUTCOMES_PATH.open("a") as _vf:
+            _vf.write(json.dumps(line) + "\n")
+    except Exception as _e:  # pragma: no cover — outcome logging must not break the verdict
+        pass
     return _inject_apex(result, "well_validate_vitality")
 
 
@@ -17221,34 +17405,34 @@ def well_registry_status(
             "replacement": "well_validate_vitality",
             "replacement_args": {"mode": "readiness"},
             "deprecation_epoch": "2026-07-12",
-            "removal_date": "2026-09-01",
+            "removal_date": "2026-12-01",
         },
         "well_get_health": {
             "replacement": "well_assess_reliability",
             "replacement_args": {"mode": "health"},
             "deprecation_epoch": "2026-06-28",
-            "removal_date": "2026-09-01",
+            "removal_date": "2026-12-01",
         },
         "well_state": {
             "replacement": "well_validate_vitality",
             "replacement_args": {"mode": "state"},
             "deprecation_epoch": "2026-06-01",
-            "removal_date": "2026-09-01",
+            "removal_date": "2026-12-01",
         },
         "well_init": {
             "replacement": "well_000_init",
             "deprecation_epoch": "2026-06-01",
-            "removal_date": "2026-09-01",
+            "removal_date": "2026-12-01",
         },
         "well_machine_state": {
             "replacement": "well_assess_reliability",
             "deprecation_epoch": "2026-06-01",
-            "removal_date": "2026-09-01",
+            "removal_date": "2026-12-01",
         },
         "well_assess_governance": {
             "replacement": "well_detect_boundary",
             "deprecation_epoch": "2026-07-01",
-            "removal_date": "2026-09-01",
+            "removal_date": "2026-12-01",
         },
     }
     # Ω-stage internal aliases (not public canonical)

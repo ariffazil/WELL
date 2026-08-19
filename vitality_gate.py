@@ -517,6 +517,30 @@ def assess_h_well(
             "source": "state_artifact",
         }
 
+    # --- Z4 UNMEASURED — H_WELL abstains when no biometric data ---
+    # No metrics AND no well_score AND no operator report → there is no
+    # substrate for H_WELL to vote on. Returning READY here was the
+    # absence-laundering bug (the 2026-08-19 live bug). UNMEASURED
+    # is non-voting: C_WELL must compute from M and G only, and name
+    # the abstention in its evidence line.
+    has_metrics = bool(state.get("metrics"))
+    has_well_score = well_score is not None
+    no_self_report = (
+        truth not in ("OPERATOR_REPORTED", "VERIFIED")
+        and not has_metrics
+        and not has_well_score
+    )
+    if no_self_report:
+        return {
+            "state": "UNMEASURED",
+            "rank": None,
+            "evidence": (
+                "no_biometric_data: H_WELL abstains; C_WELL computes from M and G only"
+            ),
+            "uncertainty": 1.0,
+            "source": "state_artifact",
+        }
+
     # --- Primary: self-report / biometric inject ---
     age_hours = None
     if ts:
@@ -675,13 +699,28 @@ def assess_c_well(h: dict, m: dict, g: dict) -> dict[str, Any]:
     """
     Assess C-WELL (coupled state) from H, M, G assessments.
     Weakest substrate + interaction risk.
+
+    Z4 UNMEASURED: if H_WELL abstained (state=UNMEASURED, rank=None),
+    C_WELL computes from M and G only, and names the abstention in
+    the evidence line.
     """
-    h_rank = h["rank"]
+    h_rank = h.get("rank")
+    h_state = h.get("state", "UNKNOWN")
+    h_abstained = h_state == "UNMEASURED" or h_rank is None
     m_rank = m["rank"]
     g_rank = g["rank"]
 
-    min_rank = min(h_rank, m_rank, g_rank)
-    degraded_count = sum(1 for r in [h_rank, m_rank, g_rank] if r <= 2)
+    if h_abstained:
+        # H_WELL abstained — compute from M and G only.
+        ranks = [m_rank, g_rank]
+        min_rank = min(ranks)
+        degraded_count = sum(1 for r in ranks if r <= 2)
+        abstention_note = "H_WELL abstained (no biometric data); C_WELL from M and G only"
+    else:
+        ranks = [h_rank, m_rank, g_rank]
+        min_rank = min(ranks)
+        degraded_count = sum(1 for r in ranks if r <= 2)
+        abstention_note = None
 
     if min_rank <= 1 or degraded_count >= 2:
         c_state = "HIGH_RISK"
@@ -692,12 +731,20 @@ def assess_c_well(h: dict, m: dict, g: dict) -> dict[str, Any]:
     else:
         c_state = "LOW_RISK"
 
+    base_evidence = (
+        f"H={h_state}({h_rank if h_rank is not None else 'abstain'}) "
+        f"M={m['state']}({m_rank}) G={g['state']}({g_rank}), "
+        f"degraded_count={degraded_count}"
+    )
+    evidence = f"{abstention_note}; {base_evidence}" if abstention_note else base_evidence
+
     return {
         "state": c_state,
         "rank": _rank(c_state),
-        "evidence": f"H={h['state']}({h_rank}) M={m['state']}({m_rank}) G={g['state']}({g_rank}), "
-        f"degraded_count={degraded_count}",
-        "uncertainty": max(h["uncertainty"], m["uncertainty"], g["uncertainty"]),
+        "evidence": evidence,
+        "uncertainty": max(
+            h.get("uncertainty", 1.0), m["uncertainty"], g["uncertainty"]
+        ),
         "source": "coupled_analysis",
     }
 
@@ -746,12 +793,30 @@ def vitality_gate(
     g = assess_g_well(_state)
     c = assess_c_well(h, m, g)
 
-    # Weakest substrate = gate
+    # Weakest substrate = gate. UNMEASURED (rank=None) abstention sorts
+    # below every ranked value — H_WELL abstains from the vote.
     all_dims = {"H_WELL": h, "M_WELL": m, "G_WELL": g, "C_WELL": c}
-    weakest_name = min(all_dims, key=lambda k: all_dims[k]["rank"])
-    weakest_rank = all_dims[weakest_name]["rank"]
 
-    raw_verdict = _VERDICT_MAP.get(weakest_rank, "INSUFFICIENT_DATA")
+    def _rank_sort(d):
+        r = d.get("rank")
+        if r is None:
+            return -1  # abstention — sorts below any ranked value
+        return r
+
+    weakest_dim = min(all_dims.values(), key=_rank_sort)
+    # find the substrate name for the weakest dim
+    weakest_name = next(
+        k for k, v in all_dims.items() if v is weakest_dim
+    )
+    weakest_rank = weakest_dim.get("rank")
+    weakest_state = weakest_dim.get("state", "UNKNOWN")
+
+    # If the weakest dimension is UNMEASURED (abstention), the gate
+    # reports UNMEASURED too — abstention propagates up to the verdict.
+    if weakest_rank is None:
+        raw_verdict = "UNMEASURED"
+    else:
+        raw_verdict = _VERDICT_MAP.get(weakest_rank, "INSUFFICIENT_DATA")
 
     # ═══════════════════════════════════════════════════════════════════════
     # PHASE 1 SAFETY LOCK: ALL verdicts route to observe-only.
@@ -767,12 +832,16 @@ def vitality_gate(
         "root-cause-on-recurrence, and quarantine allowlist are wired.",
     }
 
-    # Peace condition
+    # Peace condition. Z4 UNMEASURED: if H_WELL abstained (rank=None),
+    # the peace check requires H's participation — abstention breaks peace.
+    h_rank_val = h.get("rank")
+    h_abstained = h_rank_val is None
     peace = (
-        h["rank"] >= 2
-        and (m["rank"] >= 3 or m["state"] == "STRAINED")
-        and g["rank"] >= 3
-        and c["rank"] >= 3
+        not h_abstained
+        and h_rank_val >= 2
+        and (m.get("rank", 0) >= 3 or m.get("state") == "STRAINED")
+        and g.get("rank", 0) >= 3
+        and c.get("rank", 0) >= 3
     )
 
     return {

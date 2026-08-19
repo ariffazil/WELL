@@ -138,6 +138,22 @@ ALLOWLIST: list[dict[str, Any]] = [
             "searxng",  # search — restart safe
         ],
     },
+    {
+        "id": "repair-swap-cycle",
+        "band": "A3",
+        "symptom": "Swap used > 30%",
+        "probable_cause": "Working set larger than RAM; pages idle in swap",
+        "proposed_action": (
+            "swapoff -a && swapon -a ONLY if MemAvailable >= SwapUsed + 1GiB "
+            "AND memory PSI avg10 < 5. PSI-quiet alone is not safety. "
+            "If deficit > 0: HOLD. Free RAM first."
+        ),
+        "reversibility": "REVERSIBLE if RAM fits; IRREVERSIBLE OOM if it does not",
+        "blast_radius": "HIGH if RAM does not fit, LOW if physics gate passes",
+        "verification_test": "well_machine_physics.assess_swap_cycle(...).safe is True",
+        "rollback": "swapon -a if swapoff succeeded; none if OOM",
+        "required_authority": "A3_EXPLICIT_JUDGMENT",
+    },
     # ── A3: Judgment-gated repair ──
     {
         "id": "repair-restart-webfacing",

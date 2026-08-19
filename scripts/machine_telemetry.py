@@ -194,6 +194,35 @@ def disk_stats() -> dict:
     }
 
 
+def tmpfs_stats() -> dict:
+    """RAM-backed mounts. /tmp on tmpfs is memory, not disk reclaim."""
+    try:
+        import sys
+        from pathlib import Path as _P
+
+        _root = _P(__file__).resolve().parents[1]
+        if str(_root) not in sys.path:
+            sys.path.insert(0, str(_root))
+        from well_machine_physics import live_tmpfs_ram
+
+        data = live_tmpfs_ram()
+        return {
+            "tmp_used_kb": data.get("tmp_used_kb", 0),
+            "tmp_used_gb": data.get("tmp_used_gb", 0.0),
+            "total_used_kb": data.get("total_used_kb", 0),
+            "total_used_gb": data.get("total_used_gb", 0.0),
+            "note": data.get("note"),
+        }
+    except Exception:
+        return {
+            "tmp_used_kb": 0,
+            "tmp_used_gb": 0.0,
+            "total_used_kb": 0,
+            "total_used_gb": 0.0,
+            "note": "tmpfs probe failed",
+        }
+
+
 def service_stats() -> dict:
     """Query systemd for key federation services."""
     services = [
@@ -371,6 +400,7 @@ def collect() -> dict:
         "memory": memory_stats(),
         "pressure": pressure_stats(),
         "disk": disk_stats(),
+        "tmpfs": tmpfs_stats(),
         "services": service_stats(),
         "docker": docker_stats(),
         "zombies": zombie_count(),

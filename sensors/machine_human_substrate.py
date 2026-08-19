@@ -283,11 +283,11 @@ def collect_substrate_signals() -> dict[str, Any]:
             "GREEN" if readiness > 0.7 else "YELLOW" if readiness > 0.4 else "RED"
         ),
         "honesty": {
-            "source_type": "MACHINE_TELEMETRY",
-            "is_sensor_verified": True,
+            "source_type": "MACHINE_PATTERN_INFERENCE",
+            "is_sensor_verified": False,
             "is_self_report": False,
             "is_mock_or_test": False,
-            "is_stale": False,
+            "is_stale": True,
             "banner": "UNKNOWN — machine telemetry sensor pipeline not deployed. Install Prometheus Node Exporter for live substrate signals.",
         },
     }
