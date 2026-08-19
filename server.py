@@ -15358,6 +15358,16 @@ def well_check_repair(
         ctx=ctx,
     )
 
+    # P4 — strip fabricated readiness from repair precheck.
+    # well_777_forge(mode=precheck) returns data.readiness = {human, machine}
+    # via _compose_verdict, regardless of whether state has biometric data.
+    # A repair precheck is advisory-only (W0 mirror), not a vitality verdict —
+    # carrying a fabricated readiness.human = OPTIMAL while the state has
+    # truth_status=INSUFFICIENT_DATA is the absence-laundering bug.
+    if isinstance(result, dict) and isinstance(result.get("data"), dict):
+        result["data"].pop("readiness", None)
+
+
     # P4 WIRED (2026-07-21): Enrich with repair allowlist
     try:
         from repair_allowlist import (
