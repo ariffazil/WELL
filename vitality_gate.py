@@ -470,6 +470,53 @@ def assess_h_well(
     sources: list[str] = []
     combined_rank = 0
 
+    # --- Test-fixture rejection (F2/F4 gate) ---
+    # A state.json that is itself a test fixture must NEVER be classified as
+    # a real human reading, regardless of timestamp or well_score. The fixture
+    # is honest about being a fixture (environment=TEST, reason="Mocked ...").
+    # Background: state.json leakage documented 2026-08-19. Without this
+    # guard, a stale April TEST fixture that still claims FRESH would let
+    # the gate emit a confident verdict for a state that is in fact absent.
+    if (
+        state.get("environment") == "TEST"
+        or state.get("truth_status") == "TEST"
+        or str(state.get("reason", "")).startswith("Mocked")
+    ):
+        return {
+            "state": "UNKNOWN",
+            "rank": 0,
+            "evidence": (
+                f"test_fixture_detected: env={state.get('environment')} "
+                f"truth={state.get('truth_status')}"
+            ),
+            "uncertainty": 0.9,
+            "source": "state_artifact",
+        }
+
+    # --- VERIFIED-claim-without-data rejection (F2/F4 gate) ---
+    # Same coercion as biometric_inject.sh VERIFIED → OPERATOR_REPORTED,
+    # applied to the gate's reading path. A state that claims VERIFIED but
+    # has empty metrics and no well_score is a category error: the data
+    # does not back the claim. Without this guard, an injected VERIFIED
+    # truth_status with no biometric data produces READY (rank 4) — the
+    # exact absence-laundering bug the test_gate_rejects_mismatched_truth_status
+    # test documents.
+    if (
+        state.get("truth_status") == "VERIFIED"
+        and not state.get("metrics")
+        and state.get("well_score") is None
+    ):
+        return {
+            "state": "UNKNOWN",
+            "rank": 0,
+            "evidence": (
+                "verified_claim_without_data: truth=VERIFIED "
+                "metrics_empty=True well_score=None"
+            ),
+            "uncertainty": 0.9,
+            "source": "state_artifact",
+        }
+
     # --- Primary: self-report / biometric inject ---
     age_hours = None
     if ts:
