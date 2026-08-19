@@ -234,3 +234,41 @@ def test_machine_substrate_health_does_not_invent_score():
     assert "well_score" not in block
     assert block["source"] == "machine_state.json"
     assert block["status"] in {"healthy", "degraded", "unavailable"}
+
+
+# ── 6. well_check_repair must not carry fabricated readiness (P4 honesty) ─────
+
+
+def test_well_check_repair_does_not_leak_fabricated_readiness(monkeypatch, tmp_path):
+    """well_check_repair is a repair precheck (advisory). The readiness field
+    is fabricated by well_777_forge → well_forge_precheck → _compose_verdict
+    regardless of whether the state has biometric data. A repair tool that
+    is allowed to carry a fabricated "readiness.human=OPTIMAL" verdict
+    while the state has truth_status=INSUFFICIENT_DATA is the absence-
+    laundering bug surfaced in docs/FINDINGS-2026-08-19.
+    """
+    import server as _server_mod
+    from server import well_check_repair
+    state_path = tmp_path / "well-state.json"
+    state_path.write_text(
+        '{"truth_status":"INSUFFICIENT_DATA","environment":"PROD",'
+        '"well_score":null,"reason":"no production state yet"}'
+    )
+    monkeypatch.setattr(_server_mod, "STATE_PATH", state_path)
+
+    result = well_check_repair(mode="precheck", task_description="probe-repair")
+
+    # The result is wrapped by _to_federation_output. The forged readiness
+    # surfaces inside result["observation"]["readiness"]. The fix is to strip
+    # the readiness field from the observation before returning.
+    observation = result.get("observation", {})
+    if isinstance(observation, dict):
+        assert "readiness" not in observation, (
+            f"well_check_repair leaked fabricated readiness: {observation.get('readiness')}. "
+            f"Repair precheck is advisory-only and must not carry a vitality verdict."
+        )
+
+    # Also: the top-level result must not carry a top-level "readiness" key.
+    assert "readiness" not in result, (
+        f"well_check_repair leaked top-level readiness: {result.get('readiness')}"
+    )
