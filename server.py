@@ -1739,6 +1739,11 @@ from well_triad.phase3_tools import (
 from well_triad.phase4_tools import (
     well_assess_triadic_state as _wt_well_assess_triadic_state,
 )
+from well_triad.phase5_observability import (
+    well_get_triadic_snapshot as _wt_well_get_triadic_snapshot,
+    well_render_hud_panel as _wt_well_render_hud_panel,
+    well_frame_read_snapshot as _wt_well_frame_read_snapshot,
+)
 
 # install_bindings() is wired below, after _load_state / _save_state are defined.
 
@@ -4164,6 +4169,38 @@ def well_assess_triadic_state(
         lookback_hours=lookback_hours,
         ctx=ctx,
     )
+
+
+# ── Phase 5 — Observability (HUD/AAA/FRAME readers + snapshot path) ─────────
+
+@mcp.tool()
+def well_get_triadic_snapshot(ctx: Context | None = None) -> dict[str, Any]:
+    """[Triad Phase 5] Read the canonical triadic snapshot at /state/triadic_snapshot.json.
+
+    This is the read surface consumed by HUD, AAA cockpit, and FRAME observer.
+    Cron snapshotter writes the file every 60s. If absent, returns graceful UNKNOWN.
+    """
+    return _wt_well_get_triadic_snapshot(ctx=ctx)
+
+
+@mcp.tool()
+def well_render_hud_panel(ctx: Context | None = None) -> dict[str, Any]:
+    """[Triad Phase 5] Render HUD cockpit ASCII panel from triadic snapshot.
+
+    F1 amanah: panel never includes per-biometric fields, only aggregate scores.
+    Hermes HUD reads this for the cockpit top-bar.
+    """
+    return _wt_well_render_hud_panel(ctx=ctx)
+
+
+@mcp.tool()
+def well_frame_read_snapshot(ctx: Context | None = None) -> dict[str, Any]:
+    """[Triad Phase 5] FRAME observer reads snapshot as evidence, never verdict.
+
+    F12 verdict hygiene: returns `snapshot` (observation) + `frame_verdict:
+    "EVIDENCE_ONLY"`. FRAME is the independent observer — never ratifies decisions.
+    """
+    return _wt_well_frame_read_snapshot(ctx=ctx)
 
 
 # internal -- not MCP-facing (collapsed 2026-05-26)
@@ -18234,6 +18271,10 @@ SOMATIC_TOOLS = {
     "well_seal_recommendation_log",        # read recommendation history
     # ── Triadic Substrate Phase 4 (FORGED 2026-08-20, F13 SEALED) ──────────
     "well_assess_triadic_state",           # headline: human × machine × governance → 1 signal
+    # ── Triadic Substrate Phase 5 (FORGED 2026-08-20, F13 SEALED) ──────────
+    "well_get_triadic_snapshot",           # read /state/triadic_snapshot.json
+    "well_render_hud_panel",               # HUD cockpit ASCII panel
+    "well_frame_read_snapshot",            # FRAME observer evidence-only reader
 }
 # NOTE: well_registry_status is the canonical blueprint format tool.
 # well_system_registry_status is deprecated (internal only, no MCP registration).

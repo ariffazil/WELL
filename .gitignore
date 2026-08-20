@@ -58,3 +58,9 @@ machine_state.json
 schema.json
 agent_telemetry.json
 CONTRIBUTING.md
+
+# ── Ephemeral work directories ──
+forge_work/
+
+# ── Human state files — sensitive, reflect-only ──
+sado-human-state.md
