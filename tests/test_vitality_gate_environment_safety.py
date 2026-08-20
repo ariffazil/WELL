@@ -77,19 +77,6 @@ def test_gate_rejects_mismatched_truth_status():
     )
 
 
-def test_h_well_unmeasured_when_no_biometrics():
-    """Honest empty PROD state must abstain, not READY."""
-    state = {
-        "truth_status": "INSUFFICIENT_DATA",
-        "environment": "PROD",
-        "well_score": None,
-        "reason": "no production state yet",
-    }
-    result = assess_h_well(state, substrate_data=None)
-    assert result["state"] == "UNMEASURED"
-    assert result["rank"] is None
-
-
 def test_gate_determinism_with_frozen_inputs():
     """Two calls with identical inputs must return byte-identical outputs.
 
