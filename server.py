@@ -1736,6 +1736,9 @@ from well_triad.phase3_tools import (
     well_consent_audit as _wt_well_consent_audit,
     well_seal_recommendation_log as _wt_well_seal_recommendation_log,
 )
+from well_triad.phase4_tools import (
+    well_assess_triadic_state as _wt_well_assess_triadic_state,
+)
 
 # install_bindings() is wired below, after _load_state / _save_state are defined.
 
@@ -4133,6 +4136,32 @@ def well_seal_recommendation_log(
     return _wt_well_seal_recommendation_log(
         lookback_hours=lookback_hours,
         recommendation_filter=recommendation_filter,
+        ctx=ctx,
+    )
+
+
+# ── Phase 4 — Triadic Composition (headline tool) ───────────────────────────
+
+@mcp.tool()
+def well_assess_triadic_state(
+    actor_id: str = "arif",
+    lookback_hours: int = 1,
+    ctx: Context | None = None,
+) -> dict[str, Any]:
+    """[Triad Phase 4] Headline composition: human × machine × governance → unified signal.
+
+    Composes:
+      - Human plane: well_assess_homeostasis (state.json metrics)
+      - Machine plane: well_observe_federation_thermal (per-organ /health aggregate)
+      - Governance plane: well_consent_audit + events.jsonl recommendation count
+
+    Returns unified_score, weakest_plane, route (PROCEED/REDUCE_LOAD/RECOVER/HOLD/SABAR).
+    F12 verdict hygiene: NEVER returns sealed/verdict/acted_on. Route is recommendation only.
+    Caller must pass through arifOS.verify → AAA.judge before any action.
+    """
+    return _wt_well_assess_triadic_state(
+        actor_id=actor_id,
+        lookback_hours=lookback_hours,
         ctx=ctx,
     )
 
@@ -18203,6 +18232,8 @@ SOMATIC_TOOLS = {
     "well_consent_set_scope",              # Hermes-only F11 scope grant/revoke
     "well_consent_audit",                  # read consent registry
     "well_seal_recommendation_log",        # read recommendation history
+    # ── Triadic Substrate Phase 4 (FORGED 2026-08-20, F13 SEALED) ──────────
+    "well_assess_triadic_state",           # headline: human × machine × governance → 1 signal
 }
 # NOTE: well_registry_status is the canonical blueprint format tool.
 # well_system_registry_status is deprecated (internal only, no MCP registration).
