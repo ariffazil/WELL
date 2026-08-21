@@ -2702,12 +2702,8 @@ def _machine_substrate_health() -> dict[str, Any]:
         ms = json.loads(path.read_text())
         ts = ms.get("timestamp")
         dt = datetime.datetime.fromisoformat(str(ts).replace("Z", "+00:00"))
-        age = (
-            datetime.datetime.now(datetime.timezone.utc) - dt
-        ).total_seconds()
-        band = (
-            "FRESH" if age < 3600 else "AGED" if age < 14400 else "STALE"
-        )
+        age = (datetime.datetime.now(datetime.timezone.utc) - dt).total_seconds()
+        band = "FRESH" if age < 3600 else "AGED" if age < 14400 else "STALE"
         return {
             "status": "healthy" if band == "FRESH" else "degraded",
             "source": "machine_state.json",
@@ -2975,6 +2971,7 @@ _wt_events.install(_append_event)
 # re-trigger the arifOS import chain via from-server-import statements).
 _wt_install_bindings(_load_state, _save_state)
 from well_triad.phase3_tools import install_bindings as _wt_p3_install_bindings
+
 _wt_p3_install_bindings(_load_state, _save_state)
 
 
@@ -3815,25 +3812,46 @@ def well_log_intake(
     Source: must be declared (F2). Free-form fields: PII-scanned (F4).
     """
     import datetime as _dt
+
     eaten_at_dt = (
         _dt.datetime.fromisoformat(eaten_at_utc.replace("Z", "+00:00"))
-        if eaten_at_utc else None
+        if eaten_at_utc
+        else None
     )
     return _wt_well_log_intake(
-        meal_label=meal_label, kcal=kcal, protein_g=protein_g, carb_g=carb_g,
-        fat_g=fat_g, hydration_ml=hydration_ml, caffeine_mg=caffeine_mg,
-        sugar_g=sugar_g, fiber_g=fiber_g, location_label=location_label,
-        eaten_at_utc=eaten_at_dt, source=source, confidence=confidence,
-        consent_scope=consent_scope, note=note, ctx=ctx,
+        meal_label=meal_label,
+        kcal=kcal,
+        protein_g=protein_g,
+        carb_g=carb_g,
+        fat_g=fat_g,
+        hydration_ml=hydration_ml,
+        caffeine_mg=caffeine_mg,
+        sugar_g=sugar_g,
+        fiber_g=fiber_g,
+        location_label=location_label,
+        eaten_at_utc=eaten_at_dt,
+        source=source,
+        confidence=confidence,
+        consent_scope=consent_scope,
+        note=note,
+        ctx=ctx,
     )
 
 
 @mcp.tool()
 def well_log_recovery_event(
     event_type: Literal[
-        "sauna", "cold_exposure", "nap", "meditation",
-        "walk", "stretching", "fasting_start", "fasting_end",
-        "breathwork", "massage", "sleep_block",
+        "sauna",
+        "cold_exposure",
+        "nap",
+        "meditation",
+        "walk",
+        "stretching",
+        "fasting_start",
+        "fasting_end",
+        "breathwork",
+        "massage",
+        "sleep_block",
     ],
     duration_min: float | None = None,
     intensity: float | None = None,
@@ -3847,23 +3865,37 @@ def well_log_recovery_event(
 ) -> dict[str, Any]:
     """[Triad Phase 1] Log a recovery/restorative event."""
     import datetime as _dt
+
     occurred_dt = (
         _dt.datetime.fromisoformat(occurred_at_utc.replace("Z", "+00:00"))
-        if occurred_at_utc else None
+        if occurred_at_utc
+        else None
     )
     return _wt_well_log_recovery_event(
-        event_type=event_type, duration_min=duration_min, intensity=intensity,
-        fasting_window_hours=fasting_window_hours, occurred_at_utc=occurred_dt,
-        source=source, confidence=confidence, consent_scope=consent_scope,
-        note=note, ctx=ctx,
+        event_type=event_type,
+        duration_min=duration_min,
+        intensity=intensity,
+        fasting_window_hours=fasting_window_hours,
+        occurred_at_utc=occurred_dt,
+        source=source,
+        confidence=confidence,
+        consent_scope=consent_scope,
+        note=note,
+        ctx=ctx,
     )
 
 
 @mcp.tool()
 def well_log_substance(
     substance: Literal[
-        "caffeine", "alcohol", "nicotine", "melatonin",
-        "creatine", "magnesium", "modafinil", "other",
+        "caffeine",
+        "alcohol",
+        "nicotine",
+        "melatonin",
+        "creatine",
+        "magnesium",
+        "modafinil",
+        "other",
     ],
     subclass: str | None = None,
     dose_mg: float | None = None,
@@ -3881,22 +3913,36 @@ def well_log_substance(
     Required scope: substance.full (default OFF — operator must opt in).
     """
     import datetime as _dt
+
     occurred_dt = (
         _dt.datetime.fromisoformat(occurred_at_utc.replace("Z", "+00:00"))
-        if occurred_at_utc else None
+        if occurred_at_utc
+        else None
     )
     return _wt_well_log_substance(
-        substance=substance, subclass=subclass, dose_mg=dose_mg,
-        dose_unit=dose_unit, dose_count=dose_count,
-        occurred_at_utc=occurred_dt, source=source, confidence=confidence,
-        consent_scope=consent_scope, note=note, ctx=ctx,
+        substance=substance,
+        subclass=subclass,
+        dose_mg=dose_mg,
+        dose_unit=dose_unit,
+        dose_count=dose_count,
+        occurred_at_utc=occurred_dt,
+        source=source,
+        confidence=confidence,
+        consent_scope=consent_scope,
+        note=note,
+        ctx=ctx,
     )
 
 
 @mcp.tool()
 def well_inject_biometric(
     source: Literal[
-        "apple_health", "whoop", "oura", "withings", "garmin", "manual",
+        "apple_health",
+        "whoop",
+        "oura",
+        "withings",
+        "garmin",
+        "manual",
     ],
     readings: dict[str, float],
     observed_at_utc: str | None = None,
@@ -3911,14 +3957,20 @@ def well_inject_biometric(
     biometric.full (default OFF — operator must opt in via Hermes).
     """
     import datetime as _dt
+
     observed_dt = (
         _dt.datetime.fromisoformat(observed_at_utc.replace("Z", "+00:00"))
-        if observed_at_utc else None
+        if observed_at_utc
+        else None
     )
     return _wt_well_inject_biometric(
-        source=source, readings=readings, observed_at_utc=observed_dt,
-        consent_scope=consent_scope, device_id=device_id,
-        actor_token=actor_token, ctx=ctx,
+        source=source,
+        readings=readings,
+        observed_at_utc=observed_dt,
+        consent_scope=consent_scope,
+        device_id=device_id,
+        actor_token=actor_token,
+        ctx=ctx,
     )
 
 
@@ -4012,6 +4064,7 @@ def well_classify_machine_state(
 
 # ── Phase 3 — Governance plane write-path (proposer, never judge) ────────────
 
+
 @mcp.tool()
 def well_attest_to_kernel(
     attestation_kind: str = "substrate_evidence",
@@ -4025,7 +4078,9 @@ def well_attest_to_kernel(
     from WELL alone (separation of powers: WELL proposes, arifOS verifies,
     AAA judges, A-FORGE executes, FRAME observes).
     """
-    return _wt_well_attest_to_kernel(attestation_kind=attestation_kind, actor_id=actor_id, ctx=ctx)
+    return _wt_well_attest_to_kernel(
+        attestation_kind=attestation_kind, actor_id=actor_id, ctx=ctx
+    )
 
 
 @mcp.tool()
@@ -4147,6 +4202,7 @@ def well_seal_recommendation_log(
 
 # ── Phase 4 — Triadic Composition (headline tool) ───────────────────────────
 
+
 @mcp.tool()
 def well_assess_triadic_state(
     actor_id: str = "arif",
@@ -4172,6 +4228,7 @@ def well_assess_triadic_state(
 
 
 # ── Phase 5 — Observability (HUD/AAA/FRAME readers + snapshot path) ─────────
+
 
 @mcp.tool()
 def well_get_triadic_snapshot(ctx: Context | None = None) -> dict[str, Any]:
@@ -15851,7 +15908,6 @@ def well_check_repair(
     if isinstance(result, dict) and isinstance(result.get("data"), dict):
         result["data"].pop("readiness", None)
 
-
     # P4 WIRED (2026-07-21): Enrich with repair allowlist
     try:
         from repair_allowlist import (
@@ -17750,6 +17806,28 @@ def well_registry_status(
         "well_444_reply",
         "well_444_gateway",
         "well_000_init",
+        # Triad phase tools (registered, internal — 2026-08-21 registry reconciliation)
+        "well_assess_triadic_state",
+        "well_attest_to_kernel",
+        "well_classify_machine_state",
+        "well_consent_audit",
+        "well_consent_set_scope",
+        "well_frame_read_snapshot",
+        "well_get_triadic_snapshot",
+        "well_handoff_dignity_to_arifos",
+        "well_inject_biometric",
+        "well_log_intake",
+        "well_log_recovery_event",
+        "well_log_substance",
+        "well_observe_drift_field",
+        "well_observe_evidence_backlog",
+        "well_observe_federation_thermal",
+        "well_observe_machine",
+        "well_observe_scar_load",
+        "well_propose_governance_signal",
+        "well_propose_seal_recommendation",
+        "well_render_hud_panel",
+        "well_seal_recommendation_log",
     }
 
     phantom_tools = sorted(registered_in_somatic - all_tools_in_code)
@@ -18250,31 +18328,31 @@ SOMATIC_TOOLS = {
     "well_machine_diagnose",  # M-WELL: full VPS diagnostic with recommendations
     "well_machine_recommend",  # M-WELL: concrete fix commands with risk assessment
     # ── Triadic Substrate Phase 1 (FORGED 2026-08-20, F13 SEALED) ──────────
-    "well_log_intake",             # intake write-path (kcal + macros)
-    "well_log_recovery_event",     # recovery/restorative events
-    "well_log_substance",          # caffeine, alcohol, supplements, nootropics
-    "well_inject_biometric",       # Hermes-only biometric injection
+    "well_log_intake",  # intake write-path (kcal + macros)
+    "well_log_recovery_event",  # recovery/restorative events
+    "well_log_substance",  # caffeine, alcohol, supplements, nootropics
+    "well_inject_biometric",  # Hermes-only biometric injection
     # ── Triadic Substrate Phase 2 (FORGED 2026-08-20, F13 SEALED) ──────────
-    "well_observe_machine",                # per-organ thermal/drift/scar/evidence
-    "well_observe_federation_thermal",     # aggregate across 5 live organs
-    "well_observe_scar_load",              # scar volume (graceful UNKNOWN)
-    "well_observe_drift_field",            # FRAME observer drift
-    "well_observe_evidence_backlog",       # receipt queue depth (graceful UNKNOWN)
-    "well_classify_machine_state",         # OPTIMAL/WATCH/DEGRADED/CRITICAL
+    "well_observe_machine",  # per-organ thermal/drift/scar/evidence
+    "well_observe_federation_thermal",  # aggregate across 5 live organs
+    "well_observe_scar_load",  # scar volume (graceful UNKNOWN)
+    "well_observe_drift_field",  # FRAME observer drift
+    "well_observe_evidence_backlog",  # receipt queue depth (graceful UNKNOWN)
+    "well_classify_machine_state",  # OPTIMAL/WATCH/DEGRADED/CRITICAL
     # ── Triadic Substrate Phase 3 (FORGED 2026-08-20, F13 SEALED) ──────────
-    "well_attest_to_kernel",               # bridge fire → arifOS /attest
-    "well_handoff_dignity_to_arifos",      # bridge fire → arifOS /dignity/handoff
-    "well_propose_seal_recommendation",    # proposer → arifOS /recommendation/inbox
-    "well_propose_governance_signal",      # proposer → arifOS /signal/inbox
-    "well_consent_set_scope",              # Hermes-only F11 scope grant/revoke
-    "well_consent_audit",                  # read consent registry
-    "well_seal_recommendation_log",        # read recommendation history
+    "well_attest_to_kernel",  # bridge fire → arifOS /attest
+    "well_handoff_dignity_to_arifos",  # bridge fire → arifOS /dignity/handoff
+    "well_propose_seal_recommendation",  # proposer → arifOS /recommendation/inbox
+    "well_propose_governance_signal",  # proposer → arifOS /signal/inbox
+    "well_consent_set_scope",  # Hermes-only F11 scope grant/revoke
+    "well_consent_audit",  # read consent registry
+    "well_seal_recommendation_log",  # read recommendation history
     # ── Triadic Substrate Phase 4 (FORGED 2026-08-20, F13 SEALED) ──────────
-    "well_assess_triadic_state",           # headline: human × machine × governance → 1 signal
+    "well_assess_triadic_state",  # headline: human × machine × governance → 1 signal
     # ── Triadic Substrate Phase 5 (FORGED 2026-08-20, F13 SEALED) ──────────
-    "well_get_triadic_snapshot",           # read /state/triadic_snapshot.json
-    "well_render_hud_panel",               # HUD cockpit ASCII panel
-    "well_frame_read_snapshot",            # FRAME observer evidence-only reader
+    "well_get_triadic_snapshot",  # read /state/triadic_snapshot.json
+    "well_render_hud_panel",  # HUD cockpit ASCII panel
+    "well_frame_read_snapshot",  # FRAME observer evidence-only reader
 }
 # NOTE: well_registry_status is the canonical blueprint format tool.
 # well_system_registry_status is deprecated (internal only, no MCP registration).
