@@ -109,6 +109,8 @@ The goal is not compliance. The goal is **durable operation**.
 
 ## One-minute demo
 
+*(Illustrative — example exchange, not a live transcript.)*
+
 ```text
 User: "Should I push this production release?"
 
