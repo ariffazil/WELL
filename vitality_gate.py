@@ -597,8 +597,8 @@ def assess_h_well(
                 )
             combined_rank = min(combined_rank, substrate_rank + 1)
         else:
-            # No self-report — substrate is the only signal
-            combined_rank = substrate_rank
+            # No self-report — substrate is the only signal (cap at rank 3 to prevent ungrounded READY)
+            combined_rank = min(substrate_rank, 3)
             evidence_parts.append(
                 f"substrate_only readiness={readiness:.2f} "
                 f"circadian={circadian.get('phase', '?')} "
