@@ -34,15 +34,17 @@ from well_triad import events as _wt_events
 
 # Federation topology — single source of truth.
 # Each entry: (organ_id, port, probe_path)
+# FIXED 2026-09-04 FI-008 (cron-zen-audit): arifos 18081→8088, geox 18082→8081 (was
+# crossing into WEALTH's port — "geox healthy" was WEALTH mislabeled), wealth
+# 18086→18082 (port retired, nothing listened). Verified vs `ss -tlnp` live truth.
 FEDERATION_ORGANS: tuple[tuple[str, int, str], ...] = (
-    ("arifos", 18081, "/health"),
-    ("geox",   18082, "/health"),
+    ("arifos", 8088,  "/health"),
+    ("geox",   8081,  "/health"),
     ("well",   18083, "/health"),
     ("frame",  18085, "/health"),
-    # AAA :18084 has no /mcp; use /health anyway
+    # AAA a2a surface :18084 answers /health (cockpit surface :3001 is the node app)
     ("aaa",    18084, "/health"),
-    # Wealth (offline as of probe)
-    ("wealth", 18086, "/health"),
+    ("wealth", 18082, "/health"),
 )
 
 # Strip these keys from any per-organ payload to enforce F1.

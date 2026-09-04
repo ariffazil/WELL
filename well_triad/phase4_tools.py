@@ -92,12 +92,14 @@ def _fetch_machine_plane(lookback_hours: int) -> dict[str, Any]:
     import time as _time
 
     FEDERATION = (
-        ("arifos", 18081),
-        ("geox",   18082),
+        # FIXED 2026-09-04 FI-008: arifos 18081→8088, geox 18082→8081 (was crossing
+        # into WEALTH), wealth 18086→18082. Verified vs live `ss -tlnp`.
+        ("arifos", 8088),
+        ("geox",   8081),
         ("well",   18083),
         ("aaa",    18084),
         ("frame",  18085),
-        ("wealth", 18086),
+        ("wealth", 18082),
     )
 
     organs: dict[str, dict[str, Any]] = {}
