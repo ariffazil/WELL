@@ -1,41 +1,49 @@
-# Contributing to WELL
+# Contributing to arifOS
 
-> **SOT:** 2026-07-25 | **DITEMPA BUKAN DIBERI**
+Thank you for your interest in contributing to the arifOS Federation.
 
-WELL is the substrate readiness organ of the arifOS Federation. It reflects — never diagnoses, never adjudicates.
+## Code of Conduct
 
-## Before You Start
+We expect all contributors to uphold a culture of respect, intellectual honesty,
+and governance-first thinking. arifOS exists because ungoverned AI is a liability,
+not an asset.
 
-1. Read the [README](README.md) — understand REFLECT_ONLY and the ABC Trinity
-2. Understand the medical boundary: `test_medical_boundary.py` is non-negotiable
-3. Run `curl :18083/health` — ensure WELL is running
+## How to Contribute
 
-## Setup
+1. **Fork** the repository you want to contribute to.
+2. **Branch** from `main` — feature branches must be descriptive.
+3. **Commit** with conventional commit messages: `feat:`, `fix:`, `docs:`, `chore:`, `test:`.
+4. **Test** your changes before opening a PR. Each organ has its own test suite.
+5. **Open a Pull Request** against `main`.
 
-```bash
-git clone git@github.com:ariffazil/WELL.git && cd WELL
-pip install -e .
-python server.py             # starts on :18083
-curl http://localhost:18083/health
-```
+## Pull Request Requirements
 
-## Making Changes
+Every PR must include:
+- A clear description of **what** changed and **why**.
+- Reference to an issue or session discussion (if applicable).
+- Evidence that tests pass (CI must be green).
+- For structural changes: an updated README or docs file.
 
-1. **Fork → Branch → Edit → Test → PR**
-2. Run `pytest tests/ -q --tb=short` before pushing
-3. `asyncio_mode = "auto"` — no explicit `@pytest.mark.asyncio` needed
+## Constitutional Alignment
 
-## Boundaries
+arifOS is a governed system. Changes that affect:
+- **Constitutional floors (F1–F13)** require explicit sovereign approval.
+- **MCP tool contracts** must maintain backward compatibility or include a migration guide.
+- **VAULT999 schema** changes require a seal approval and migration script.
 
-- WELL reflects — never diagnoses medical conditions
-- WELL observes — never overrides human self-reporting
-- `state.json` is F13 territory — only Arif writes biometric state
-- REFLECT_ONLY: no tool may issue strategic judgment or authorization
+## License
 
-## Federation
+Unless otherwise noted, this project is licensed under the **AGPL-3.0**.
+See [LICENSE](LICENSE) for the full text. The GEOX organ is licensed under the
+**Business Source License 1.1** (BSL-1.1); see the GEOX repository for details.
 
-WELL is one of 7 organs. See [ariffazil/ariffazil](https://github.com/ariffazil/ariffazil) for the federation map.
+By contributing, you agree that your contributions will be licensed under the
+same license as the repository.
 
----
+## Governance
 
-*Maintained under F13 SOVEREIGN by Muhammad Arif bin Fazil.*
+The arifOS Federation is governed by a constitutional kernel (F1–F13).
+External contributions are welcome but subject to constitutional review before
+merging into production branches.
+
+**DITEMPA BUKAN DIBERI** — Forged, Not Given.
