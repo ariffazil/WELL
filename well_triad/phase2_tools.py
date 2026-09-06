@@ -51,7 +51,8 @@ FEDERATION_ORGANS: tuple[tuple[str, int, str], ...] = (
 # kvm2 :8080 = Azwa arifOS-mcp fork (13 tools). kvm2 :7073 = Azwa fork, not KVM8 arifFlow.
 # kvm4 :4000 liveliness = LiteLLM worker. kvm4 :18789 = OpenClaw edge.
 MESH_SURFACES: tuple[tuple[str, str, int, str, str], ...] = (
-    ("kvm4-litellm", "100.64.0.5", 4000, "/health/liveliness", "execution"),
+    # LiteLLM worker is on KVM4; KVM8 HAProxy :4000 is the local intake WELL can always reach.
+    ("kvm4-litellm", "127.0.0.1", 4000, "/health/liveliness", "execution"),
     ("kvm4-openclaw", "100.64.0.5", 18789, "/health", "edge"),
     ("kvm2-witness-mcp", "100.64.0.4", 8080, "/health", "witness"),
     ("kvm2-azwa-fork", "100.64.0.4", 7073, "/health", "witness"),
