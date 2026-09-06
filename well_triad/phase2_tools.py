@@ -32,19 +32,29 @@ from fastmcp import Context
 from well_triad import events as _wt_events
 
 
-# Federation topology — single source of truth.
-# Each entry: (organ_id, port, probe_path)
-# FIXED 2026-09-04 FI-008 (cron-zen-audit): arifos 18081→8088, geox 18082→8081 (was
-# crossing into WEALTH's port — "geox healthy" was WEALTH mislabeled), wealth
-# 18086→18082 (port retired, nothing listened). Verified vs `ss -tlnp` live truth.
+# Federation topology — KVM8 loopback organs. Live :port/health beats this table.
+# 2026-09-04 FI-008: arifos 18081→8088, geox 18082→8081, wealth 18086→18082.
+# 2026-09-06: add A-FORGE + arifFlow (were missing; thermal was not "the federation").
 FEDERATION_ORGANS: tuple[tuple[str, int, str], ...] = (
-    ("arifos", 8088,  "/health"),
-    ("geox",   8081,  "/health"),
-    ("well",   18083, "/health"),
-    ("frame",  18085, "/health"),
+    ("arifos",   8088,  "/health"),
+    ("aforge",   7071,  "/health"),
+    ("arifflow", 7073,  "/health"),
+    ("geox",     8081,  "/health"),
+    ("well",     18083, "/health"),
+    ("frame",    18085, "/health"),
     # AAA a2a surface :18084 answers /health (cockpit surface :3001 is the node app)
-    ("aaa",    18084, "/health"),
-    ("wealth", 18082, "/health"),
+    ("aaa",      18084, "/health"),
+    ("wealth",   18082, "/health"),
+)
+
+# Cross-machine mesh surfaces (Headscale 100.64.0.0/10). NOT extra judges.
+# kvm2 :8080 = Azwa arifOS-mcp fork (13 tools). kvm2 :7073 = Azwa fork, not KVM8 arifFlow.
+# kvm4 :4000 liveliness = LiteLLM worker. kvm4 :18789 = OpenClaw edge.
+MESH_SURFACES: tuple[tuple[str, str, int, str, str], ...] = (
+    ("kvm4-litellm", "100.64.0.5", 4000, "/health/liveliness", "execution"),
+    ("kvm4-openclaw", "100.64.0.5", 18789, "/health", "edge"),
+    ("kvm2-witness-mcp", "100.64.0.4", 8080, "/health", "witness"),
+    ("kvm2-azwa-fork", "100.64.0.4", 7073, "/health", "witness"),
 )
 
 # Strip these keys from any per-organ payload to enforce F1.
@@ -81,9 +91,15 @@ def _redact_biometric(payload: dict[str, Any]) -> dict[str, Any]:
     return out
 
 
-def _probe_organ_http(name: str, port: int, path: str, timeout: float = 2.0) -> dict[str, Any]:
+def _probe_organ_http(
+    name: str,
+    port: int,
+    path: str,
+    timeout: float = 2.0,
+    host: str = "127.0.0.1",
+) -> dict[str, Any]:
     """Probe an organ's HTTP endpoint. Returns typed dict or error envelope."""
-    url = f"http://127.0.0.1:{port}{path}"
+    url = f"http://{host}:{port}{path}"
     t0 = _time.monotonic()
     try:
         req = urllib.request.Request(url, method="GET")
@@ -144,7 +160,10 @@ def _score_from_organ_data(name: str, data: dict[str, Any]) -> float:
         or "UNKNOWN"
     )
     s = str(status).upper()
-    if s in ("HEALTHY", "OK", "OPTIMAL", "READY", "STABLE", "GREEN"):
+    raw = str(data.get("raw") or "")
+    if "ALIVE" in raw.upper() or s in ("LIVE",) or s.startswith("OK"):
+        base = 0.95
+    elif s in ("HEALTHY", "OK", "OPTIMAL", "READY", "STABLE", "GREEN"):
         base = 0.95
     elif s in ("WATCH", "WARN", "AMBER", "BELOW_BASELINE", "DEGRADED"):
         base = 0.70
@@ -325,23 +344,36 @@ def well_observe_federation_thermal(
     lookback_hours: int = 1,
     ctx: Optional[Context] = None,
 ) -> dict[str, Any]:
-    """Aggregate thermal state across all 5 live organs."""
+    """Aggregate thermal state across KVM8 organs + KVM4/KVM2 mesh surfaces."""
     organs: dict[str, dict[str, Any]] = {}
     unknown_organs: list[str] = []
 
     for name, port, path in FEDERATION_ORGANS:
         probe = _probe_organ_http(name, port, path)
         if probe["ok"]:
-            redacted = _redact_biometric(probe["data"])
-            score = _score_from_organ_data(name, redacted)
-            organs[name] = {
+            redacted = _redact_biometric(probe["data"]) if isinstance(probe.get("data"), dict) else {}
+            score_src = redacted
+            # H-WELL stale self-report must not paint M-WELL thermal.
+            if name == "well" and isinstance(redacted.get("machine_substrate"), dict):
+                ms = redacted["machine_substrate"]
+                if str(ms.get("status", "")).lower() in ("healthy", "ok", "fresh"):
+                    score_src = {"status": ms.get("status"), "freshness_band": ms.get("freshness_band")}
+            score = _score_from_organ_data(name, score_src)
+            entry = {
                 "status": redacted.get("status", "UNKNOWN"),
                 "score": round(score, 3),
                 "classification": _classify_machine(score),
                 "latency_ms": probe["latency_ms"],
                 "port": port,
+                "host": "127.0.0.1",
                 "f1_redacted": True,
             }
+            if name == "well":
+                hs = redacted.get("human_substrate") if isinstance(redacted.get("human_substrate"), dict) else {}
+                entry["m_well"] = (redacted.get("machine_substrate") or {}).get("status")
+                entry["h_well"] = hs.get("status")
+                entry["h_well_honesty"] = hs.get("honesty") or redacted.get("honesty", {}).get("code")
+            organs[name] = entry
         else:
             organs[name] = {
                 "status": "DOWN",
@@ -350,15 +382,52 @@ def well_observe_federation_thermal(
                 "latency_ms": probe.get("latency_ms"),
                 "error": probe.get("error"),
                 "port": port,
+                "host": "127.0.0.1",
             }
             unknown_organs.append(name)
 
-    # Find weakest
-    scored = {n: v.get("score", 0.0) for n, v in organs.items()}
+    mesh: dict[str, dict[str, Any]] = {}
+    for name, host, port, path, role in MESH_SURFACES:
+        probe = _probe_organ_http(name, port, path, host=host)
+        if probe["ok"]:
+            data = probe["data"] if isinstance(probe.get("data"), dict) else {"raw": str(probe.get("data"))[:200]}
+            # LiteLLM liveliness body is the string "I'm alive!" — not JSON status.
+            if name == "kvm4-litellm" and probe.get("status_code") == 200:
+                data = {"status": "healthy", "raw": data.get("raw", "I'm alive!")}
+            score = _score_from_organ_data(name, data)
+            mesh[name] = {
+                "status": data.get("status", "UNKNOWN"),
+                "score": round(score, 3),
+                "classification": _classify_machine(score),
+                "latency_ms": probe["latency_ms"],
+                "host": host,
+                "port": port,
+                "path": path,
+                "role": role,
+                "note": "witness/edge/execution surface — not a second judge",
+            }
+        else:
+            mesh[name] = {
+                "status": "DOWN",
+                "score": 0.0,
+                "classification": "CRITICAL",
+                "latency_ms": probe.get("latency_ms"),
+                "error": probe.get("error"),
+                "host": host,
+                "port": port,
+                "path": path,
+                "role": role,
+            }
+            unknown_organs.append(name)
+
+    # Find weakest across organs + mesh
+    scored = {n: v.get("score", 0.0) for n, v in {**organs, **mesh}.items()}
     weakest = min(scored, key=lambda k: scored[k]) if scored else "unknown"
 
     # Federation route
-    critical_count = sum(1 for v in organs.values() if v.get("classification") == "CRITICAL")
+    critical_count = sum(
+        1 for v in {**organs, **mesh}.values() if v.get("classification") == "CRITICAL"
+    )
     if critical_count >= 1:
         route = "SABAR"
     elif min(scored.values()) < 0.5:
@@ -390,6 +459,12 @@ def well_observe_federation_thermal(
         "ok": True,
         "lookback_hours": lookback_hours,
         "organs": organs,
+        "mesh": mesh,
+        "topology": {
+            "kvm8": "100.64.0.2 truth",
+            "kvm4": "100.64.0.5 workshop/LLM",
+            "kvm2": "100.64.0.4 witness — not judge",
+        },
         "weakest": weakest,
         "unknown_organs": unknown_organs,
         "route": route,

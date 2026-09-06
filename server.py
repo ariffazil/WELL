@@ -4012,7 +4012,7 @@ def well_observe_federation_thermal(
     ctx: Context | None = None,
     actor_id: str | None = None,
 ) -> dict[str, Any]:
-    """[Triad Phase 2] Aggregate thermal state across 5 live organs.
+    """[Triad Phase 2] Aggregate thermal state across KVM8 organs + KVM4/KVM2 mesh.
 
     Probes each organ's /health, scores, finds weakest, returns route
     recommendation. F1 no biometric leakage.

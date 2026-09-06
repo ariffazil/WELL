@@ -1,10 +1,12 @@
 <!-- SOT-MANIFEST
 owner: Muhammad Arif bin Fazil (F13 SOVEREIGN)
 federation_release: v2026.08.25
-last_verified: 2026-08-25T04:30:00Z
-live_commit: 33c837f
+last_verified: 2026-09-06T15:20:00Z
+live_commit: probe :18083/health
 tools_live: 31 (canonical, live-witnessed via :18083/health)
 authority_ceiling: REFLECT_ONLY
+honesty: H-WELL is SELF_REPORT/AGED until biometric inject; M-WELL machine_state.json is separate
+mesh: thermal observes KVM8 organs + KVM4 LiteLLM/OpenClaw + KVM2 witness fork — not extra judges
 truth_rule: live :18083/health + tools/list beat any static count in prose
 -->
 
@@ -59,8 +61,8 @@ Traditional monitoring tools track uptime and metrics. They miss the human eleme
 └──────────────────────────┬───────────────────────────────────┘
                            │ MCP
                     ┌──────▼──────┐
-                    │  arifOS FED  │
-                    │  :7080 MCP   │
+                    │  arifOS      │
+                    │  :8088 MCP   │
                     └─────────────┘
 ```
 
