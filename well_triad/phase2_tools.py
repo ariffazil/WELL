@@ -350,7 +350,8 @@ def well_observe_federation_thermal(
     unknown_organs: list[str] = []
 
     for name, port, path in FEDERATION_ORGANS:
-        probe = _probe_organ_http(name, port, path)
+        # GEOX /health can exceed 2s under concurrent MCP load (E2E 2026-09-06).
+        probe = _probe_organ_http(name, port, path, timeout=5.0 if name == "geox" else 2.5)
         if probe["ok"]:
             redacted = _redact_biometric(probe["data"]) if isinstance(probe.get("data"), dict) else {}
             score_src = redacted
