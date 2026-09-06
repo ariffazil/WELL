@@ -3174,7 +3174,7 @@ def _compose_verdict(
 # @mcp.tool() REMOVED — KUTIP SAMPAH 2026-08-04: shadow surface cleanup. M2 was 1.60.
 # Internal callers use well_validate_vitality directly. Legacy bridge in compatibility.py.
 # @mcp.tool() — REMOVED. well_state is now internal-only.
-def well_state(include: str = "full", ctx: Context | None = None) -> dict[str, Any]:
+def well_state(include: str = "full", ctx: Context | None = None, actor_id: str | None = None) -> dict[str, Any]:
     """
     Get the current WELL state -- biological telemetry snapshot for operator Arif.
     Returns score, floor violations, and all metric dimensions.
@@ -3252,6 +3252,7 @@ def well_log(
     # Optional note
     note: str | None = None,
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """
     Log a biological telemetry update for operator Arif.
@@ -3369,6 +3370,7 @@ def well_log(
 def well_contrast_report(
     lookback_days: int = 14,
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """
     DEPRECATED: use well_state(include="trend") instead for trend data.
@@ -3574,6 +3576,7 @@ async def well_init(
 async def well_anchor(
     force: bool = False,
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """
     [DEPRECATED -- use well_anchor_evidence(mode='seal')]
@@ -3619,7 +3622,7 @@ async def well_anchor(
 
 # internal -- not MCP-facing (collapsed 2026-05-26)
 # @mcp.tool() REMOVED — KUTIP SAMPAH: internal/superseded()
-def well_check_floors(ctx: Context | None = None) -> dict[str, Any]:
+def well_check_floors(ctx: Context | None = None, actor_id: str | None = None) -> dict[str, Any]:
     """
     [DEPRECATED -- use well_validate_vitality(mode='floors')]
     Legacy W-floor checker. Retained for compatibility.
@@ -3764,6 +3767,7 @@ def well_log_state(
     clarity_score: float | None = None,
     note: str | None = None,
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """
     Log biological state entry to ledger (Phase 2).
@@ -3805,6 +3809,7 @@ def well_log_intake(
     consent_scope: str = "intake.basic",
     note: str | None = None,
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """[Triad Phase 1] Log a meal/snack/intake event with kcal + macro breakdown.
 
@@ -3862,6 +3867,7 @@ def well_log_recovery_event(
     consent_scope: str = "recovery.basic",
     note: str | None = None,
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """[Triad Phase 1] Log a recovery/restorative event."""
     import datetime as _dt
@@ -3907,6 +3913,7 @@ def well_log_substance(
     consent_scope: str = "substance.full",
     note: str | None = None,
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """[Triad Phase 1] Log a substance intake event.
 
@@ -3950,6 +3957,7 @@ def well_inject_biometric(
     device_id: str | None = None,
     actor_token: str | None = None,
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """[Triad Phase 1] Hermes-only biometric injection from external device.
 
@@ -3987,6 +3995,7 @@ def well_observe_machine(
     agent_id: Literal["arifos", "geox", "well", "aaa", "frame", "wealth"] = "well",
     surface: Literal["thermal", "drift", "scar", "evidence", "all"] = "all",
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """[Triad Phase 2] Per-organ thermal/drift/scar/evidence card.
 
@@ -4001,6 +4010,7 @@ def well_observe_machine(
 def well_observe_federation_thermal(
     lookback_hours: int = 1,
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """[Triad Phase 2] Aggregate thermal state across 5 live organs.
 
@@ -4014,6 +4024,7 @@ def well_observe_federation_thermal(
 def well_observe_scar_load(
     agent_id: str | None = None,
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """[Triad Phase 2] Scar volume per organ. Graceful UNKNOWN if no endpoint.
 
@@ -4027,6 +4038,7 @@ def well_observe_scar_load(
 def well_observe_drift_field(
     lookback_hours: int = 24,
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """[Triad Phase 2] FRAME observer drift over last N hours.
 
@@ -4040,6 +4052,7 @@ def well_observe_drift_field(
 def well_observe_evidence_backlog(
     agent_id: str | None = None,
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """[Triad Phase 2] Receipt queue depth. Graceful UNKNOWN if no endpoint.
 
@@ -4053,6 +4066,7 @@ def well_observe_evidence_backlog(
 def well_classify_machine_state(
     agent_id: Literal["arifos", "geox", "well", "aaa", "frame", "wealth"] = "well",
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """[Triad Phase 2] Compose prior tools → OPTIMAL/WATCH/DEGRADED/CRITICAL.
 
@@ -4177,6 +4191,7 @@ def well_consent_audit(
     scope_filter: str | None = None,
     include_revoked: bool = True,
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """[Triad Phase 3] Read consent scope registry. Sovereign's right (no F11 gate)."""
     return _wt_well_consent_audit(
@@ -4191,6 +4206,7 @@ def well_seal_recommendation_log(
     lookback_hours: int = 24,
     recommendation_filter: str | None = None,
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """[Triad Phase 3] Read recommendation history from events.jsonl. Read-only."""
     return _wt_well_seal_recommendation_log(
@@ -4231,7 +4247,7 @@ def well_assess_triadic_state(
 
 
 @mcp.tool()
-def well_get_triadic_snapshot(ctx: Context | None = None) -> dict[str, Any]:
+def well_get_triadic_snapshot(ctx: Context | None = None, actor_id: str | None = None) -> dict[str, Any]:
     """[Triad Phase 5] Read the canonical triadic snapshot at /state/triadic_snapshot.json.
 
     This is the read surface consumed by HUD, AAA cockpit, and FRAME observer.
@@ -4241,7 +4257,7 @@ def well_get_triadic_snapshot(ctx: Context | None = None) -> dict[str, Any]:
 
 
 @mcp.tool()
-def well_render_hud_panel(ctx: Context | None = None) -> dict[str, Any]:
+def well_render_hud_panel(ctx: Context | None = None, actor_id: str | None = None) -> dict[str, Any]:
     """[Triad Phase 5] Render HUD cockpit ASCII panel from triadic snapshot.
 
     F1 amanah: panel never includes per-biometric fields, only aggregate scores.
@@ -4251,7 +4267,7 @@ def well_render_hud_panel(ctx: Context | None = None) -> dict[str, Any]:
 
 
 @mcp.tool()
-def well_frame_read_snapshot(ctx: Context | None = None) -> dict[str, Any]:
+def well_frame_read_snapshot(ctx: Context | None = None, actor_id: str | None = None) -> dict[str, Any]:
     """[Triad Phase 5] FRAME observer reads snapshot as evidence, never verdict.
 
     F12 verdict hygiene: returns `snapshot` (observation) + `frame_verdict:
@@ -4262,7 +4278,7 @@ def well_frame_read_snapshot(ctx: Context | None = None) -> dict[str, Any]:
 
 # internal -- not MCP-facing (collapsed 2026-05-26)
 # @mcp.tool() REMOVED — KUTIP SAMPAH: redundant with canonical tool()
-def well_get_readiness(ctx: Context | None = None) -> dict[str, Any]:
+def well_get_readiness(ctx: Context | None = None, actor_id: str | None = None) -> dict[str, Any]:
     """
     Return current readiness score + W-floor status (Phase 2).
     Includes GREEN|AMBER|RED tiering and human_decision_required flag.
@@ -4327,7 +4343,8 @@ def well_get_readiness(ctx: Context | None = None) -> dict[str, Any]:
 # internal -- not MCP-facing (collapsed 2026-05-26)
 # @mcp.tool() REMOVED — KUTIP SAMPAH: internal/superseded()
 def well_check_floor(
-    floor_id: str | None = None, ctx: Context | None = None
+    floor_id: str | None = None, ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """
     [DEPRECATED -- use well_validate_vitality(floor_id=...)]
@@ -4429,7 +4446,7 @@ def well_check_floor(
 
 # internal -- not MCP-facing (collapsed 2026-05-26)
 # @mcp.tool() REMOVED — KUTIP SAMPAH: redundant with canonical tool()
-def well_list_log(limit: int = 10, ctx: Context | None = None) -> dict[str, Any]:
+def well_list_log(limit: int = 10, ctx: Context | None = None, actor_id: str | None = None) -> dict[str, Any]:
     """List recent biological state log entries (Phase 1/2)."""
     if not EVENTS_PATH.exists():
         return {"ok": True, "entries": []}
@@ -4452,7 +4469,8 @@ def well_list_log(limit: int = 10, ctx: Context | None = None) -> dict[str, Any]
 # internal -- not MCP-facing (collapsed 2026-05-26)
 @mcp.tool(task=True)
 async def well_seal_vault(
-    force: bool = False, ctx: Context | None = None
+    force: bool = False, ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """
     Seal current biological state to VAULT999 via vault_bridge.py (Phase 2).
@@ -4477,7 +4495,7 @@ async def well_seal_vault(
 
 
 @mcp.tool()
-def well_trend_analysis(ctx: Context | None = None) -> dict[str, Any]:
+def well_trend_analysis(ctx: Context | None = None, actor_id: str | None = None) -> dict[str, Any]:
     """
     Detect directional trajectory across all WELL metrics.
     Answers: improving / stable / degrading / collapse-risk.
@@ -4587,7 +4605,7 @@ def well_trend_analysis(ctx: Context | None = None) -> dict[str, Any]:
 
 
 @mcp.tool()
-def well_bandwidth_recommendation(ctx: Context | None = None) -> dict[str, Any]:
+def well_bandwidth_recommendation(ctx: Context | None = None, actor_id: str | None = None) -> dict[str, Any]:
     """
     [DEPRECATED -- use well_assess_metabolism(mode='bandwidth')]
     Legacy bandwidth/action-mode mapper. Retained for compatibility.
@@ -4691,7 +4709,7 @@ def well_bandwidth_recommendation(ctx: Context | None = None) -> dict[str, Any]:
 
 
 # internal -- not MCP-facing (collapsed 2026-05-26)
-def well_recovery_protocol(ctx: Context | None = None) -> dict[str, Any]:
+def well_recovery_protocol(ctx: Context | None = None, actor_id: str | None = None) -> dict[str, Any]:
     """
     Suggest stabilizing actions based on current WELL state.
     Not medical advice -- operational self-regulation support.
@@ -4832,6 +4850,7 @@ def well_niat_check(
     context: str | None = None,
     reversibility: str = "unknown",
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """
     Before high-impact action, check alignment between intent and biological state.
@@ -4938,6 +4957,7 @@ def well_decision_classify(
     task_description: str | None = None,
     decision_class: str | None = None,  # Allow pre-specified class
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """
     Classify a task or decision into C0-C5 risk tiers.
@@ -5294,7 +5314,7 @@ W0_TELEMETRY_PURPOSES = [
 
 
 # internal -- not MCP-facing (collapsed 2026-05-26)
-def well_consent_status(ctx: Context | None = None) -> dict[str, Any]:
+def well_consent_status(ctx: Context | None = None, actor_id: str | None = None) -> dict[str, Any]:
     """
     Return W0 Sovereignty & Telemetry Consent status.
     This is a hard floor -- WELL never operates without operator consent.
@@ -5351,6 +5371,7 @@ MEDICAL_RED_FLAGS = [
 def well_medical_boundary(
     include_score: bool = True,
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """
     Explicit non-diagnosis guard for WELL.
@@ -5431,6 +5452,7 @@ def well_pressure_ledger(
     intensity: float | None = None,
     note: str | None = None,
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """
     Log or retrieve pressure events categorized by source.
@@ -5523,7 +5545,7 @@ def well_pressure_ledger(
 
 # internal -- not MCP-facing (collapsed 2026-05-26)
 @mcp.tool()
-def well_daily_brief(ctx: Context | None = None) -> dict[str, Any]:
+def well_daily_brief(ctx: Context | None = None, actor_id: str | None = None) -> dict[str, Any]:
     """
     Daily operator dashboard -- one consolidated briefing.
     Readiness / Main Risk / Best Task Class / Avoid / Recovery Move / arifOS Mode
@@ -5673,6 +5695,7 @@ TTL_STALE = 48  # hours -- RED/STALE
 def well_readiness(
     detail: Literal["summary", "full"] = "full",
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """
     [INTERNAL ONLY — deprecated 2026-07-12] → well_validate_vitality(mode="readiness").
@@ -5910,7 +5933,7 @@ def well_readiness(
 # M-WELL State -- loads machine telemetry from state.json (m_machine section)
 # DEPRECATED: Use well_assess_reliability(mode="vitals") instead.
 # @mcp.tool() removed -- internal use only.
-def well_machine_state(ctx: Context | None = None) -> dict[str, Any]:
+def well_machine_state(ctx: Context | None = None, actor_id: str | None = None) -> dict[str, Any]:
     """
     Read current machine substrate state.
     Tracks: model reliability, tool availability, latency, context pressure,
@@ -5996,6 +6019,7 @@ def well_machine_log(
     vault_status: str | None = None,
     schema_valid: bool | None = None,
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """
     Log machine substrate telemetry.
@@ -6137,6 +6161,7 @@ def well_coupled_readiness(
     role_burden: float | None = None,
     dignity_preservation: float | None = None,
     purpose_alignment: float | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """
     C-WELL: Evaluate coupled human-machine readiness.
@@ -6331,6 +6356,7 @@ def well_decision_bandwidth(
     decision_class: str | None = None,
     task_description: str | None = None,
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """
     C-WELL decision bandwidth -- combines human + machine state for a specific class.
@@ -6474,6 +6500,7 @@ def well_forge_precheck(
     decision_class: str | None = None,
     estimated_duration_minutes: float | None = None,
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """
     A-FORGE asks WELL before forging: What is the safe execution mode?
@@ -6638,6 +6665,7 @@ def well_forge_pressure_update(
     intensity: float,  # 0-10
     detail: str | None = None,
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """
     A-FORGE reports pressure/cognitive load to WELL during forging.
@@ -6715,7 +6743,7 @@ def well_forge_pressure_update(
 
 
 # INTERNAL -- called by well_777_forge(mode="mode")
-def well_forge_mode_recommend(ctx: Context | None = None) -> dict[str, Any]:
+def well_forge_mode_recommend(ctx: Context | None = None, actor_id: str | None = None) -> dict[str, Any]:
     """
     Returns current forge mode recommendation for A-FORGE.
     Based on H-WELL + M-WELL + C-WELL state.
@@ -6799,6 +6827,7 @@ def well_forge_closeout(
     fatigue_spent: float | None = None,  # explicit fatigue cost if known
     note: str | None = None,
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """
     A-FORGE sends closure data after forge operation.
@@ -6965,7 +6994,7 @@ def _check_data_freshness(state: dict[str, Any]) -> dict[str, Any]:
 # NOTE: Expose=False in SOMATIC_TOOLS -- not in public MCP tools/list, not a phantom
 # @mcp.tool() REMOVED by FORGE entropy audit 2026-07-03 -- reduces callable surface.
 # @mcp.tool()
-def well_get_health(ctx: Context | None = None) -> dict[str, Any]:
+def well_get_health(ctx: Context | None = None, actor_id: str | None = None) -> dict[str, Any]:
     """
     Canonical three-layer health check.
 
@@ -7141,7 +7170,8 @@ def well_get_health(ctx: Context | None = None) -> dict[str, Any]:
 # internal -- not MCP-facing (collapsed 2026-05-26)
 # @mcp.tool() REMOVED — KUTIP SAMPAH: redundant with canonical tool()
 def well_get_state(
-    domain: str | None = None, ctx: Context | None = None
+    domain: str | None = None, ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """
     Retrieve current WELL state with evidence status.
@@ -7187,7 +7217,8 @@ def well_get_state(
 # internal -- not MCP-facing (collapsed 2026-05-26)
 # @mcp.tool() REMOVED — KUTIP SAMPAH: internal/superseded()
 def well_check_invariant(
-    floor_id: str | None = None, ctx: Context | None = None
+    floor_id: str | None = None, ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """
     Check WELL identity invariant and W-floors.
@@ -7241,6 +7272,7 @@ async def well_log_signal(
     confidence: str = "medium",
     note: str | None = None,
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """
     Plastic evidence logger. One tool, many domains.
@@ -7377,7 +7409,8 @@ async def well_log_signal(
 # internal -- not MCP-facing (collapsed 2026-05-26)
 # @mcp.tool() REMOVED — KUTIP SAMPAH: internal/superseded()
 def well_list_events(
-    limit: int = 10, redact: bool = True, ctx: Context | None = None
+    limit: int = 10, redact: bool = True, ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """
     List recent WELL events with optional redaction of sensitive fields.
@@ -7396,7 +7429,8 @@ def well_list_events(
 # ── WELL-06 well_reflect_trend ────────────────────────────────────────────────
 # @mcp.tool() REMOVED — KUTIP SAMPAH: redundant with canonical tool()
 def well_reflect_trend(
-    lookback_days: int = 30, ctx: Context | None = None
+    lookback_days: int = 30, ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """
     Reflect trajectory over time. Not analysis as authority -- reflection only.
@@ -7411,6 +7445,7 @@ def well_reflect_readiness(
     task_type: str | None = None,
     decision_class: str | None = None,
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """
     Reflect readiness from available evidence.
@@ -7438,6 +7473,7 @@ def well_suggest_mode(
     task_description: str | None = None,
     decision_class: str | None = None,
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """
     Suggest operating mode. Suggest, not decide.
@@ -7457,7 +7493,7 @@ def well_suggest_mode(
 # [INTERNAL] Suggest non-medical stabilizing actions. Suggest, not prescribe.
 # Use well_recovery_protocol(ctx=ctx) directly instead.
 # @mcp.tool() REMOVED — KUTIP SAMPAH: redundant with canonical tool()
-def well_suggest_recovery(ctx: Context | None = None) -> dict[str, Any]:
+def well_suggest_recovery(ctx: Context | None = None, actor_id: str | None = None) -> dict[str, Any]:
     return well_recovery_protocol(ctx=ctx)
 
 
@@ -7468,6 +7504,7 @@ def well_reflect_niat(
     context: str | None = None,
     reversibility: str = "unknown",
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """
     Reflect whether stated intent appears clear, reversible, and aligned.
@@ -7483,6 +7520,7 @@ def well_classify_task(
     task_description: str | None = None,
     decision_class: str | None = None,
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """
     Classify task risk C0-C5. Classification is not judgment.
@@ -7499,6 +7537,7 @@ def well_get_packet(
     target: str = "arifos",
     detail: str = "standard",
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """
     Emit context packet for arifOS, dashboard, A-FORGE, or unified substrate.
@@ -7543,6 +7582,7 @@ async def well_request_anchor(
     dry_run: bool = False,
     reason: str = "state_checkpoint",
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """
     Request anchor/seal to vault. Subject to auth and invariant pass.
@@ -8307,6 +8347,7 @@ def well_boundary_check(
     substrate_class: str,
     evaluation_intent: str,
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """
     Prevent category error and authority overreach.
@@ -8445,6 +8486,7 @@ def well_evidence_quality_check(
     evidence_age_hours: float | None = None,
     corroboration_count: int = 0,
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """
     Assess evidence strength for vitality claims.
@@ -8498,6 +8540,7 @@ def well_verdict_packet(
     meaning_boundary: str = "unknown",
     human_judge_required: bool = True,
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """
     Structured advisory output for any substrate evaluation.
@@ -8531,6 +8574,7 @@ def well_livelihood_energy_check(
     duty_load: float | None = None,
     recovery_hours: float | None = None,
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """
     Assess whether the person has enough energy to sustain duties.
@@ -8590,6 +8634,7 @@ def well_livelihood_time_check(
     time_sovereignty_score: float | None = None,
     competing_demands: list[str] | None = None,
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """
     Assess time sovereignty -- does the person control their own time?
@@ -8641,6 +8686,7 @@ def well_livelihood_role_check(
     role_burden: float | None = None,
     role_contradictions: list[str] | None = None,
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """
     Assess role clarity, burden, and contradictions.
@@ -8686,6 +8732,7 @@ def well_livelihood_meaning_check(
     niat_clarity: float | None = None,
     motivation_source: str | None = None,
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """
     Assess purpose alignment and Niat (intention) clarity.
@@ -8728,6 +8775,7 @@ def well_livelihood_dignity_check(
     coercion_signals: list[str] | None = None,
     survival_quality: str | None = None,
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """
     Assess whether survival preserves dignity.
@@ -8798,6 +8846,7 @@ def well_bio_viability_check(
     has_reproduction: bool | None = None,
     host_dependency: str = "independent",
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """
     Assess biological viability for organisms, tissues, viruses.
@@ -8859,6 +8908,7 @@ def well_material_integrity_check(
     age_years: float | None = None,
     hazard_flags: list[str] | None = None,
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """
     Assess structural condition of material objects.
@@ -8899,6 +8949,7 @@ def well_institution_entropy_check(
     trust_trend: str | None = None,
     decision_latency_days: float | None = None,
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """
     Assess organizational viability -- mission, cashflow, trust, coordination.
@@ -8979,6 +9030,7 @@ def well_info_coherence_check(
     maintainability_score: float | None = None,
     truth_anchor_strength: float | None = None,
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """
     Assess coherence, maintainability, and truth integrity of information systems.
@@ -9047,6 +9099,7 @@ def well_symbolic_domain_check(
     reductionism_risk: float | None = None,
     dignity_boundary: bool = True,
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """
     Detect metaphysical/meaning domain and protect against reductionism.
@@ -9456,6 +9509,7 @@ def well_111_sense(
     description: str | None = None,
     evaluation_intent: str | None = None,
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """
     Ω-WELL-01: Substrate sensing and classification.
@@ -9557,6 +9611,7 @@ def well_222_fetch(
     evidence_age_hours: float | None = None,
     corroboration_count: int = 0,
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """
     Ω-WELL-02: Evidence fetching and quality assessment.
@@ -9660,6 +9715,7 @@ def well_333_mind(
     cashflow_status: str | None = None,
     internal_consistency: float | None = None,
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """
     Ω-WELL-03: Vitality reasoning across all substrates.
@@ -9861,6 +9917,7 @@ def well_444_kernel(
     task_description: str | None = None,
     decision_class: str | None = None,
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """
     Ω-WELL-04: Routing and lane selection.
@@ -9988,6 +10045,7 @@ def well_555_memory(
     limit: int = 10,
     lookback_days: int = 30,
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """
     Ω-WELL-05: Memory, trend, and ledger operations.
@@ -10061,6 +10119,7 @@ def well_666_heart(
     coercion_signals: list[str] | None = None,
     reductionism_risk: float | None = None,
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """
     Ω-WELL-06: Empathy, ethics, and dignity critique.
@@ -10214,6 +10273,7 @@ def well_777_forge(
     intensity: float | None = None,
     outcome: str | None = None,
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """
     Ω-WELL-07: Forge execution coupling.
@@ -10325,6 +10385,7 @@ def well_888_judge(
     task_description: str | None = None,
     decision_class: str | None = None,
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """
     Ω-WELL-08: Validate biological readiness and NIAT.
@@ -10421,6 +10482,7 @@ async def well_999_vault(
     reason: str = "state_checkpoint",
     force: bool = False,
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """
     Ω-WELL-09: Immutable vault operations.
@@ -10496,6 +10558,7 @@ def well_444_reply(
     subject: str | None = None,
     substrate_class: str | None = None,
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """
     Ω-WELL-10: Packet composition and reply forging.
@@ -10575,6 +10638,7 @@ def well_444_gateway(
     mode: str = "status",
     peer: str | None = None,
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """
     Ω-WELL-11: Federation gateway and bridge.
@@ -10835,6 +10899,7 @@ def _read_machine_state_delta(field: str, default: Any = None) -> Any:
 def well_000_ops(
     mode: str = "health",
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """
     Ω-WELL-12: Operations and health telemetry.
@@ -11171,6 +11236,7 @@ def _telemetry_age_seconds(ms: dict) -> float:
 @mcp.tool()
 def well_machine_diagnose(
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """M-WELL MACHINE DIAGNOSTIC -- Full VPS health with actionable recommendations.
 
@@ -11437,6 +11503,7 @@ def well_machine_diagnose(
 def well_machine_recommend(
     issue_type: str = "swap",
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """M-WELL RECOMMENDATION ENGINE -- Get specific fix commands for machine issues.
 
@@ -11819,6 +11886,7 @@ def _resolve_path(state: dict[str, Any], path: list[str]) -> Any:
 def well_13_signal_coverage(
     operator_id: str | None = None,
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """
     [DEPRECATED -- USE well_signal_coverage]
@@ -11835,6 +11903,7 @@ def well_13_signal_coverage(
 def well_signal_coverage(
     operator_id: str | None = None,
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """
     DREAM ENGINE: Audit WELL's coverage of canonical human substrate
@@ -12546,7 +12615,7 @@ def afwell_causal_dag() -> str:
         "Example: tree777://skills/well/governance-ops"
     ),
 )
-def well_tree777_skill(name: str) -> str:
+def well_tree777_skill(name: str, actor_id: str | None = None) -> str:
     file_path = TREE777_SKILLS_DIR / f"{name}.md"
     if not file_path.exists():
         return json.dumps(
@@ -12568,7 +12637,7 @@ def well_tree777_skill(name: str) -> str:
         "Example: tree777://well/concepts/TREE777"
     ),
 )
-def well_tree777_concept(name: str) -> str:
+def well_tree777_concept(name: str, actor_id: str | None = None) -> str:
     file_path = TREE777_CONCEPTS_DIR / f"{name}.md"
     if not file_path.exists():
         return json.dumps(
@@ -12591,7 +12660,7 @@ def well_tree777_concept(name: str) -> str:
         "Example: tree777://well/scars/well-fatigue-breach"
     ),
 )
-def well_tree777_scar(name: str) -> str:
+def well_tree777_scar(name: str, actor_id: str | None = None) -> str:
     file_path = TREE777_SCAR_DIR / f"{name}.md"
     if not file_path.exists():
         return json.dumps(
@@ -13514,6 +13583,7 @@ def well_handoff_dignity_to_arifos(
     reductionism_risk: float | None = None,
     signal: str = "dignity_leakage_under_review",
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """
     Ω-WELL-FED-S12: Explicit handoff of S12 (social_dignity_consent) signal
@@ -13575,6 +13645,7 @@ def well_handoff_livelihood_to_wealth(
     duty_load: float | None = None,
     cashflow_status: str | None = None,
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """
     Ω-WELL-FED-S13: Explicit handoff of S13 (environment_livelihood) signal
@@ -14051,6 +14122,7 @@ def well_machine_log_signal(
     duration_seconds: float | None = None,
     source: str = "auto",
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """
     Log a realtime machine telemetry signal.
@@ -14127,6 +14199,7 @@ def well_machine_log_signal(
 def well_machine_trend(
     lookback_minutes: int = 60,
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """
     Reflect recent machine signal trends.
@@ -14214,6 +14287,7 @@ def well_fatigue_accumulator(
     session_intensity: float | None = None,
     rest_hours: float | None = None,
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """
     DEPRECATED: use well_assess_homeostasis(mode="fatigue") for check.
@@ -14390,6 +14464,7 @@ CIRCADIAN_PHASES = {
 def well_circadian_phase(
     override_hour: int | None = None,
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """
     Reflect circadian phase based on current UTC+8 time (Arif's timezone).
@@ -14449,6 +14524,7 @@ def well_circadian_phase(
 def well_machine_health_probe(
     targets: list[str] | None = None,
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """
     Probe machine health of federation services.
@@ -14698,6 +14774,7 @@ def well_trace_lineage(
     reason: str = "state_checkpoint",
     force: bool = False,
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """Ω-WELL-02: Memory, trend, ledger, and vault chain tracing."""
     mode = mode.lower()
@@ -14753,6 +14830,7 @@ def well_detect_boundary(
     evaluation_intent: str | None = None,
     peer: str | None = None,
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """Ω-WELL-03: Boundary detection across membrane, body, machine, and federation."""
     mode = mode.lower()
@@ -14792,6 +14870,7 @@ def well_measure_gradient(
     evidence_age_hours: float | None = None,
     corroboration_count: int = 0,
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """Ω-WELL-04: Measure chemical, energy, pressure, attention, and compute gradients."""
     return _to_federation_output(
@@ -14824,6 +14903,7 @@ def well_assess_metabolism(
     cashflow_status: str | None = None,
     internal_consistency: float | None = None,
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """Ω-WELL-05: Assess biological metabolism and system throughput across substrates."""
     logger.info("well_assess_metabolism called mode=%s", mode)
@@ -14964,6 +15044,7 @@ def well_assess_homeostasis(
     # Decision class for routing -- C1 trivial through C5 critical
     decision_class: str = "C3",
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """Ω-WELL-06: Assess regulation, stability, and empathic balance under change.
 
@@ -15887,6 +15968,7 @@ def well_check_repair(
     intensity: float | None = None,
     outcome: str | None = None,
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """Ω-WELL-07: Check repair, recovery, resilience, and forge cycle integrity."""
     result = well_777_forge(
@@ -15963,6 +16045,7 @@ def well_validate_vitality(
     task_description: str | None = None,
     decision_class: str | None = None,
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """Ω-WELL-08: Validate vitality, readiness, and NIAT. (Floor compliance removed -- arifOS adjudicates floors.)"""
     logger.info("well_validate_vitality called mode=%s", mode)
@@ -16134,6 +16217,7 @@ def well_assess_livelihood(
     # ── Evidence provenance ──
     data_source: str | None = None,
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """Ω-WELL-09: Assess human wellness, role, dignity, support, and meaning.
 
@@ -16375,6 +16459,7 @@ def well_daily_checkin(
     pain_level: float | None = None,
     note: str | None = None,
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """Ω-WELL-S2: Daily operator check-in -- log daily body telemetry for WELL substrate governance.
 
@@ -16527,6 +16612,7 @@ def well_daily_checkin(
 def well_assess_reliability(
     mode: str = "health",
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """Ω-WELL-10: Assess machine, tool, institution, and operational reliability."""
     logger.info("well_assess_reliability called mode=%s", mode)
@@ -16572,6 +16658,7 @@ def well_compute_metabolic_flux(
     mode: str = "compute",
     force_recompute: bool = False,
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """Ω-WELL-10b: Compute metabolic_flux -- unified thermodynamic entropy rate.
 
@@ -16643,6 +16730,7 @@ async def well_assess_sovereign_entropy(
     context_switching_frequency: float | None = None,
     refusal_patterns: float | None = None,
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """Ω-WELL-SE: Measure the sovereign's resistance to behavioral modeling.
 
@@ -16874,6 +16962,7 @@ async def well_dark_geometry_mirror(
     time_window: str | None = None,
     vitality_signals: dict[str, float] | None = None,
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """Ω-WELL-DG: Mirror language and behavioral signals for dark geometry patterns.
 
@@ -17049,6 +17138,7 @@ def well_reflect_intelligence(
     task_description: str | None = None,
     decision_class: str | None = None,
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """Ω-WELL-11: Reflect cognition, reasoning, adaptation, coherence, and routing."""
     internal = well_444_kernel(
@@ -17073,6 +17163,7 @@ def well_guard_dignity(
     coercion_signals: list[str] | None = None,
     reductionism_risk: float | None = None,
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """Ω-WELL-12: Guard soul, personhood, meaning, and symbolic boundaries."""
     logger.info("well_guard_dignity called mode=%s", mode)
@@ -17199,6 +17290,7 @@ async def well_anchor_evidence(
     reason: str = "state_checkpoint",
     force: bool = False,
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """Ω-WELL-13: Anchor evidence, audit, vault, packet, and provenance."""
     import hashlib
@@ -17261,6 +17353,7 @@ def well_assess_governance(
     mode: str = "coherence",
     target: str = "local",
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """
     G-WELL: Assess constitutional governance state of machine substrate.
@@ -17335,6 +17428,7 @@ def well_trace_decision(
     decision_id: str | None = None,
     lookback_hours: float = 24,
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """
     G-WELL: Trace decision lineage through the governance chain.
@@ -17423,6 +17517,7 @@ def well_validate_consensus(
     action: str = "",
     required_witnesses: list[str] | None = None,
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """
     G-WELL: Validate multi-organ consensus before irreversible actions.
@@ -17517,7 +17612,7 @@ def well_validate_consensus(
 # what the connector can dispatch.
 # P0.5 fix: hidden-internal-alias classification for well_system_registry_status.
 # @mcp.tool() REMOVED — KUTIP SAMPAH: redundant with canonical tool()
-def well_system_registry_status() -> dict[str, Any]:
+def well_system_registry_status(actor_id: str | None = None) -> dict[str, Any]:
     """WELL registry truth probe -- somatic surface vs autonomic internals.
 
     DEPRECATED: Use well_registry_status (blueprint canonical format) instead.
@@ -18181,6 +18276,7 @@ def well_classify_state(
     recent_messages: list[str] | None = None,
     stated_intent: str = "",
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """Classify human psychological state from message.
 
@@ -18384,6 +18480,7 @@ def well_sabar_latency(
     baseline_response_latency: float | None = None,
     baseline_revision_latency: float | None = None,
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """Ω-WELL-SL: Measure temporal compression between stimulus and response.
     Does NOT say 'loss of sabar' based on speed alone."""
@@ -18423,6 +18520,7 @@ def well_trust_compression(
     events: list[dict[str, Any]] | None = None,
     baseline_trust_diversity: float | None = None,
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """Ω-WELL-TC: Detect narrowing trust patterns.
     All-or-nothing trust, universal threat, loyalty tests, witness narrowing."""
@@ -18461,6 +18559,7 @@ def well_niat_impact_mirror(
     repair_response: str = "",
     witness_acceptance: str = "",
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """Ω-WELL-NIM: Compare declared niat with acknowledged impact.
     Permitted: 'Impact was answered primarily with intention language.'
@@ -18501,6 +18600,7 @@ def well_correction_capacity(
     correction_events: list[dict[str, Any]] | None = None,
     baseline_capacity: float | None = None,
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """Ω-WELL-CC: Score observable correctability.
     Can add context, revise, tolerate ambiguity, separate self from error, hear consequence."""
@@ -18538,6 +18638,7 @@ def well_regulation_recovery(
     activation_events: list[dict[str, Any]] | None = None,
     baseline_recovery_time: float | None = None,
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """Ω-WELL-RR: Measure recovery after activation.
     A human who becomes angry and repairs may have better integrity
@@ -18582,6 +18683,7 @@ def well_assess_readiness(
     case: dict[str, Any] | None = None,
     mode: str = "depth",
     ctx: Context | None = None,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """WELL Depth Assessment -- unified readiness with thermodynamic-APEX signals.
 
@@ -19194,6 +19296,7 @@ def well_assess_readiness(
 
 def well_sense_substrate(
     include_vitality_gate: bool = True,
+    actor_id: str | None = None,
 ) -> dict[str, Any]:
     """Automated machine-to-human substrate sensing.
 
