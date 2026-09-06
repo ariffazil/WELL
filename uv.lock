@@ -1573,7 +1573,7 @@ wheels = [
 
 [[package]]
 name = "well-mcp"
-version = "2026.8.27"
+version = "2026.9.6"
 source = { virtual = "." }
 dependencies = [
     { name = "fastmcp", extra = ["tasks"] },
