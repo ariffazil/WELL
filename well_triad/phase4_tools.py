@@ -64,6 +64,19 @@ def _fetch_human_plane(actor_id: str) -> dict[str, Any]:
     else:
         state_label = "CRITICAL"
 
+    # SELF-REPORT / stale inject must not be sold as OPTIMAL physiology.
+    source = str(state.get("source_type") or state.get("truth_status") or "")
+    evidence = str(state.get("evidence_class") or "")
+    honesty = str(state.get("honesty_banner") or "")
+    is_self = (
+        "OPERATOR" in source.upper()
+        or "SELF" in source.upper()
+        or "SELF_REPORT" in evidence.upper()
+        or "SELF-REPORT" in honesty.upper()
+    )
+    if is_self and state_label == "OPTIMAL":
+        state_label = "WATCH"
+
     metrics = state.get("metrics", {})
     weakest = "none"
     weakest_score = 1.0
@@ -74,12 +87,16 @@ def _fetch_human_plane(actor_id: str) -> dict[str, Any]:
                 weakest_score = v["score"]
                 weakest = k
 
-    return {
+    out = {
         "score": round(score, 3),
         "state": state_label,
         "weakest": weakest,
         "well_score": well_score,
     }
+    if is_self:
+        out["honesty"] = "SELF_REPORT"
+        out["note"] = "Number from sovereign inject / state.json — not a wearable. Do not treat as OPTIMAL physiology."
+    return out
 
 
 def _fetch_machine_plane(lookback_hours: int) -> dict[str, Any]:
