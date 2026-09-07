@@ -1,0 +1,20 @@
+{
+  "ts": "2026-09-07T19:12:58.119123+00:00",
+  "source": "voice",
+  "operator_id": "arif",
+  "signals": {
+    "speech_rate": 142.5,
+    "pause_density": 0.21,
+    "pitch_variance": 0.38,
+    "breath_rate": 16.2,
+    "jitter": 0.012,
+    "shimmer": 0.043,
+    "raw_features_count": 14
+  },
+  "derived": {
+    "energy": 5.85,
+    "fatigue": 6.99,
+    "calm": 4.15
+  },
+  "confidence": "HIGH"
+}
