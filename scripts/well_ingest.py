@@ -2,17 +2,20 @@
 """well_ingest.py — Phase 1 WELL pipeline (Day 1, F13-ratified 2026-09-08).
 
 Reads intake files from /root/WELL/intake/{voice,manual,cron}/,
-validates per SCHEMA.md, applies freshest-signal-wins merge into
-/root/WELL/state.json (additive fields only — never destructive).
+validates per SCHEMA.md, applies freshest-signal-wins merge into the
+LIVE organ state at /var/lib/well/state.json (additive fields only —
+never destructive). Repointed from the repo-dir fixture file to the
+live organ state by F13 directive 2026-09-12 — the kernel L13 gate and
+the organ both read/write this file.
 
 Reversible: does NOT switch environment to LIVE. Does NOT auto-modify
 the L13 gate. Does NOT replace state.json — it merges derived signals
 into state.json's "metrics" + "signals_meta" fields.
 
 Authority:
-- Reads: state.json (current), intake files
-- Writes: state.json (merged), intake_log.jsonl (audit), moves processed
-  files to intake/processed/
+- Reads: live organ state.json (current), intake files
+- Writes: live organ state.json (merged), intake_log.jsonl (audit), moves
+  processed files to intake/processed/
 
 Exit codes:
   0 = success (or no intake files — silent)
@@ -25,13 +28,14 @@ Called by:
 - Manual: python3 /root/WELL/scripts/well_ingest.py
 """
 import json
+import os
 import shutil
 import sys
 import hashlib
 from datetime import datetime, timezone
 from pathlib import Path
 
-STATE_FILE = Path("/root/WELL/state.json")
+STATE_FILE = Path(os.environ.get("WELL_STATE_PATH", "/var/lib/well/state.json"))
 INTAKE_DIR = Path("/root/WELL/intake")
 PROCESSED_DIR = INTAKE_DIR / "processed"
 AUDIT_LOG = Path("/root/WELL/data/intake_log.jsonl")
@@ -171,7 +175,8 @@ def process_intake_file(intake_path: Path) -> str:
     state["arif_decision_required"] = False
     state["reason"] = (
         f"P1 ingest (source={payload['source']} conf={payload['confidence']}). "
-        f"Day 1 F13-ratified pipeline. environment still TEST pending live signal."
+        f"F13-ratified pipeline; merged into live organ state "
+        f"(var/lib/well) per F13 repoint 2026-09-12."
     )
 
     try:
