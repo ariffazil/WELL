@@ -33,7 +33,7 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 
-STATE_FILE = Path("/root/WELL/machine_state.json")
+STATE_FILE = Path(os.environ.get("WELL_MACHINE_STATE_PATH", "/var/lib/well/machine_state.json"))
 STATE_BAK = STATE_FILE.with_suffix(".json.bak")
 HISTORY_MAX = 288  # 24 hours at 5-min intervals
 
