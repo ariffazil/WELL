@@ -1,13 +1,16 @@
 <!-- SOT-MANIFEST
 owner: Muhammad Arif bin Fazil (F13 SOVEREIGN)
-federation_release: v2026.08.25
-last_verified: 2026-09-06T15:20:00Z
-live_commit: probe :18083/health
+federation_release: v2026.09.13
+last_verified: 2026-09-13T06:32:00Z
+live_commit: 4e4e04c
+live_health: degraded (OBS 2026-09-13) — REFLECT_ONLY, no autonomy escalation
 tools_live: 31 (canonical, live-witnessed via :18083/health)
 authority_ceiling: REFLECT_ONLY
+apex_zen: A2A delegates ⊥ MCP equips ⊥ ACT mutates ⊥ arifOS governs ⊥ F13 decides
 honesty: H-WELL is SELF_REPORT/AGED until biometric inject; M-WELL machine_state.json is separate
 mesh: thermal observes KVM8 organs + KVM4 LiteLLM/OpenClaw + KVM2 witness fork — not extra judges
 truth_rule: live :18083/health + tools/list beat any static count in prose
+holds: biometric telemetry never on public or extended A2A cards
 -->
 
 # WELL — Biometric Monitoring & Vitality Engine
