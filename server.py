@@ -2690,7 +2690,7 @@ def _state_is_insufficient(state: dict[str, Any]) -> tuple[bool, list[str]]:
 
 def _machine_substrate_health() -> dict[str, Any]:
     """Freshness of machine_state.json only. Never a human well_score."""
-    path = Path("/root/WELL/machine_state.json")
+    path = Path(_os.environ.get("WELL_MACHINE_STATE_PATH", "/var/lib/well/machine_state.json"))
     if not path.exists():
         return {
             "status": "unavailable",
@@ -10881,7 +10881,7 @@ def _read_machine_state_field(field: str, default: Any = None) -> Any:
     from pathlib import Path as _PathRf
 
     try:
-        p = _PathRf("/root/WELL/machine_state.json")
+        p = _PathRf(_os.environ.get("WELL_MACHINE_STATE_PATH", "/var/lib/well/machine_state.json"))
         if not p.exists():
             return default
         ms = _json_rf.loads(p.read_text())
@@ -11009,7 +11009,7 @@ def _well_assess_machine_telemetry() -> dict[str, Any]:
     import json as _json_mt
     from pathlib import Path as _PathMt
 
-    state_path = _PathMt("/root/WELL/machine_state.json")
+    state_path = _PathMt(_os.environ.get("WELL_MACHINE_STATE_PATH", "/var/lib/well/machine_state.json"))
     if not state_path.exists():
         return _omega_well_output(
             ok=False,
@@ -11250,7 +11250,7 @@ def well_machine_diagnose(
     import json as _json_md
     from pathlib import Path as _PathMd
 
-    state_path = _PathMd("/root/WELL/machine_state.json")
+    state_path = _PathMd(_os.environ.get("WELL_MACHINE_STATE_PATH", "/var/lib/well/machine_state.json"))
     if not state_path.exists():
         return _omega_well_output(
             ok=False,
@@ -11518,7 +11518,7 @@ def well_machine_recommend(
 
     issue_type = issue_type or "swap"  # defensive default for FastMCP unmarshal gap
 
-    state_path = _PathMr("/root/WELL/machine_state.json")
+    state_path = _PathMr(_os.environ.get("WELL_MACHINE_STATE_PATH", "/var/lib/well/machine_state.json"))
     ms = {}
     if state_path.exists():
         try:
