@@ -13101,18 +13101,24 @@ WELL measures where you are on the gradient. You walk the path.
 
 # ── WellStack Monkeys ─────────────────────────────────────────────────────────
 # Fix 406 from Accept header -- mirror of GEOX fix
+# mcp 2.0.0 compat: _check_accept_headers was removed/renamed
 from mcp.server.streamable_http import StreamableHTTPServerTransport
 
-_orig_check = StreamableHTTPServerTransport._check_accept_headers
+_orig_check = getattr(StreamableHTTPServerTransport, "_check_accept_headers", None)
 
+if _orig_check is not None:
+    def _patched_check(self, request):
+        if getattr(self, "is_json_response_enabled", False):
+            return True, True
+        return _orig_check(self, request)
 
-def _patched_check(self, request):
-    if getattr(self, "is_json_response_enabled", False):
-        return True, True
-    return _orig_check(self, request)
-
-
-StreamableHTTPServerTransport._check_accept_headers = _patched_check
+    StreamableHTTPServerTransport._check_accept_headers = _patched_check
+else:
+    import logging as _logging
+    _logging.getLogger("well").warning(
+        "StreamableHTTPServerTransport._check_accept_headers not found (mcp>=2.0); "
+        "skipping 406 Accept-header patch"
+    )
 
 # ============================================================
 # ORGAN_GOVERNANCE: arifOS L1-L13 Wrapper
