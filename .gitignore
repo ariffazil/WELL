@@ -65,3 +65,4 @@ forge_work/
 # ── Human state files — sensitive, reflect-only ──
 sado-human-state.md
 sessions/
+.ua/
