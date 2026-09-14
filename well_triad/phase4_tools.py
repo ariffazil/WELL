@@ -171,28 +171,34 @@ def _fetch_machine_plane(lookback_hours: int) -> dict[str, Any]:
             weakest = name
 
     avg_score = sum(scores) / len(scores) if scores else 0.5
-    avg_classification = (
-        "OPTIMAL" if avg_score >= 0.85 else
-        "WATCH" if avg_score >= 0.70 else
-        "DEGRADED" if avg_score >= 0.50 else
+    # APEX-ZEN FIX: floor dominates aggregate (arifOS rule). The machine plane's
+    # state + route must reflect the WEAKEST organ, not the mean. A single
+    # DEGRADED organ (e.g. well at 0.70) must NOT be painted "OPTIMAL/PROCEED"
+    # by the average — mirrors the triadic plane's own floor-dominance behavior.
+    floor_score = weakest_score if scores else 0.5
+    floor_classification = (
+        "OPTIMAL" if floor_score >= 0.85 else
+        "WATCH" if floor_score >= 0.70 else
+        "DEGRADED" if floor_score >= 0.50 else
         "CRITICAL"
     )
 
     critical_count = sum(1 for v in organs.values() if v.get("classification") == "CRITICAL")
     if critical_count >= 1:
         route = "SABAR"
-    elif avg_score < 0.5:
+    elif floor_score < 0.5:
         route = "HOLD"
-    elif avg_score < 0.7:
+    elif floor_score < 0.7:
         route = "REDUCE_LOAD"
-    elif avg_score < 0.85:
+    elif floor_score < 0.85:
         route = "RECOVER"
     else:
         route = "PROCEED"
 
     return {
-        "score": round(avg_score, 3),
-        "state": avg_classification,
+        "score": round(floor_score, 3),
+        "state": floor_classification,
+        "avg_score": round(avg_score, 3),
         "weakest": weakest,
         "organs": organs,
         "route": route,
