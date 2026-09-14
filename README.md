@@ -187,12 +187,12 @@ WELL is the readiness monitor in the arifOS federation. It holds a mirror — it
 **ARIF vetoes. arifOS judges. AAA routes. A-FORGE executes.**
 
 **Sister Repos:**
-- [arifOS](https://github.com/arif-fazil/arifOS) — Constitutional kernel
-- [AAA](https://github.com/arif-fazil/AAA) — Intelligence routing
-- [A-FORGE](https://github.com/arif-fazil/A-FORGE) — Execution engine
-- [GEOX](https://github.com/arif-fazil/GEOX) — Earth sciences
-- [WEALTH](https://github.com/arif-fazil/WEALTH) — Capital management
-- [arifFlow](https://github.com/arif-fazil/arifFlow) — Workflow orchestration
+- [arifOS](https://github.com/arif-fazil/arifOS) — Authority Plane — constitutional judgment
+- [AAA](https://github.com/arif-fazil/AAA) — Attention Plane — reality compression + routing
+- [A-FORGE](https://github.com/arif-fazil/A-FORGE) — Execution Plane — governed mutation
+- [GEOX](https://github.com/arif-fazil/GEOX) — Earth Intelligence
+- [WEALTH](https://github.com/arif-fazil/WEALTH) — Capital Intelligence
+- [arifFlow](https://github.com/arif-fazil/arifFlow) — Witness Plane — metabolism, FQ monitoring
 
 ---
 
