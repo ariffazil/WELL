@@ -162,7 +162,31 @@ def well_attest_to_kernel(
     state = _load_state_fn() if _load_state_fn else {}
     well_score = state.get("well_score")
     verdict_local = state.get("verdict", "WELL_HOLD")
-    freshness = state.get("freshness", "UNKNOWN")
+    # APEX-ZEN FIX: never trust the stored "freshness" field — the inject/keepalive
+    # stamps "FRESH" on every write even when the source timestamp is days old.
+    # Compute TRUE age from the state timestamp (same bands as /health):
+    # <1h FRESH, <24h STALE, else EXPIRED.
+    _ts = state.get("timestamp") or state.get("last_successful_read")
+    if _ts:
+        try:
+            _ts_dt = _dt.datetime.fromisoformat(str(_ts))
+            if _ts_dt.tzinfo is None:
+                _ts_dt = _ts_dt.replace(tzinfo=_dt.timezone.utc)
+            state_age_hours = round(
+                (_dt.datetime.now(_dt.timezone.utc) - _ts_dt).total_seconds() / 3600.0, 1
+            )
+        except Exception:
+            state_age_hours = None
+    else:
+        state_age_hours = None
+    if state_age_hours is None:
+        freshness = "UNKNOWN"
+    elif state_age_hours < 1.0:
+        freshness = "FRESH"
+    elif state_age_hours < 24.0:
+        freshness = "STALE"
+    else:
+        freshness = "EXPIRED"
 
     attestation_payload = {
         "organ": "WELL",
@@ -174,6 +198,7 @@ def well_attest_to_kernel(
         "verdict_local": verdict_local,
         "well_score": well_score,
         "freshness": freshness,
+        "state_age_hours": state_age_hours,
         "ts": _dt.datetime.now(_dt.timezone.utc).isoformat(),
         "f2_source": "well:18083/state.json + triadic events",
     }

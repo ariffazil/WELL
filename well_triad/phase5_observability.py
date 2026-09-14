@@ -130,8 +130,11 @@ def well_get_triadic_snapshot(ctx: Optional[Context] = None) -> dict[str, Any]:
         "triadic": triadic,
         "f2_provenance": f"file:{SNAPSHOT_PATH} (cron-written)",
         "f4_privacy": "leaves_host:false",
-        "f8_truth_class": "OBS",
-        "f8_evidence_label": "OBS",
+        # APEX-ZEN FIX: the snapshot content is a DERIVED triadic composition (DER),
+        # not a raw observation. Reading a DER file must not relabel it OBS.
+        # Inner triadic payload already carries f8_truth_class="DER" — keep it.
+        "f8_truth_class": "DER",
+        "f8_evidence_label": "DER",
         "f13_sovereign": "OPERATOR_VETO_INTACT",
         "w0": "OPERATOR_VETO_INTACT / HIERARCHY_INVARIANT",
     }
