@@ -2230,7 +2230,7 @@ def well_health_check(
                 "id": 1,
                 "method": "initialize",
                 "params": {
-                    "protocolVersion": "2024-11-25",
+                    "protocolVersion": "2025-06-18",
                     "capabilities": {},
                     "clientInfo": {
                         "name": "well-federation-bridge",
@@ -7161,7 +7161,7 @@ def well_get_health(ctx: Context | None = None, actor_id: str | None = None) -> 
                 "id": 1,
                 "method": "initialize",
                 "params": {
-                    "protocolVersion": "2024-11-25",
+                    "protocolVersion": "2025-06-18",
                     "capabilities": {},
                     "clientInfo": {
                         "name": "well-federation-bridge",
@@ -13807,10 +13807,10 @@ def well_attest_to_kernel(
     Ω-WELL-FED-ATTEST: Active organ attestation from WELL → arifOS kernel.
 
     The external organ_heartbeat_daemon polls /health (read-only, one-way).
-    This tool performs an active attestation (WELL → kernel) that records
-    state in the kernel's organ registry via arif_organ_attest.
+    This tool records a local attestation only: the arifOS attest lane is
+    DEAD (F13 Option B, 2026-09-16) and witness traffic routes via
+    arifFlow :7073 flow_ingest (wired in well_bridge, Phase 1).
 
-    Fail-open: if arifOS unreachable, returns federation_unavailable.
     The /health heartbeat (daemon) remains the canonical health source.
 
     Args:
@@ -13834,31 +13834,18 @@ def well_attest_to_kernel(
         "actor_id": _actor,
         "ts": datetime.datetime.now(datetime.timezone.utc).isoformat() + "Z",
     }
-    _resp = _federation_post_tool_call(
-        _ARIFOS_MCP_URL,
-        "arif_organ_attest",
-        {
-            "organ_id": "WELL",
-            "actor_id": _actor,
-        },
-    )
-    if not _resp.get("ok"):
-        return {
-            "ok": False,
-            "organ": "WELL",
-            "federation": "arifos",
-            "fail_mode": _resp.get("fail_mode", "federation_unavailable"),
-            "error": _resp.get("error"),
-            "attestation": _attestation,
-            "w0": "OPERATOR_VETO_INTACT / HIERARCHY_INVARIANT",
-        }
-    _arif_inner = _extract_mcp_text_payload(_resp["result"])
+    _lane_dead = {
+        "lane": "arifos_attest",
+        "forwarded": False,
+        "status": "DEAD",
+        "decision": "F13 2026-09-16 Option B — no unique capability justified the lane; async witness already proven via arifFlow receipts",
+        "route_via": "arifFlow :7073 flow_ingest (wired in well_bridge, Phase 1)",
+    }
     return {
         "ok": True,
         "organ": "WELL",
         "federation": "arifos",
-        "arifos_session_id": _resp.get("session_id"),
-        "arifos_receipt": _arif_inner,
+        "bridge": _lane_dead,
         "attestation": _attestation,
         "w0": "OPERATOR_VETO_INTACT / HIERARCHY_INVARIANT",
     }
@@ -19981,6 +19968,19 @@ if __name__ == "__main__":
 
     # Register health handlers if not already present
     async def _well_health_handler(request):
+        if request.headers.get("x-forwarded-for"):
+            _pub_cls = _classify_well_state(_load_state())
+            _pub_status = (
+                "healthy"
+                if _pub_cls["well_ok"]
+                and _pub_cls.get("well_signal", "WELL_HOLD") == "WELL_PASS"
+                else "degraded"
+            )
+            if _compute_well_commits()["drift"]:
+                _pub_status = "degraded"
+            return JSONResponse(
+                {"status": _pub_status, "organ": "WELL", "version": "v2026.07.24"}
+            )
         try:
             with open(".identity_hash", "r") as f:
                 identity_hash = f.read().strip()
