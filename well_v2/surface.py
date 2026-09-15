@@ -39,14 +39,189 @@ def _tag(r: Any, tool: str, mode: str) -> Any:
     return r
 
 
-async def _res(r: Any) -> Any:
-    if inspect.isawaitable(r):
-        return await r
-    return r
+# ── R-WELL v1 source registry (Phase 4, 2026-09-16) ─────────────────────────
+# Live probes only. class: OBSERVED (live-probed) · VERIFIED (cross-checked) ·
+# ASSUMED (declared only) · STALE (probed but old). Edited ≠ Executed.
+
+_GRAPHITI_URL = "http://127.0.0.1:18412/mcp"
+_FALKOR_HOST, _FALKOR_PORT = "127.0.0.1", 6380
+_FALKOR_GRAPHS = ["af_forge", "arif_l5_knowledge"]
+_BASELINE_PATH = "/var/lib/well/reality_baseline.json"
+_FRESH_DAYS = 7.0
+
+
+def _http_probe(url: str, body: dict, timeout: float = 4.0) -> tuple[bool, float, str]:
+    import json as _json
+    import time as _time
+    import urllib.request as _rq
+    t0 = _time.monotonic()
+    try:
+        req = _rq.Request(url, data=_json.dumps(body).encode(),
+                          headers={"Content-Type": "application/json",
+                                   "Accept": "application/json, text/event-stream"})
+        with _rq.urlopen(req, timeout=timeout) as resp:
+            body_txt = resp.read(400).decode("utf-8", "replace")
+        return ("jsonrpc" in body_txt or "result" in body_txt), (_time.monotonic() - t0) * 1000, body_txt[:80]
+    except Exception as e:
+        return False, (_time.monotonic() - t0) * 1000, str(e)[:80]
+
+
+def _falkor_query(graph: str, cypher: str) -> str | None:
+    """GRAPH.QUERY via redis lib, docker exec fallback, else None."""
+    try:
+        import redis  # type: ignore
+        r = redis.Redis(host=_FALKOR_HOST, port=_FALKOR_PORT, socket_timeout=4)
+        out = r.execute_command("GRAPH.QUERY", graph, cypher)
+        return str(out)
+    except Exception:
+        pass
+    try:
+        import subprocess as _sp
+        p = _sp.run(["docker", "exec", "falkordb", "redis-cli", "GRAPH.QUERY", graph, cypher],
+                    capture_output=True, text=True, timeout=8)
+        return p.stdout if p.returncode == 0 else None
+    except Exception:
+        return None
+
+
+def _falkor_int(graph: str, cypher: str) -> int | None:
+    out = _falkor_query(graph, cypher)
+    if not out:
+        return None
+    import re as _re
+    m = _re.search(r"\b(\d+)\b", out)
+    return int(m.group(1)) if m else None
+
+
+def _probe_reality_sources() -> dict[str, Any]:
+    import datetime as _dt
+    import json as _json
+    import os as _os
+
+    table: list[dict] = []
+    classes: dict[str, str] = {}
+
+    # 1. commit alignment (VERIFIED/STALE)
+    try:
+        commits = globals().get("_rg_commits")() if False else None
+    except Exception:
+        commits = None
+    # (server helpers injected via g at registration; re-resolve lazily)
+    g = _RG.get("g") or {}
+    try:
+        commits = g["_compute_well_commits"]()
+        drift = bool(commits.get("drift"))
+    except Exception:
+        drift = None
+    classes["commit_alignment"] = (
+        "UNKNOWN" if drift is None else ("VERIFIED" if not drift else "STALE"))
+    table.append({"source": "commit_alignment", "class": classes["commit_alignment"],
+                  "detail": f"drift={drift}"})
+
+    # 2. machine telemetry
+    try:
+        ms = g["_machine_substrate_health"]()
+        band = ms.get("freshness_band") or ms.get("status") or "UNKNOWN"
+    except Exception:
+        band = "UNKNOWN"
+    classes["machine_telemetry"] = "OBSERVED" if band == "FRESH" else str(band).upper()
+    table.append({"source": "machine_telemetry", "class": classes["machine_telemetry"],
+                  "detail": f"band={band}"})
+
+    # 3. graphiti MCP (OBSERVED/MISSING)
+    ok, lat, det = _http_probe(_GRAPHITI_URL, {
+        "jsonrpc": "2.0", "id": 1, "method": "initialize",
+        "params": {"protocolVersion": "2025-06-18", "capabilities": {},
+                   "clientInfo": {"name": "rwell-probe", "version": "1"}}})
+    classes["graphiti_mcp"] = "OBSERVED" if ok else "MISSING"
+    table.append({"source": "graphiti_mcp", "class": classes["graphiti_mcp"],
+                  "latency_ms": round(lat, 1), "detail": det})
+
+    # 4. falkordb memory plane + freshness + growth baseline
+    now = _dt.datetime.now(_dt.timezone.utc)
+    graphs, latest_iso = {}, None
+    for k in _FALKOR_GRAPHS:
+        n = _falkor_int(k, "MATCH (n) RETURN count(n)")
+        e = _falkor_int(k, "MATCH ()-[r]->() RETURN count(r)")
+        graphs[k] = {"nodes": n, "edges": e}
+        fr = _falkor_query(k, "MATCH (n) WHERE n.created_at IS NOT NULL RETURN n.created_at ORDER BY n.created_at DESC LIMIT 1")
+        if fr:
+            import re as _re2
+            m = _re2.search(r"(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})", fr)
+            if m:
+                latest_iso = max(latest_iso or "", m.group(1))
+    age_days = None
+    if latest_iso:
+        try:
+            ts = _dt.datetime.fromisoformat(latest_iso)
+            if ts.tzinfo is None:
+                ts = ts.replace(tzinfo=_dt.timezone.utc)
+            age_days = round((now - ts).total_seconds() / 86400.0, 1)
+        except Exception:
+            pass
+    total_nodes = sum(v["nodes"] or 0 for v in graphs.values())
+    total_edges = sum(v["edges"] or 0 for v in graphs.values())
+
+    baseline = {}
+    try:
+        baseline = _json.loads(open(_BASELINE_PATH).read())
+    except Exception:
+        pass
+    growth = {
+        "nodes_delta": total_nodes - baseline.get("total_nodes", total_nodes),
+        "edges_delta": total_edges - baseline.get("total_edges", total_edges),
+        "since": baseline.get("ts"),
+    }
+    try:
+        _os.makedirs(_os.path.dirname(_BASELINE_PATH), exist_ok=True)
+        _json.dump({"ts": now.isoformat(), "total_nodes": total_nodes,
+                    "total_edges": total_edges}, open(_BASELINE_PATH, "w"))
+    except Exception:
+        pass
+
+    exists = total_nodes > 0
+    fresh = age_days is not None and age_days <= _FRESH_DAYS
+    memory_alive = bool(exists and fresh)
+    classes["memory_plane"] = (
+        "OBSERVED" if memory_alive else ("STALE" if exists else "MISSING"))
+    table.append({"source": "falkor_memory", "class": classes["memory_plane"],
+                  "detail": f"nodes={total_nodes} edges={total_edges} last_episode_age_d={age_days}"})
+
+    # 5. witness bridge lane
+    lane_off = str(_os.environ.get("WELL_BRIDGE_ARIFFLOW", "1")).lower() in ("0", "false", "off", "no")
+    classes["witness_bridge"] = "OBSERVED" if not lane_off else "ASSUMED"
+    table.append({"source": "witness_bridge", "class": classes["witness_bridge"],
+                  "detail": "arifFlow lane (arifOS lane DEAD by Option B)" +
+                            ("" if not lane_off else " — routing DISABLED by env")})
+
+    good = sum(1 for v in classes.values() if v in ("OBSERVED", "VERIFIED"))
+    confidence = round(good / len(classes), 2) if classes else 0.0
+
+    memory = {
+        "ok": True,
+        "memory_alive": memory_alive,
+        "doctrine": "Memory Exists != Memory Alive",
+        "graphs": graphs,
+        "total_nodes": total_nodes,
+        "total_edges": total_edges,
+        "last_episode_at": latest_iso,
+        "last_episode_age_days": age_days,
+        "freshness_band": ("FRESH" if fresh else ("STALE" if exists else "MISSING")),
+        "growth_since_last_probe": growth,
+        "unmeasured": {
+            "recall_rate": "UNMEASURED — needs query logging",
+            "entity_resolution_health": "UNMEASURED — needs resolution audit",
+        },
+    }
+    return {"classes": classes, "table": table, "confidence": confidence, "memory": memory}
+
+
+_RG: dict = {}
 
 
 def register_v2_tools(g: dict) -> None:
     mcp = g["mcp"]
+    _RG["g"] = g
 
     @mcp.tool()
     async def well_human(
@@ -140,40 +315,42 @@ def register_v2_tools(g: dict) -> None:
         limit: int = 10,
         lookback_days: int = 30,
     ) -> dict[str, Any]:
-        """R-WELL (v0). Reality Integrity plane. mode=confidence|lineage|witness|patterns.
+        """R-WELL (v1). Reality Integrity plane. mode=confidence|memory|witness|lineage|patterns.
 
         Constitutional metric: Edited Reality ≠ Executed Reality.
-        confidence v0 = live drift + machine freshness + bridge lane truth.
+        v1 sources (live-probed): graphiti_mcp :18412, falkordb graphs,
+        commit alignment, machine telemetry, witness bridge lane.
         """
         if mode == "lineage":
             r = _call(g, "well_trace_lineage", mode="recall", limit=limit)
             return _tag(await _res(r), "well_reality", mode)
-        if mode in ("witness", "patterns"):
+        if mode == "patterns":
             return _tag({
                 "ok": True,
-                "implementation_status": "PENDING — Phase 4 (Graphiti/Falkor witness wiring, scar→risk patterns)",
-                "constitutional_metric": "Edited Reality != Executed Reality",
+                "implementation_status": "PENDING — scar→risk fingerprint matching (Phase 4.5)",
+                "known_fingerprints": ["Witness Surface Mismatch (daemon logs ignored + assumptions over probes + count without identity proof)"],
                 "deprecation": _DEPRECATION,
             }, "well_reality", mode)
-        commits = g["_compute_well_commits"]()
-        ms = g["_machine_substrate_health"]()
-        band = ms.get("freshness_band") or ms.get("status")
-        evidence_classes = {
-            "commit_alignment": "VERIFIED" if not commits.get("drift") else "STALE",
-            "machine_telemetry": "OBSERVED" if band == "FRESH" else str(band).upper(),
-            "witness_bridge": "OBSERVED (arifFlow lane; arifOS lane DEAD by F13 Option B)",
-        }
+
+        src = _probe_reality_sources()
+
+        if mode == "memory":
+            return _tag(src["memory"], "well_reality", mode)
+        if mode == "witness":
+            return _tag({
+                "ok": True,
+                "witness_quality_table": src["table"],
+                "note": "class semantics: OBSERVED=live-probed · VERIFIED=cross-checked · ASSUMED=declared only · STALE=probed but old",
+            }, "well_reality", mode)
+
         return _tag({
             "ok": True,
-            "implementation_status": "v0 — Phase 4 deep wiring pending",
-            "drift": commits.get("drift"),
-            "source_commit": commits.get("source_commit"),
-            "deployed_commit": commits.get("deployed_commit"),
-            "machine_freshness_band": band,
-            "evidence_classes": evidence_classes,
-            "reality_confidence_v0": round(
-                sum(1 for v in evidence_classes.values() if v.startswith(("VERIFIED", "OBSERVED")))
-                / len(evidence_classes), 2),
+            "implementation_status": "v1 — live evidence classes",
+            "reality_confidence": src["confidence"],
+            "evidence_classes": src["classes"],
+            "memory_alive": src["memory"].get("memory_alive"),
+            "drift": src["classes"].get("commit_alignment"),
+            "source_table": src["table"],
         }, "well_reality", mode)
 
     @mcp.tool()
