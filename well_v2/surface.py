@@ -61,7 +61,7 @@ def _http_probe(url: str, body: dict, timeout: float = 4.0) -> tuple[bool, float
                                    "Accept": "application/json, text/event-stream"})
         with _rq.urlopen(req, timeout=timeout) as resp:
             body_txt = resp.read(400).decode("utf-8", "replace")
-        return ("jsonrpc" in body_txt or "result" in body_txt), (_time.monotonic() - t0) * 1000, body_txt[:80]
+        return (resp.status == 200 and bool(body_txt.strip())), (_time.monotonic() - t0) * 1000, body_txt[:80]
     except Exception as e:
         return False, (_time.monotonic() - t0) * 1000, str(e)[:80]
 
@@ -281,7 +281,7 @@ def _probe_adaptation() -> dict[str, Any]:
     # MTTR metabolism ledger — real incident history (hermes cron_incidents)
     incidents, mean_mttr = [], None
     try:
-        c = _sq.connect("file:/root/.hermes/cron/executions.db?mode=ro", uri=True, timeout=4)
+        c = _sq.connect("file:/root/.hermes/cron/executions.db?mode=ro&immutable=1", uri=True, timeout=4)
         rows = c.execute("SELECT job_id, first_seen_at, closed_at FROM cron_incidents "
                          "WHERE closed_at IS NOT NULL AND first_seen_at IS NOT NULL "
                          "ORDER BY closed_at DESC LIMIT 20").fetchall()
