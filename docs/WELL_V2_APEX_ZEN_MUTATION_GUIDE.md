@@ -167,6 +167,19 @@ unlock) · **#2 state migration to /var/lib/well** (kill twin trees
 permanently — twin-path is a recurring disease) · **#3 31→10 tools**
 (optimisation, not capability unlock).
 
+**Phase 1 #3 — REGISTERED (2026-09-16, commits b709afa + 0cc95c8):** v2 surface
+live: `well_v2/surface.py` registers 9 mode-tools (+ shared `well_classify_substrate`
+= the 10) as thin signature-filtered delegators over legacy impls. `tools/list: 40`
+(31 legacy + 9 v2, both discoverable during epoch; removal 2026-10-16 = Phase 3).
+Discovery via `SOMATIC_TOOLS` set; bridge modes delegate `_wt_*` impls directly
+(bypassing the stale server.py L13800 shadow — third twin-module strike, to be
+deleted in Phase 3). Live-fired: well_human(readiness)=YELLOW+tag,
+well_reality(confidence)=1.0 (drift:false, FRESH, lane truth),
+well_registry(contradictions)=0 open, well_bridge(attest)=arifFlow receipt
+b898c0aa. `tools_sot.yaml` carries the full v2_legacy_map for consumer sweep.
+Consumer risk during epoch: zero name-based external consumers (verified);
+re-verify before Phase 3 removal.
+
 **Phase 1 #2 — EXECUTED (2026-09-16):** twin trees killed permanently.
 `well.service` drop-in `25-source-runtime.conf` repoints runtime to `/root/WELL`
 (source IS runtime); `triadic-snapshot.service` interpreter repointed;
