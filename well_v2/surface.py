@@ -285,23 +285,23 @@ def register_v2_tools(g: dict) -> None:
         WELL never returns verdicts — proposals + evidence only.
         """
         if mode == "attest":
-            r = _call(g, "well_attest_to_kernel", attestation_kind=attestation_kind,
+            r = _call(g, "_wt_well_attest_to_kernel", attestation_kind=attestation_kind,
                       actor_id=actor_id)
         elif mode == "signal":
-            r = _call(g, "well_propose_governance_signal", signal_kind=signal_kind,
+            r = _call(g, "_wt_well_propose_governance_signal", signal_kind=signal_kind,
                       severity=severity, description=description, actor_id=actor_id)
         elif mode == "recommend":
             if not candidate:
                 return _tag({"ok": False, "error": "candidate required"}, "well_bridge", mode)
-            r = _call(g, "well_propose_seal_recommendation", candidate=candidate,
+            r = _call(g, "_wt_well_propose_seal_recommendation", candidate=candidate,
                       recommendation=recommendation, actor_id=actor_id)
         elif mode == "dignity":
-            r = _call(g, "well_handoff_dignity_to_arifos", signal=signal,
+            r = _call(g, "_wt_well_handoff_dignity_to_arifos", signal=signal,
                       coercion_signals=coercion_signals,
                       dignity_preservation=dignity_preservation,
                       reductionism_risk=reductionism_risk, actor_id=actor_id)
         elif mode == "log":
-            r = _call(g, "well_seal_recommendation_log", lookback_hours=lookback_hours)
+            r = _call(g, "_wt_well_seal_recommendation_log", lookback_hours=lookback_hours)
         else:
             return _tag({"ok": False, "error": f"unknown mode: {mode}"}, "well_bridge", mode)
         return _tag(await _res(r), "well_bridge", mode)

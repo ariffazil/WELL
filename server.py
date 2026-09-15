@@ -18527,6 +18527,16 @@ SOMATIC_TOOLS = {
     "well_get_triadic_snapshot",  # read /state/triadic_snapshot.json
     "well_render_hud_panel",  # HUD cockpit ASCII panel
     "well_frame_read_snapshot",  # FRAME observer evidence-only reader
+    # ── WELL v2 surface (F13 rank #3, 2026-09-16; epoch → removal 2026-10-16) ─
+    "well_human",  # H plane: homeostasis|readiness|dignity
+    "well_machine",  # M plane: diagnose|recommend|classify|observe
+    "well_triad",  # G+C plane: assess|snapshot|hud
+    "well_reality",  # R plane v0: confidence|lineage|witness|patterns
+    "well_adaptation",  # A plane v0: precheck|readiness|mttr|gaps
+    "well_intake",  # H-write: meal|recovery|substance|biometric
+    "well_consent",  # G-write: audit|grant|revoke
+    "well_bridge",  # G-outbound witness: attest|signal|recommend|dignity|log
+    "well_registry",  # meta: status|full|contradictions
 }
 # NOTE: well_registry_status is the canonical blueprint format tool.
 # well_system_registry_status is deprecated (internal only, no MCP registration).
