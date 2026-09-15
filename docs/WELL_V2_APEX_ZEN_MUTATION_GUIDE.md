@@ -241,3 +241,17 @@ the future — and hands the answer to the court, every time.
 
 - FIX-9 (protocol constant) + FIX-10 (one FastMCP 4 impl) + FIX-11 (contract v2 rewrite) + FIX-13 (public /health redaction) → **Phase 0**
 - FIX-12 (witness lane: deploy :18081 OR mark DEAD) → **Phase 0, requires F13 architectural choice** — it is the root cause of C7 and unblocks `well_bridge` having any real forward leg
+
+### 8.8 F13 verdicts (2026-09-16) — EXECUTED
+
+| Fix | Verdict | Execution |
+|-----|---------|-----------|
+| FIX-9 | SEAL | both bridge-client constants → `2025-06-18` (commit e9da7c0) |
+| FIX-10 | SEAL | `well_mcp_fastmcp/` → `_archive/`; FastMCP = v2 constitutional implementation |
+| FIX-11 | SEAL | contract v2 written against live surfaces; valid until 2026-12-16 |
+| FIX-13 | SEAL | `/health` XFF-gated public subset `{status, organ, version}` — verified live on well.arif-fazil.com; localhost/A-FORGE full shape frozen |
+| FIX-12 | **Option B** | lane :18081/:8088 **DEAD** — `_bridge_forward` returns DEAD for all four bridges; local events.jsonl stays the record; witness routes via arifFlow :7073 (first receipt `fde229c4` minted by this very mutation) |
+
+Deployed live 2026-09-16 (commits e9da7c0, 9554982; 3-way stamps aligned; `drift:false`; rollback `/opt/well/server.py.bak-20260916-preP0`). Live-path lesson: the `@mcp.tool` wrappers in server.py delegate to `well_triad/phase3_tools.py` (`_wt_` prefix) — server.py also carries a stale module-level duplicate at ~L13800; twin-module trap confirmed a third time.
+
+**Phase-1 constraint (from kabankan crescent 2026-09-16):** the v2 FastMCP canonical surface must carry trace correlation through the **envelope**, not ambient contextvars — FastMCP→handler contextvar propagation is proven lossy (double-emission, disjoint trace_ids). One emitter per request; handler-side inherits via envelope or stays silent.
