@@ -107,3 +107,49 @@ telemetry:
   agent_telemetry: "live — agent_telemetry.py every 5min via cron"
   state_json: "PROD — BEHAVIORAL honesty, INSUFFICIENT data quality"
   biometric_sensors: "NONE — awaiting sovereign inject or wearable sync"
+
+# ── WELL v2 surface (F13 rank #3, 2026-09-16) ────────────────────────────────
+v2_deprecation:
+  epoch: 2026-09-16
+  removal: 2026-10-16
+  note: "v2 = 10 mode-tools (thin delegation, zero logic duplication). Legacy 31 stay registered during epoch."
+
+v2_public_tools:
+- {name: well_human,        plane: H, modes: "homeostasis|readiness|dignity"}
+- {name: well_machine,      plane: M, modes: "diagnose|recommend|classify|observe (scope organ|federation)"}
+- {name: well_triad,        plane: "G+C", modes: "assess|snapshot|hud (observer frame)"}
+- {name: well_classify_substrate, plane: U, modes: unchanged}
+- {name: well_reality,      plane: "R (v0)", modes: "confidence|lineage|witness|patterns"}
+- {name: well_adaptation,   plane: "A (v0)", modes: "precheck|readiness|mttr|gaps"}
+- {name: well_intake,       plane: "H-write", modes: "meal|recovery|substance|biometric"}
+- {name: well_consent,      plane: "G-write", modes: "audit|grant|revoke"}
+- {name: well_bridge,       plane: "G-outbound", modes: "attest|signal|recommend|dignity|log"}
+- {name: well_registry,     plane: meta, modes: "status|full|contradictions"}
+
+v2_legacy_map:
+  well_assess_homeostasis: {v2: well_human, mode: homeostasis}
+  well_validate_vitality: {v2: well_human, mode: readiness}
+  well_guard_dignity: {v2: well_human, mode: dignity}
+  well_machine_diagnose: {v2: well_machine, mode: diagnose}
+  well_machine_recommend: {v2: well_machine, mode: recommend}
+  well_classify_machine_state: {v2: well_machine, mode: classify}
+  well_observe_machine: {v2: well_machine, "mode: observe, scope: organ"}
+  well_observe_federation_thermal: {v2: well_machine, "mode: observe, scope: federation"}
+  well_assess_triadic_state: {v2: well_triad, mode: assess}
+  well_get_triadic_snapshot: {v2: well_triad, mode: snapshot}
+  well_frame_read_snapshot: {v2: well_triad, "mode: snapshot, observer: frame"}
+  well_render_hud_panel: {v2: well_triad, mode: hud}
+  well_trace_lineage: {v2: well_reality, mode: lineage}
+  well_check_repair: {v2: well_adaptation, mode: precheck}
+  well_log_intake: {v2: well_intake, mode: meal}
+  well_log_recovery_event: {v2: well_intake, mode: recovery}
+  well_log_substance: {v2: well_intake, mode: substance}
+  well_inject_biometric: {v2: well_intake, mode: biometric}
+  well_consent_audit: {v2: well_consent, mode: audit}
+  well_consent_set_scope: {v2: "well_consent grant|revoke"}
+  well_attest_to_kernel: {v2: well_bridge, mode: attest}
+  well_propose_governance_signal: {v2: well_bridge, mode: signal}
+  well_propose_seal_recommendation: {v2: well_bridge, mode: recommend}
+  well_handoff_dignity_to_arifos: {v2: well_bridge, mode: dignity}
+  well_seal_recommendation_log: {v2: well_bridge, mode: log}
+  well_registry_status: {v2: "well_registry status|full"}

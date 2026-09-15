@@ -19909,6 +19909,13 @@ if _REFLECT_LOADED and _wrap_canonical_tools is not None:
 else:  # pragma: no cover
     _wrapped_count = 0
 
+# ── WELL v2 surface (F13 rank #3, 2026-09-16): 10 mode-tools over legacy 31 ──
+# Deprecation epoch 2026-09-16 → removal 2026-10-16. Reversible: remove these
+# two lines to unregister the v2 surface.
+from well_v2.surface import register_v2_tools as _register_v2_surface
+
+_register_v2_surface(globals())
+
 if __name__ == "__main__":
     # ── Transport mode selection (fallback entry) ────────────────────────
     import argparse
