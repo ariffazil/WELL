@@ -50,13 +50,14 @@ _BASELINE_PATH = "/var/lib/well/reality_baseline.json"
 _FRESH_DAYS = 7.0
 
 
-def _http_probe(url: str, body: dict, timeout: float = 4.0) -> tuple[bool, float, str]:
+def _http_probe(url: str, body: dict | None, timeout: float = 4.0) -> tuple[bool, float, str]:
     import json as _json
     import time as _time
     import urllib.request as _rq
     t0 = _time.monotonic()
     try:
-        req = _rq.Request(url, data=_json.dumps(body).encode(),
+        data = _json.dumps(body).encode() if body is not None else None
+        req = _rq.Request(url, data=data,
                           headers={"Content-Type": "application/json",
                                    "Accept": "application/json, text/event-stream"})
         with _rq.urlopen(req, timeout=timeout) as resp:
@@ -257,7 +258,7 @@ def _probe_adaptation() -> dict[str, Any]:
             })
 
     # Capability 2: litellm/FED — local :4000 liveliness vs topology SOT
-    ok_l, _, _ = _http_probe("http://127.0.0.1:4000/health/liveliness", {"probe": 1}, timeout=4.0)
+    ok_l, _, _ = _http_probe("http://127.0.0.1:4000/health/liveliness", None, timeout=4.0)
     if ok_l:
         checked.append("litellm_fed")
         stale = _file_has("/root/.config/federation-models.json", r"100\.64\.0\.2:4000")
