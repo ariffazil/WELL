@@ -167,6 +167,16 @@ unlock) · **#2 state migration to /var/lib/well** (kill twin trees
 permanently — twin-path is a recurring disease) · **#3 31→10 tools**
 (optimisation, not capability unlock).
 
+**Phase 1 #1 — EXECUTED (2026-09-16, commit 445a0f1):** `_bridge_forward` now
+routes all four witness bridges (attest, dignity, recommendation, signal) via
+arifFlow `POST :7073/ingest` — wire schema requires full FlowReceipt incl.
+`receipt_id`+`created_at`+`cooling_decision:"None"`+formula stamps. Live-fire
+proof: attest → `arifflow_receipt_id c2baf3c8`, ledger actor `well-organ`,
+`f8_evidence_label: OBS` (was NONE). Kill-switch: `WELL_BRIDGE_ARIFFLOW=off`.
+arifOS lane stays declared DEAD inside every bridge response — the receipt
+carries the lane verdict as payload truth. Remaining in #1: mode-merge of the
+four tools into `well_bridge` (rides with the v2 surface, rank #3).
+
 ---
 
 ## 6. Anti-Goals (what WELL v2 must NOT become)
