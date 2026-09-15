@@ -60,6 +60,12 @@ _ARIFOS_BRIDGE_ENDPOINTS: dict[str, str] = {
     "signal":            f"{_ARIFOS_BASE}/signal/inbox",
 }
 
+# Phase 1 #1 (F13 2026-09-16): witness receipts route via arifFlow metabolism lane.
+# Kill-switch: WELL_BRIDGE_ARIFFLOW=off → lane-declared DEAD only, no ingest attempt.
+_ARIFFLOW_INGEST_URL = os.environ.get(
+    "WELL_ARIFFLOW_INGEST_URL", "http://127.0.0.1:7073/ingest"
+)
+
 # Consent scopes required for each tool (F11 gate)
 _SCOPE_GATE: dict[str, str] = {
     "well_attest_to_kernel":              "governance.attest",
@@ -93,19 +99,81 @@ def _bridge_forward(
         return {"ok": False, "forwarded_to": None, "error": "unknown_endpoint_key"}
 
     # FIX-12 Option B (F13 2026-09-16): arifOS witness-bridge lane is DEAD.
-    # No HTTP attempt. Async witness routes via arifFlow :7073 flow_ingest
-    # (wired as well_bridge in Phase 1). Local events.jsonl stays the record.
+    # Phase 1 #1: witness traffic routes via arifFlow /ingest (metabolism copy).
+    # Local events.jsonl (written by each caller) stays the canonical record.
     # Body below retained for reversibility; unreachable while lane is DEAD.
-    return {
-        "ok": False,
+    _lane_dead = {
         "lane": "arifos_bridge",
-        "status": "DEAD",
         "forwarded_to": url,
         "forwarded": False,
-        "decision": "F13 2026-09-16 Option B — no unique capability; async witness proven via arifFlow receipts",
-        "route_via": "arifFlow :7073 flow_ingest",
-        "missing_evidence": ["arifos_bridge_lane_dead"],
+        "decision": "F13 2026-09-16 Option B — no unique capability; async witness via arifFlow receipts",
     }
+    if os.environ.get("WELL_BRIDGE_ARIFFLOW", "1").strip().lower() in ("0", "false", "off", "no"):
+        return {
+            "ok": False,
+            **_lane_dead,
+            "status": "DEAD",
+            "route_via": _ARIFFLOW_INGEST_URL,
+            "missing_evidence": ["arifos_bridge_lane_dead", "arifflow_routing_disabled"],
+        }
+    import uuid as _uuid_mod
+    _ts = _dt.datetime.now(_dt.timezone.utc).isoformat()
+    _receipt = {
+        "receipt_id": str(_uuid_mod.uuid4()),
+        "previous_receipt_hash": None,
+        "created_at": _ts,
+        "actor_id": "well-organ",
+        "session_id": f"well-{endpoint_key}-{_ts}",
+        "session_token": None,
+        "step_type": "Verify",
+        "topology_id": None,
+        "lane_id": None,
+        "step_number": 1,
+        "cost_ns": 0,
+        "preceding_verify_cost_ns": None,
+        "epistemic_label": "Observation",
+        "floor_verdict": "Pass",
+        "cooling_decision": "None",
+        "tri_witness_votes": None,
+        "merkle_root": None,
+        "merkle_inclusion_proof": None,
+        "payload": {
+            "witness_kind": endpoint_key,
+            "attestation": payload,
+            "arifos_lane": "DEAD (F13 Option B 2026-09-16)",
+            "canonical_record": "well events.jsonl",
+        },
+        "formula_version": "qg.v0.2",
+        "formula_hash": "sha256:arifflow-fq-v2.2-2026-08-14",
+        "witness_organs": ["arifFlow"],
+        "routed_organ": "WELL",
+    }
+    try:
+        _req = urllib.request.Request(
+            _ARIFFLOW_INGEST_URL,
+            data=json.dumps(_receipt).encode(),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urllib.request.urlopen(_req, timeout=timeout) as _resp:
+            _body = json.loads(_resp.read().decode("utf-8"))
+        return {
+            "ok": True,
+            **_lane_dead,
+            "status": "DEAD (arifOS) — ROUTED via arifFlow",
+            "routed_via": _ARIFFLOW_INGEST_URL,
+            "arifflow_receipt_id": _receipt["receipt_id"],
+            "arifflow_status": _body.get("status") if isinstance(_body, dict) else str(_body)[:80],
+        }
+    except Exception as _exc:
+        return {
+            "ok": False,
+            **_lane_dead,
+            "status": "DEAD (arifOS) — arifFlow INGEST FAILED",
+            "route_via": _ARIFFLOW_INGEST_URL,
+            "error": f"arifflow_ingest_failed: {_exc}",
+            "missing_evidence": ["arifos_bridge_lane_dead", "arifflow_ingest_failed"],
+        }
 
     t0 = _time.monotonic()
     try:
