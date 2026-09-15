@@ -336,6 +336,112 @@ def _probe_adaptation() -> dict[str, Any]:
     }
 
 
+def _probe_patterns(g: dict) -> dict[str, Any]:
+    """Phase 4.5: scar→risk fingerprints with LIVE detectors. Measurement only.
+
+    Library v1 = scars proven in this very session (2026-09-16), per F13 canon:
+    'the biggest scar is: system healthy, but the observer watched the wrong
+    reality surface.'
+    """
+    import datetime as _dt
+    import os as _os
+    import re as _re
+    import sqlite3 as _sq
+
+    fps: list[dict] = []
+
+    # FP1 — WITNESS_SURFACE_MISMATCH (F13 canon; source scars: Graphiti session + WELL C1-C8)
+    evidence1: list[str] = []
+    try:
+        a = _probe_adaptation()
+        for gp in a.get("gaps", []):
+            if gp.get("gap_class") in ("declaration_vs_live", "stale_host_ref"):
+                evidence1.append(f"{gp['capability']}: {gp.get('evidence','')[:90]}")
+    except Exception as e:
+        evidence1.append(f"gap-scan unavailable: {e}")
+    # stale-incident lie: open incident whose job's last execution SUCCEEDED
+    try:
+        c = _sq.connect("file:/root/.hermes/cron/executions.db?mode=ro&immutable=1", uri=True, timeout=4)
+        rows = c.execute(
+            "SELECT i.job_id, i.first_seen_at FROM cron_incidents i WHERE i.closed_at IS NULL").fetchall()
+        for jid, fs in rows:
+            last = c.execute(
+                "SELECT status FROM executions WHERE job_id=? ORDER BY started_at DESC LIMIT 1",
+                (jid,)).fetchone()
+            if last and last[0] == "completed":
+                evidence1.append(f"incident {jid} open (since {str(fs)[:10]}) but last execution COMPLETED — era-ended lie")
+        c.close()
+    except Exception:
+        pass
+    fps.append({
+        "id": "FP1", "name": "WITNESS_SURFACE_MISMATCH",
+        "source_scar": "Graphiti session 2026-09-15 + WELL C1-C8 (2026-09-16)",
+        "canon": "System healthy, but the observer watched the wrong reality surface",
+        "status": "ACTIVE" if evidence1 else "CLEAR",
+        "evidence": evidence1 or ["no declared-vs-live drift; no era-ended open incidents"],
+    })
+
+    # FP2 — TWIN_MODULE_TRAP (three strikes this session)
+    evidence2: list[str] = []
+    try:
+        src = open("/root/WELL/server.py", encoding="utf-8", errors="replace").read()
+        for name in ("well_attest_to_kernel",):
+            n = len(_re.findall(rf"^def {name}\(", src, _re.MULTILINE))
+            if n > 1:
+                evidence2.append(f"{n} module-level defs of {name}() in server.py — name shadowing (L13800 class, Phase 3 will delete)")
+    except Exception:
+        pass
+    # twin state-writer: dead twin still being written?
+    try:
+        dead_twin, live_twin = "/root/WELL/state.json", "/var/lib/well/state.json"
+        now = _dt.datetime.now().timezone and _dt.datetime.now(_dt.timezone.utc).timestamp()
+        age_h = lambda p: (now - _os.path.getmtime(p)) / 3600.0
+        if _os.path.exists(dead_twin) and _os.path.exists(live_twin):
+            if age_h(dead_twin) < 48:
+                evidence2.append(f"dead twin {dead_twin} modified {age_h(dead_twin):.0f}h ago — a writer still targets the wrong tree")
+    except Exception:
+        pass
+    fps.append({
+        "id": "FP2", "name": "TWIN_MODULE_TRAP",
+        "source_scar": "well_mcp vs monolith vs /opt/well; L13800 shadow (3 strikes, 2026-09-16)",
+        "canon": "Edited Reality != Executed Reality",
+        "status": "ACTIVE" if evidence2 else "CLEAR",
+        "evidence": evidence2 or ["no duplicate module-level tool defs; no live twin-writer"],
+    })
+
+    # FP3 — OPEN_INCIDENT_LIE (era ended, incident never closed)
+    open_n = None
+    try:
+        c = _sq.connect("file:/root/.hermes/cron/executions.db?mode=ro&immutable=1", uri=True, timeout=4)
+        open_n = c.execute("SELECT COUNT(*) FROM cron_incidents WHERE closed_at IS NULL").fetchone()[0]
+        c.close()
+    except Exception:
+        pass
+    fps.append({
+        "id": "FP3", "name": "OPEN_INCIDENT_LIE",
+        "source_scar": "incident sweep 2026-09-16 (4 era-ended lies-by-omission)",
+        "status": ("ACTIVE" if (open_n or 0) > 0 else ("CLEAR" if open_n == 0 else "UNKNOWN")),
+        "evidence": [f"open incidents: {open_n}"] + (["swept to zero 2026-09-16"] if open_n == 0 else []),
+    })
+
+    # FP4 — STATUS_OK_ARTIFACT_MISSING (backup-report class) — known, honestly unmonitored
+    fps.append({
+        "id": "FP4", "name": "STATUS_OK_ARTIFACT_MISSING",
+        "source_scar": "gdrive backup 21-day silent outage (2026-09-16 report)",
+        "status": "UNMONITORED",
+        "evidence": ["job status 'ok' measures agent turn, not artifact — detector needs per-job artifact verification; scheduler-audit skill carries the manual sweep"],
+    })
+
+    active = [f["name"] for f in fps if f["status"] == "ACTIVE"]
+    return {
+        "ok": True,
+        "fingerprints": fps,
+        "active_risk_patterns": active,
+        "active_count": len(active),
+        "verdict_note": "MEASUREMENT ONLY — risk patterns are evidence for arifOS, never verdicts",
+    }
+
+
 def register_v2_tools(g: dict) -> None:
     mcp = g["mcp"]
     _RG["g"] = g
@@ -442,12 +548,7 @@ def register_v2_tools(g: dict) -> None:
             r = _call(g, "well_trace_lineage", mode="recall", limit=limit)
             return _tag(await _res(r), "well_reality", mode)
         if mode == "patterns":
-            return _tag({
-                "ok": True,
-                "implementation_status": "PENDING — scar→risk fingerprint matching (Phase 4.5)",
-                "known_fingerprints": ["Witness Surface Mismatch (daemon logs ignored + assumptions over probes + count without identity proof)"],
-                "deprecation": _DEPRECATION,
-            }, "well_reality", mode)
+            return _tag(_probe_patterns(g), "well_reality", mode)
 
         src = _probe_reality_sources()
 
