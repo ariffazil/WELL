@@ -554,6 +554,78 @@ def _load_events(lookback_days: int = CONTRAST_BASELINE_WINDOW_DAYS) -> list[dic
     return events
 
 
+def _compute_well_commits() -> dict[str, Any]:
+    """Compute 3-way commit alignment for WELL runtime: source, deployed, built, drift."""
+    source_commit = "UNKNOWN"
+    # 1. source_commit: git HEAD of /root/WELL
+    try:
+        import subprocess as _sp
+
+        _r = _sp.run(
+            ["git", "-C", "/root/WELL", "rev-parse", "--short=7", "HEAD"],
+            capture_output=True,
+            text=True,
+            timeout=3,
+        )
+        if _r.returncode == 0 and _r.stdout.strip():
+            source_commit = _r.stdout.strip()[:7]
+    except Exception:
+        pass
+    if source_commit == "UNKNOWN":
+        for p in ("/root/WELL/.git_commit", "/opt/well/.git_commit"):
+            try:
+                c = Path(p).read_text().strip()
+                if c and len(c) >= 7:
+                    source_commit = c[:7]
+                    break
+            except Exception:
+                pass
+
+    # 2. deployed_commit: stamp in /opt/well/.git_commit (or /root/WELL/.git_commit)
+    deployed_commit = "UNKNOWN"
+    for p in ("/opt/well/.git_commit", "/root/WELL/.git_commit"):
+        try:
+            c = Path(p).read_text().strip()
+            if c and len(c) >= 7:
+                deployed_commit = c[:7]
+                break
+        except Exception:
+            pass
+    if deployed_commit == "UNKNOWN":
+        deployed_commit = source_commit
+
+    # 3. built_commit: from /opt/well/release-manifest.json or WELL_BUILT_COMMIT
+    built_commit = "UNKNOWN"
+    import os as _os
+
+    env_c = _os.getenv("WELL_BUILT_COMMIT", "").strip()
+    if env_c:
+        built_commit = env_c[:7]
+    else:
+        for p in ("/opt/well/release-manifest.json", "/root/WELL/release-manifest.json"):
+            try:
+                if Path(p).exists():
+                    import json as _json
+
+                    _data = _json.loads(Path(p).read_text())
+                    c = _data.get("git_commit", "")
+                    if c and len(c) >= 7:
+                        built_commit = c[:7]
+                        break
+            except Exception:
+                pass
+    if built_commit == "UNKNOWN":
+        built_commit = deployed_commit
+
+    drift = bool(source_commit != deployed_commit or deployed_commit != built_commit)
+    return {
+        "source_commit": source_commit,
+        "deployed_commit": deployed_commit,
+        "built_commit": built_commit,
+        "drift": drift,
+    }
+
+
 def _compute_baseline(events: list[dict]) -> dict[str, dict]:
     """Establish per-dimension baseline statistics from event history.
 
@@ -13984,29 +14056,17 @@ if __name__ == "__main__":
         _clarity = state.get("metrics", {}).get("cognitive", {}).get("clarity")
 
         git_commit = "UNAVAILABLE"
-        try:
-            import subprocess as _sp
-
-            _r = _sp.run(
-                ["git", "-C", "/root/WELL", "rev-parse", "--short=7", "HEAD"],
-                capture_output=True,
-                text=True,
-                timeout=3,
-            )
-            if _r.returncode == 0:
-                git_commit = _r.stdout.strip()
-        except Exception:
-            pass
-        if git_commit == "UNAVAILABLE":
-            try:
-                git_commit = Path("/root/WELL/.git_commit").read_text().strip()
-            except Exception:
-                pass
+        commits = _compute_well_commits()
+        git_commit = commits["deployed_commit"]
 
         return JSONResponse(
             {
                 "identity": identity_hash if identity_hash != "UNAVAILABLE" else "WELL",
                 "git_commit": git_commit,
+                "source_commit": commits["source_commit"],
+                "deployed_commit": commits["deployed_commit"],
+                "built_commit": commits["built_commit"],
+                "drift": commits["drift"],
                 "role": "Body / Human Intelligence",
                 "authority": "REFLECT_ONLY",
                 "delta_s": state.get("delta_s", -1),
@@ -14040,10 +14100,15 @@ if __name__ == "__main__":
     async def build_info_handler(request):
         from starlette.responses import JSONResponse
 
+        commits = _compute_well_commits()
         return JSONResponse(
             {
-                "sha": "87c0e6755f44a52526763fceee15ee64740e7918",
-                "short_sha": "87c0e67",
+                "sha": commits["deployed_commit"],
+                "short_sha": commits["deployed_commit"],
+                "source_commit": commits["source_commit"],
+                "deployed_commit": commits["deployed_commit"],
+                "built_commit": commits["built_commit"],
+                "drift": commits["drift"],
                 "branch": "main",
                 "version": "1.0",
                 "tool_count": len(SOMATIC_TOOLS),
@@ -19951,30 +20016,21 @@ if __name__ == "__main__":
             else "degraded"
         )
 
-        # ── Deployment identity (P0.0) -- git commit of deployed runtime
-        source_commit = "UNKNOWN"
-        try:
-            import subprocess as _sp
-
-            _r = _sp.run(
-                ["git", "-C", "/root/WELL", "rev-parse", "--short=7", "HEAD"],
-                capture_output=True,
-                text=True,
-                timeout=3,
-            )
-            if _r.returncode == 0:
-                source_commit = _r.stdout.strip()
-        except Exception:
-            try:
-                source_commit = open("/root/WELL/.git_commit").read().strip()
-            except Exception:
-                pass
+        # ── Deployment identity (P0.0) -- 3-way commit alignment & drift
+        commits = _compute_well_commits()
+        source_commit = commits["source_commit"]
+        deployed_commit = commits["deployed_commit"]
+        built_commit = commits["built_commit"]
+        drift = commits["drift"]
 
         return JSONResponse(
             {
                 # ── Canonical 7-field health schema (federation convention) ───
-                "status": health_status,
+                "status": "degraded" if drift else health_status,
                 "source_commit": source_commit,
+                "deployed_commit": deployed_commit,
+                "built_commit": built_commit,
+                "drift": drift,
                 "final_authority": "ARIF",
                 "identity": "WELL",
                 "role": "Body / Human Intelligence",
@@ -20168,10 +20224,15 @@ if __name__ == "__main__":
     async def _well_build_info_handler(request):
         from starlette.responses import JSONResponse
 
+        commits = _compute_well_commits()
         return JSONResponse(
             {
-                "sha": "87c0e6755f44a52526763fceee15ee64740e7918",
-                "short_sha": "87c0e67",
+                "sha": commits["deployed_commit"],
+                "short_sha": commits["deployed_commit"],
+                "source_commit": commits["source_commit"],
+                "deployed_commit": commits["deployed_commit"],
+                "built_commit": commits["built_commit"],
+                "drift": commits["drift"],
                 "branch": "main",
                 "version": "1.0",
                 "tool_count": len(SOMATIC_TOOLS),
