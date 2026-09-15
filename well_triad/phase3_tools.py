@@ -48,12 +48,16 @@ from well_triad import events as _wt_events
 
 HERMES_HERMETIC_TOKEN_ENV = "HERMES_HERMETIC_TOKEN"
 
+_ARIFOS_PORT = os.environ.get("ARIFOS_PORT", "8088")
+_ARIFOS_HOST = os.environ.get("ARIFOS_HOST", "127.0.0.1")
+_ARIFOS_BASE = f"http://{_ARIFOS_HOST}:{_ARIFOS_PORT}"
+
 # arifOS bridge endpoints (per Phase 3 doctrine §3)
 _ARIFOS_BRIDGE_ENDPOINTS: dict[str, str] = {
-    "attest":            "http://127.0.0.1:18081/attest",
-    "dignity_handoff":   "http://127.0.0.1:18081/dignity/handoff",
-    "recommendation":    "http://127.0.0.1:18081/recommendation/inbox",
-    "signal":            "http://127.0.0.1:18081/signal/inbox",
+    "attest":            f"{_ARIFOS_BASE}/attest",
+    "dignity_handoff":   f"{_ARIFOS_BASE}/dignity/handoff",
+    "recommendation":    f"{_ARIFOS_BASE}/recommendation/inbox",
+    "signal":            f"{_ARIFOS_BASE}/signal/inbox",
 }
 
 # Consent scopes required for each tool (F11 gate)
@@ -230,9 +234,9 @@ def well_attest_to_kernel(
         "attestation": attestation_payload,
         "bridge": bridge,
         "awaiting_verification": True,  # separation of powers
-        "f2_provenance": "well:18083/state.json + arifos:18081/attest (attempted)",
+        "f2_provenance": f"well:18083/state.json + arifos:{_ARIFOS_PORT}/attest (attempted)",
         "f4_privacy": "leaves_host:false",
-        "f8_truth_class": "OBS",
+        "f8_truth_class": "OBS" if bridge.get("ok") else "DER",
         "f8_evidence_label": "OBS" if bridge.get("ok") else "NONE",
         "f11_consent": _SCOPE_GATE["well_attest_to_kernel"],
         "f12_verdict_hygiene": "no_seal_no_verdict_in_well_response",

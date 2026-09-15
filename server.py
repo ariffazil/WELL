@@ -25,6 +25,7 @@ import hashlib
 import json
 import logging
 import random
+import re
 import datetime
 import urllib.request
 import urllib.error
@@ -7667,6 +7668,15 @@ CULTURAL_ARCHETYPE_PATTERNS: dict[str, list[str]] = {
 }
 
 
+def _kw_in_text(kw: str, text: str) -> bool:
+    """Check if kw is present in text with word boundary checks to avoid substring collisions."""
+    if not kw or not text:
+        return False
+    if " " in kw or "-" in kw or "_" in kw:
+        return kw in text
+    return bool(re.search(r"\b" + re.escape(kw) + r"\b", text))
+
+
 def _extract_cultural_archetype(combined: str) -> dict[str, Any]:
     """Extract cultural/symbolic names as metadata, NEVER let them determine
     substrate_class. The substrate is the human substrate; the archetype is
@@ -7684,7 +7694,7 @@ def _extract_cultural_archetype(combined: str) -> dict[str, Any]:
     """
     found: list[str] = []
     for archetype, patterns in CULTURAL_ARCHETYPE_PATTERNS.items():
-        if any(p in combined for p in patterns):
+        if any(_kw_in_text(p, combined) for p in patterns):
             found.append(archetype)
     return {
         "archetypes_present": found,
@@ -7697,14 +7707,13 @@ def _subtype_relational_dynamic(combined: str) -> str:
     """Best-fit subtype for HUMAN_RELATIONAL_DYNAMIC. Pure heuristic; advisory
     only. F2 TRUTH: this is a guess, not a diagnosis.
     """
-    if (
-        "worship" in combined
-        or "admiration" in combined
-        or "objectification" in combined
+    if any(
+        _kw_in_text(p, combined)
+        for p in ["worship", "admiration", "objectification"]
     ):
         return "embodied_worship_validation_loop"
     if any(
-        p in combined
+        _kw_in_text(p, combined)
         for p in [
             "sadomasochism",
             "sado",
@@ -7720,18 +7729,21 @@ def _subtype_relational_dynamic(combined: str) -> str:
         ]
     ):
         return "consensual_power_exchange"
-    if (
-        "touch" in combined
-        or "tactile" in combined
-        or "physical intimacy" in combined
-        or "sensual" in combined
+    if any(
+        _kw_in_text(p, combined)
+        for p in [
+            "touch",
+            "tactile",
+            "physical intimacy",
+            "sensual",
+        ]
     ):
         return "embodied_intimacy"
-    if "shame" in combined or "vulnerability" in combined or "exposure" in combined:
+    if any(_kw_in_text(p, combined) for p in ["shame", "vulnerability", "exposure"]):
         return "shame_vulnerability_loop"
-    if "validation" in combined:
+    if _kw_in_text("validation", combined):
         return "validation_dynamics"
-    if "care" in combined or "caregiver" in combined:
+    if _kw_in_text("care", combined) or _kw_in_text("caregiver", combined):
         return "care_dyadic"
     return "human_relational_dynamic_unspecified"
 
@@ -8013,6 +8025,14 @@ def _well_classify_substrate_impl(
         "wealth",
         "apex",  # was hermes -- renamed 2026-05-16
         "aaa",
+        "pod",
+        "node",
+        "vps",
+        "container",
+        "kubernetes",
+        "k8s",
+        "cgroup",
+        "subsystem",
     ]
     MACHINE_PHRASE_BLOCKS = [
         "ai agent",
@@ -8031,14 +8051,14 @@ def _well_classify_substrate_impl(
         "forge bridge",
     ]
 
-    machine_core_count = sum(1 for kw in MACHINE_CORE_INDICATORS if kw in combined)
+    machine_core_count = sum(1 for kw in MACHINE_CORE_INDICATORS if _kw_in_text(kw, combined))
     machine_phrase_blocked = any(phrase in combined for phrase in MACHINE_PHRASE_BLOCKS)
 
     # If machine indicators present → NEVER allow HUMAN_PERSON
     if machine_core_count >= 1 or machine_phrase_blocked:
         human_indicators_strict = ["human", "person", "man", "woman", "child"]
         human_matches_strict = sum(
-            1 for kw in human_indicators_strict if kw in combined
+            1 for kw in human_indicators_strict if _kw_in_text(kw, combined)
         )
         if human_matches_strict >= 1 and machine_core_count >= 1:
             detected_class = "COUPLED_HUMAN_MACHINE_SYSTEM"
@@ -8057,7 +8077,7 @@ def _well_classify_substrate_impl(
         for cls, keywords in class_keywords.items():
             if cls == "COUPLED_HUMAN_MACHINE_SYSTEM":
                 continue
-            matches = sum(1 for kw in keywords if kw in combined)
+            matches = sum(1 for kw in keywords if _kw_in_text(kw, combined))
             if matches > max_matches:
                 max_matches = matches
                 detected_class = cls
@@ -8153,12 +8173,12 @@ def _well_classify_substrate_impl(
         "tactile",
     )
     relational_markers_present = sum(
-        1 for kw in relational_body_markers if kw in combined
+        1 for kw in relational_body_markers if _kw_in_text(kw, combined)
     )
     archetype_signals = sum(
         1
         for archetype, patterns in CULTURAL_ARCHETYPE_PATTERNS.items()
-        if any(p in combined for p in patterns)
+        if any(_kw_in_text(p, combined) for p in patterns)
     )
 
     if (
