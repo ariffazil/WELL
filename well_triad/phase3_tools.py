@@ -92,6 +92,21 @@ def _bridge_forward(
     if url is None:
         return {"ok": False, "forwarded_to": None, "error": "unknown_endpoint_key"}
 
+    # FIX-12 Option B (F13 2026-09-16): arifOS witness-bridge lane is DEAD.
+    # No HTTP attempt. Async witness routes via arifFlow :7073 flow_ingest
+    # (wired as well_bridge in Phase 1). Local events.jsonl stays the record.
+    # Body below retained for reversibility; unreachable while lane is DEAD.
+    return {
+        "ok": False,
+        "lane": "arifos_bridge",
+        "status": "DEAD",
+        "forwarded_to": url,
+        "forwarded": False,
+        "decision": "F13 2026-09-16 Option B — no unique capability; async witness proven via arifFlow receipts",
+        "route_via": "arifFlow :7073 flow_ingest",
+        "missing_evidence": ["arifos_bridge_lane_dead"],
+    }
+
     t0 = _time.monotonic()
     try:
         req = urllib.request.Request(
