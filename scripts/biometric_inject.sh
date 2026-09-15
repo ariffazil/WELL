@@ -31,8 +31,8 @@
 set -euo pipefail
 
 WELL_DIR="/root/WELL"
-STATE_FILE="$WELL_DIR/state.json"
-STATE_BAK="$WELL_DIR/state.json.bak"
+STATE_FILE="/var/lib/well/state.json"
+STATE_BAK="/var/lib/well/state.json.bak"
 SERVICE_NAME="well"
 TIMESTAMP_UTC="$(date -u +%Y-%m-%dT%H:%M:%S+00:00)"
 

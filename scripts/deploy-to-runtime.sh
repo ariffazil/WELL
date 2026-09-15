@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
-# deploy-to-runtime.sh — Deploy /root/WELL source → /opt/well runtime
+# deploy-to-runtime.sh — Stamp-and-restart deploy (source IS runtime)
+# Phase 1 #2 (2026-09-16): /opt/well retired; runtime = /root/WELL directly.
 # DITEMPA BUKAN DIBERI — Truth is forged, not assumed.
 # Parity with arifOS deploy architecture: 3-way commit alignment + release manifest.
 
 set -euo pipefail
 
 SRC="/root/WELL"
-DST="/opt/well"
+DST="/root/WELL"
 SERVICE_NAME="well.service"
 
 log() { echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] $*"; }
@@ -35,17 +36,19 @@ if git -C "$SRC" rev-parse --git-dir >/dev/null 2>&1; then
     fi
 fi
 
-# ── Sync source tree to /opt/well ───────────────────────────────────────────
-log "Syncing $SRC → $DST (preserving venv and runtime configs)"
-rsync -a \
-    --exclude='.git' \
-    --exclude='.venv' \
-    --exclude='__pycache__' \
-    --exclude='*.pyc' \
-    --exclude='.pytest_cache' \
+# ── Runtime sync (no-op since Phase 1 #2: source IS runtime) ────────────────
+if [[ "$DST" != "$SRC" ]]; then
+    log "Syncing $SRC → $DST (legacy two-tree mode)"
+    rsync -a \
+        --exclude='.git' \
+        --exclude='.venv' \
+        --exclude='__pycache__' \
+        --exclude='*.pyc' \
+        --exclude='.pytest_cache' \
     --exclude='.env' \
     --exclude='.identity_hash' \
     "$SRC/" "$DST/"
+fi
 
 # ── Write release manifest and deployment stamp ─────────────────────────────
 MANIFEST_FILE="$DST/release-manifest.json"
@@ -61,7 +64,7 @@ cat > "$MANIFEST_FILE" <<MANIFEST_EOF
 }
 MANIFEST_EOF
 
-cp "$MANIFEST_FILE" "$SRC/release-manifest.json"
+[[ "$MANIFEST_FILE" == "$SRC/release-manifest.json" ]] || cp "$MANIFEST_FILE" "$SRC/release-manifest.json"
 echo "$GIT_COMMIT" > "$DST/.git_commit"
 echo "$GIT_COMMIT" > "$SRC/.git_commit"
 

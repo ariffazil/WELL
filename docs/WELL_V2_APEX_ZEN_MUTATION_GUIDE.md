@@ -167,6 +167,19 @@ unlock) · **#2 state migration to /var/lib/well** (kill twin trees
 permanently — twin-path is a recurring disease) · **#3 31→10 tools**
 (optimisation, not capability unlock).
 
+**Phase 1 #2 — EXECUTED (2026-09-16):** twin trees killed permanently.
+`well.service` drop-in `25-source-runtime.conf` repoints runtime to `/root/WELL`
+(source IS runtime); `triadic-snapshot.service` interpreter repointed;
+`biometric_inject.sh` twin-writer fixed (state → `/var/lib/well/state.json`);
+`deploy-to-runtime.sh` repurposed to stamp-and-restart (no more rsync-to-/opt);
+`/opt/well` → `/opt/well.retired-20260916` (reversible mv, not delete).
+State canonical at `/var/lib/well/` via `/etc/well/well.env` (all four paths).
+Proof: 3-way parity `source=deployed=built` drift:false via the repo's own
+deploy script; **C1 permanently closed — M_WELL UNKNOWN(74h stale) → STABLE**;
+arifFlow witness route live from new runtime (receipt 9fa48a47); snapshot
+writer green on new interpreter. Rollback: restore drop-in removal + mv
+/opt/well.retired-20260916 back + daemon-reload.
+
 **Phase 1 #1 — EXECUTED (2026-09-16, commit 445a0f1):** `_bridge_forward` now
 routes all four witness bridges (attest, dignity, recommendation, signal) via
 arifFlow `POST :7073/ingest` — wire schema requires full FlowReceipt incl.
