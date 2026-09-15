@@ -100,6 +100,12 @@ Human   Machine Gov     Coupled Underst. Reality Adaptation
 - On dependency FAIL, the question is not "did X fail?" but
   **"are we observing the correct reality surface?"**
 - Scar Graphiti becomes a metric, not a story.
+- **Edited Reality ≠ Executed Reality** (F13 canon 2026-09-16): the twin-module
+  trap — live implementation ≠ implementation being edited — is R-WELL's
+  first-class Reality Integrity metric. Canonical compression:
+  *Documentation describes reality. Runtime decides reality. Witness proves
+  reality.* WELL's role: **constitutional readiness witness**, not a readiness
+  dashboard.
 
 ### Upgrade #2 — A-WELL Adaptation Readiness → `well_adaptation`
 - Headline metric: `adaptation_readiness ∈ [0,1]` + evidence list answering
@@ -152,6 +158,14 @@ Human   Machine Gov     Coupled Underst. Reality Adaptation
 | **P3 — Removal** | Drop 21 + 6 legacy; retire arc vestige | registry 10=10=10; clean `legacy_alias_map` |
 | **P4 — R-WELL live** | `well_reality` real data (Graphiti/Falkor/bridges) | reality_confidence computed from live evidence classes |
 | **P5 — A-WELL live** | `well_adaptation` v0 gap detector + MTTR ledger | adaptation_gaps[] emitted for the Ollama KVM8→KVM4 test case |
+
+**F13 priority re-rank (2026-09-16):** the phase table above is the dependency
+map; **execution order follows this ranking** —
+**#1 `well_bridge` → arifFlow** (readiness enters witness metabolism:
+WELL observes → arifFlow receipts → long-term readiness scars; capability
+unlock) · **#2 state migration to /var/lib/well** (kill twin trees
+permanently — twin-path is a recurring disease) · **#3 31→10 tools**
+(optimisation, not capability unlock).
 
 ---
 
