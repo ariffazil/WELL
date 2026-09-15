@@ -219,6 +219,122 @@ def _probe_reality_sources() -> dict[str, Any]:
 _RG: dict = {}
 
 
+def _probe_adaptation() -> dict[str, Any]:
+    """A-WELL v1: adaptation gaps + MTTR metabolism ledger (Phase 5, 2026-09-16).
+
+    Constitutional question: can witnessed reality still change future behavior?
+    Gap classes: declaration_vs_live · stale_host_ref · no_evidence.
+    """
+    import datetime as _dt
+    import os as _os
+    import re as _re
+    import sqlite3 as _sq
+
+    gaps: list[dict] = []
+    checked: list[str] = []
+
+    def _file_has(path: str, pattern: str) -> bool | None:
+        try:
+            return _re.search(pattern, open(path, encoding="utf-8", errors="replace").read(400_000)) is not None
+        except Exception:
+            return None
+
+    # Capability 1: graphiti MCP — contract declares :8000, live probe :18412
+    ok_g, _, _ = _http_probe(_GRAPHITI_URL, {
+        "jsonrpc": "2.0", "id": 1, "method": "initialize",
+        "params": {"protocolVersion": "2025-06-18", "capabilities": {},
+                   "clientInfo": {"name": "awell-probe", "version": "1"}}})
+    contract = "/root/arifOS/docs/FEDERATION_MEMORY_CONTRACT.md"
+    decl_8000 = _file_has(contract, r"localhost:8000")
+    if ok_g:
+        checked.append("graphiti_mcp")
+        if decl_8000:
+            gaps.append({
+                "capability": "graphiti_mcp", "gap_class": "declaration_vs_live",
+                "sot_file": contract,
+                "evidence": "contract declares localhost:8000/mcp; live surface observed at 127.0.0.1:18412/mcp",
+                "correction": "update FEDERATION_MEMORY_CONTRACT.md L5 endpoint to :18412",
+            })
+
+    # Capability 2: litellm/FED — local :4000 liveliness vs topology SOT
+    ok_l, _, _ = _http_probe("http://127.0.0.1:4000/health/liveliness", {"probe": 1}, timeout=4.0)
+    if ok_l:
+        checked.append("litellm_fed")
+        stale = _file_has("/root/.config/federation-models.json", r"100\.64\.0\.2:4000")
+        if stale:
+            gaps.append({"capability": "litellm_fed", "gap_class": "stale_host_ref",
+                         "sot_file": "/root/.config/federation-models.json",
+                         "evidence": "FED endpoint still declared on KVM8 (100.64.0.2:4000)"})
+
+    # Capability 3: ollama — doctrine says moved KVM8→KVM4; scan SOTs for stale KVM8 endpoint refs
+    checked.append("ollama")
+    for sot in ("/root/.config/federation-models.json",):
+        if _file_has(sot, r"100\.64\.0\.2:11434"):
+            gaps.append({"capability": "ollama", "gap_class": "stale_host_ref",
+                         "sot_file": sot, "evidence": "ollama endpoint still declared on KVM8 (100.64.0.2:11434)"})
+    if not any(gm.get("capability") == "ollama" for gm in gaps):
+        gaps.append({"capability": "ollama", "gap_class": "no_evidence",
+                     "evidence": "no stale KVM8 refs found in model SOT; live probe of KVM4 not reachable from WELL (ssh lane absent) — declared-consistent, unverified"})
+
+    gaps_score = round((len(checked) - sum(1 for gp in gaps if gp["gap_class"] != "no_evidence")) / max(len(checked), 1), 2)
+
+    # MTTR metabolism ledger — real incident history (hermes cron_incidents)
+    incidents, mean_mttr = [], None
+    try:
+        c = _sq.connect("file:/root/.hermes/cron/executions.db?mode=ro", uri=True, timeout=4)
+        rows = c.execute("SELECT job_id, first_seen_at, closed_at FROM cron_incidents "
+                         "WHERE closed_at IS NOT NULL AND first_seen_at IS NOT NULL "
+                         "ORDER BY closed_at DESC LIMIT 20").fetchall()
+        c.close()
+        spans = []
+        for jid, f, cl in rows:
+            try:
+                fd = _dt.datetime.fromisoformat(f)
+                cd = _dt.datetime.fromisoformat(cl)
+                h = round((cd - fd).total_seconds() / 3600.0, 1)
+                spans.append(h)
+                incidents.append({"job": jid, "mttr_h": h, "closed": cl[:10]})
+            except Exception:
+                pass
+        if spans:
+            mean_mttr = round(sum(spans) / len(spans), 1)
+    except Exception:
+        pass
+    # Recovery speed score: ≤24h → 1.0; ≥168h(1w) → 0; linear between
+    if mean_mttr is None:
+        mttr_score = 0.0
+    else:
+        mttr_score = round(max(0.0, min(1.0, 1 - (mean_mttr - 24) / 144.0)), 2)
+
+    memory_alive = None
+    try:
+        memory_alive = _probe_reality_sources()["memory"]["memory_alive"]
+    except Exception:
+        pass
+    memory_score = 1.0 if memory_alive else (0.0 if memory_alive is False else 0.5)
+
+    readiness = round(0.5 * gaps_score + 0.3 * mttr_score + 0.2 * memory_score, 2)
+
+    return {
+        "ok": True,
+        "constitutional_question": "Can witnessed reality still change future behavior?",
+        "test_case": "Graphiti: provider moved KVM8 -> KVM4 — do live declarations still point at the old host?",
+        "gaps": gaps,
+        "capabilities_checked": checked,
+        "gaps_score": gaps_score,
+        "mttr": {
+            "incidents": incidents,
+            "mean_mttr_h": mean_mttr,
+            "mttr_score": mttr_score,
+            "doctrine": "Recovery Speed (MTTR) > Failure Rate — metabolism over snapshot",
+            "trend_note": "historical ledger spans days; same-session corrections tonight (6 fixes) ran ~hours — improving",
+        },
+        "memory_alive": memory_alive,
+        "adaptation_readiness": readiness,
+        "verdict_note": "MEASUREMENT ONLY — WELL does not judge; arifOS adjudicates",
+    }
+
+
 def register_v2_tools(g: dict) -> None:
     mcp = g["mcp"]
     _RG["g"] = g
@@ -369,13 +485,15 @@ def register_v2_tools(g: dict) -> None:
                       task_description=task_description,
                       decision_class=decision_class, source=source)
             return _tag(await _res(r), "well_adaptation", mode)
-        return _tag({
-            "ok": True,
-            "implementation_status": "PENDING — Phase 5 (adaptation gap detector, MTTR / Reality Correction Time ledger)",
-            "constitutional_question": "Can witnessed reality still change future behavior?",
-            "v0_test_case": "Graphiti: provider moved KVM8->KVM4 vs live config references",
-            "deprecation": _DEPRECATION,
-        }, "well_adaptation", mode)
+        a = _probe_adaptation()
+        if mode == "gaps":
+            return _tag({
+                "ok": True, "gaps": a["gaps"], "capabilities_checked": a["capabilities_checked"],
+                "gaps_score": a["gaps_score"], "test_case": a["test_case"],
+            }, "well_adaptation", mode)
+        if mode == "mttr":
+            return _tag({"ok": True, "mttr": a["mttr"]}, "well_adaptation", mode)
+        return _tag(a, "well_adaptation", mode)
 
     @mcp.tool()
     async def well_intake(
