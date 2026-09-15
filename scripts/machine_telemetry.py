@@ -384,6 +384,32 @@ def collect() -> dict:
     return snapshot
 
 
+def push_to_arifflow(snapshot: dict) -> None:
+    """Push WELL substrate telemetry to arifFlow vector plane (:7073). Non-blocking."""
+    try:
+        import urllib.request
+
+        conf = round(float(snapshot.get("confidence", 0.95)), 4)
+        payload = json.dumps({
+            "dimension": "w3",
+            "value": conf,
+            "epistemology": "WITNESS",
+            "method_id": "machine_telemetry_v1",
+            "producer": "WELL",
+        }).encode("utf-8")
+        req = urllib.request.Request(
+            "http://127.0.0.1:7073/vector",
+            data=payload,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=1.5) as _:
+            pass
+        print("  ✓ arifFlow telemetry pushed (dimension: w3, producer: WELL)")
+    except Exception as exc:
+        pass
+
+
 def main():
     snapshot = collect()
     history = load_history()
@@ -410,6 +436,7 @@ def main():
         f"Disk: {snapshot['disk']['root_used_pct']}% | "
         f"Services: {sum(1 for s in snapshot['services'].values() if s['active'])}/{len(snapshot['services'])} active"
     )
+    push_to_arifflow(snapshot)
 
 
 if __name__ == "__main__":
