@@ -167,6 +167,52 @@ unlock) · **#2 state migration to /var/lib/well** (kill twin trees
 permanently — twin-path is a recurring disease) · **#3 31→10 tools**
 (optimisation, not capability unlock).
 
+**Phase 4.5 — EXECUTED (2026-09-16, commit d7f3ed3):** `well_reality(mode=patterns)`
+live — scar→risk fingerprint library with LIVE detectors (not string matches):
+**FP1 WITNESS_SURFACE_MISMATCH** (declared-vs-live drift + era-ended open
+incidents) · **FP2 TWIN_MODULE_TRAP** (duplicate module-level tool defs +
+dead-twin writers) · **FP3 OPEN_INCIDENT_LIE** (open incident count) ·
+**FP4 STATUS_OK_ARTIFACT_MISSING** (honestly UNMONITORED — needs per-job
+artifact verification). First reading: FP1 **CLEAR** (the canon fingerprint
+reads green for the first time — contract corrected, incidents swept), FP2
+**ACTIVE** (correctly — L13800 shadow awaits Phase 3 deletion; the library
+tells the truth about our own residue), FP3 CLEAR, FP4 UNMONITORED. All
+seven upgrade metrics of the v2 doctrine are now LIVE. Remaining work is
+only Phase 3 (legacy removal 2026-10-16 + L13800 shadow + consumer sweep).
+
+**Phase 5 — EXECUTED (2026-09-16, commits 2747bce→203fbb7 + arifOS 178ba3a4b):**
+A-WELL v1 live. `well_adaptation` modes: `gaps` (declaration_vs_live ·
+stale_host_ref · no_evidence across graphiti/litellm/ollama capabilities vs
+SOTs) · `mttr` (REAL metabolism ledger from hermes cron_incidents —
+mean **153.8h** over 5 closed incidents, score 0.1: the federation takes
+~6.4 days to close known incidents; that number is now a permanent headline,
+not a hidden scar) · `readiness` (composite 0.5·gaps + 0.3·mttr + 0.2·memory).
+**Meta-proof in the first hour:** born reading 0.56 → detected the Graphiti
+contract `:8000` declaration gap → correction committed in arifOS → re-read
+**0.73 with gaps_score 1.0**. Witnessed reality changed future behavior,
+measured by the tool built to measure it. Remaining gap: `ollama:no_evidence`
+(honest — KVM4 not probe-reachable from WELL; needs an ssh lane or KVM4-side
+canary). Verdict hygiene: every response carries `verdict_note: MEASUREMENT
+ONLY — arifOS adjudicates`.
+
+**Phase 4 — EXECUTED (2026-09-16, commit 942dc89):** R-WELL v1 live.
+`well_reality` source registry probes five surfaces per call:
+commit_alignment (VERIFIED/STALE) · machine_telemetry (FRESH band) ·
+graphiti_mcp `:18412/mcp` (initialize handshake) · falkor_memory
+(GRAPH.QUERY node/edge counts + latest `created_at` freshness, redis→docker
+fallback) · witness_bridge (arifFlow lane). `mode=confidence` → live
+evidence classes + `reality_confidence`; `mode=memory` → Memory Vitality
+(alive = exists AND fresh ≤7d, per Arif's doctrine "Memory Exists ≠ Memory
+Alive"; growth deltas via `/var/lib/well/reality_baseline.json`); `mode=witness`
+→ per-source quality table with latency. First live read: confidence **1.0**,
+memory_alive **TRUE** — 171 nodes / 179 edges, L5 knowledge graph fresh at
+**2.7d** while af_forge group stale at **47d** (per-graph bands = next
+refinement). `mode=patterns` (scar→risk fingerprints) = Phase 4.5 pending.
+Recall-rate / entity-resolution honestly UNMEASURED (need query logging —
+no fake metrics). Graphiti port truth: `127.0.0.1:18412` (host-network
+container; the :8000 in FEDERATION_MEMORY_CONTRACT is a declared≠observed
+drift for R-WELL to keep catching).
+
 **Phase 1 #3 — REGISTERED (2026-09-16, commits b709afa + 0cc95c8):** v2 surface
 live: `well_v2/surface.py` registers 9 mode-tools (+ shared `well_classify_substrate`
 = the 10) as thin signature-filtered delegators over legacy impls. `tools/list: 40`

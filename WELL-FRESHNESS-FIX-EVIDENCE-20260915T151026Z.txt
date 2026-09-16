@@ -1,0 +1,42 @@
+# WELL :18083 freshness fix — evidence — 2026-09-15T15:13:10Z
+
+## which file the live process reads
+cmdline :
+/opt/well/.venv/bin/python3 /opt/well/server.py 
+cwd     :
+/opt/well
+env     :
+WELL_STATE_PATH=/var/lib/well/state.json
+unit    :
+WorkingDirectory=/opt/well
+EnvironmentFile=/etc/well/well.env
+ExecStart=/opt/well/.venv/bin/python3 /opt/well/server.py
+well.env:
+WELL_STATE_PATH=/var/lib/well/state.json
+server.py:182 :
+STATE_PATH = Path(_os.environ.get("WELL_STATE_PATH", "/root/WELL/state.json"))
+
+## the three state files reconciled
+/root/WELL/state.json
+  mtime=2026-09-15 23:12:08.027979635 +0800
+  ts=2026-09-15T10:00:01.395227+00:00
+  env=TEST reason=Mocked healthy state for test session
+/opt/well/state.json
+  mtime=2026-09-15 09:30:14.556568331 +0800
+  ts=2026-09-14T22:00:02.033990+00:00
+  env=TEST reason=Mocked healthy state for test session
+/var/lib/well/state.json
+  mtime=2026-09-15 23:12:41.739039344 +0800
+  ts=2026-09-15T15:12:41.738707+00:00
+  env=PROD reason=Sovereign biometric injection (biometric_inject.sh) — SELF-REPORT not sensor
+
+## health AFTER fix
+status           = degraded
+freshness_band   = FRESH
+state_age_hours  = 0.0
+freshness        = {"status": "fresh", "checked_at_utc": "2026-09-15T15:13:11.309469+00:00", "source_timestamp_utc": "2026-09-15T15:12:41.738707+00:00", "age_seconds": 29.6, "max_fresh_age_seconds": 3600, "stale_after_seconds": 14400, "expired_after_seconds": 86400}
+truth_status     = OPERATOR_REPORTED | well_signal = WELL_OPERATOR_PRESENT
+
+## no restart occurred (MainPID + ActiveEnterTimestamp)
+MainPID=908187
+ActiveEnterTimestamp=Tue 2026-09-15 09:58:16 +08
