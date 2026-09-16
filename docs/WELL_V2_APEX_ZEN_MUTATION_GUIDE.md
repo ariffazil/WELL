@@ -43,6 +43,7 @@ A-FORGE executes.` Any new plane that starts emitting SEAL/HOLD/VOID as
 | C6 | `observe_drift_field`: 0 samples → verdict `STABLE` | Void Guard violation — "no data" ≠ "all clear"; must be UNKNOWN |
 | C7 | 4 dead bridges: `:8088/attest` 404; scar endpoints ×3 fail; AAA cockpit ×3 404 | Witness Surface Mismatch at bridge layer — WELL probes surfaces that don't exist |
 | C8 | Deploy drift: fix in source, old code serving | `code that CAN run ≠ code that DOES run` scar |
+| C9 | `well_triad` machine plane marks `well` organ `DOWN` ("timed out") → false CRITICAL 0.05, false `route:SABAR` — while WELL is answering the very request; direct `curl :18083/health` returns 200 in the same minute | Self-referential probe starvation (observed 2026-09-16 22:39–22:47 +08, 2 consecutive runs, pre+post swap-stabilization): composer HTTP-probes its own process while that process is busy serving the composer. Fix: never HTTP-probe own process mid-request — request completion IS the self-liveness proof |
 
 ---
 
@@ -152,7 +153,7 @@ Human   Machine Gov     Coupled Underst. Reality Adaptation
 
 | Phase | Work | Exit criterion |
 |-------|------|----------------|
-| **P0 — Fix reality first** (no API change) | FIX-1 single absolute machine_state.json path + deploy pipeline reconcile (/opt/well vs /root/WELL); FIX-2 governance scorer: no-scopes-default = INTACT (breach only on revocation); FIX-3 remove self-referential legacy block; FIX-4 one human scorer; FIX-5 reconcile or formally DEAD-mark the 4 bridges in registry (stop per-call probing); FIX-6 drift 0-samples → UNKNOWN; FIX-7 execute 6 overdue legacy removals; FIX-8 repo hygiene: 7+ .bak → `_archive/`, one canonical impl (well_mcp vs well_mcp_fastmcp) | health `drift:false`, `floors_violated:[]`, C1–C8 closed |
+| **P0 — Fix reality first** (no API change) | FIX-1 single absolute machine_state.json path + deploy pipeline reconcile (/opt/well vs /root/WELL); FIX-2 governance scorer: no-scopes-default = INTACT (breach only on revocation); FIX-3 remove self-referential legacy block; FIX-4 one human scorer; FIX-5 reconcile or formally DEAD-mark the 4 bridges in registry (stop per-call probing); FIX-6 drift 0-samples → UNKNOWN; FIX-7 execute 6 overdue legacy removals; FIX-8 repo hygiene: 7+ .bak → `_archive/`, one canonical impl (well_mcp vs well_mcp_fastmcp); FIX-9 machine-plane self-probe: remove self-HTTP-probe of `well` organ in triad composer — use in-process state or treat request completion as liveness proof | health `drift:false`, `floors_violated:[]`, C1–C9 closed |
 | **P1 — v2 surface** | tools_sot.yaml → v2; implement mode-tools alongside old; deprecation epoch stamped (removal 2026-10-16); update registry assert `intended=registered=exported=10` | both surfaces callable; registry reports migration state |
 | **P2 — Consumer sweep** | Update triadic-snapshot.timer HTTP path, Hermes references, AAA cockpit, docs | zero references to retired names outside `_archive/` |
 | **P3 — Removal** | Drop 21 + 6 legacy; retire arc vestige | registry 10=10=10; clean `legacy_alias_map` |
