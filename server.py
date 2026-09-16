@@ -602,7 +602,10 @@ def _compute_well_commits() -> dict[str, Any]:
     if env_c:
         built_commit = env_c[:7]
     else:
-        for p in ("/opt/well/release-manifest.json", "/root/WELL/release-manifest.json"):
+        for p in (
+            "/opt/well/release-manifest.json",
+            "/root/WELL/release-manifest.json",
+        ):
             try:
                 if Path(p).exists():
                     import json as _json
@@ -2763,7 +2766,9 @@ def _state_is_insufficient(state: dict[str, Any]) -> tuple[bool, list[str]]:
 
 def _machine_substrate_health() -> dict[str, Any]:
     """Freshness of machine_state.json only. Never a human well_score."""
-    path = Path(_os.environ.get("WELL_MACHINE_STATE_PATH", "/var/lib/well/machine_state.json"))
+    path = Path(
+        _os.environ.get("WELL_MACHINE_STATE_PATH", "/var/lib/well/machine_state.json")
+    )
     if not path.exists():
         return {
             "status": "unavailable",
@@ -3247,7 +3252,9 @@ def _compose_verdict(
 # @mcp.tool() REMOVED — KUTIP SAMPAH 2026-08-04: shadow surface cleanup. M2 was 1.60.
 # Internal callers use well_validate_vitality directly. Legacy bridge in compatibility.py.
 # @mcp.tool() — REMOVED. well_state is now internal-only.
-def well_state(include: str = "full", ctx: Context | None = None, actor_id: str | None = None) -> dict[str, Any]:
+def well_state(
+    include: str = "full", ctx: Context | None = None, actor_id: str | None = None
+) -> dict[str, Any]:
     """
     Get the current WELL state -- biological telemetry snapshot for operator Arif.
     Returns score, floor violations, and all metric dimensions.
@@ -3695,7 +3702,9 @@ async def well_anchor(
 
 # internal -- not MCP-facing (collapsed 2026-05-26)
 # @mcp.tool() REMOVED — KUTIP SAMPAH: internal/superseded()
-def well_check_floors(ctx: Context | None = None, actor_id: str | None = None) -> dict[str, Any]:
+def well_check_floors(
+    ctx: Context | None = None, actor_id: str | None = None
+) -> dict[str, Any]:
     """
     [DEPRECATED -- use well_validate_vitality(mode='floors')]
     Legacy W-floor checker. Retained for compatibility.
@@ -4320,7 +4329,9 @@ def well_assess_triadic_state(
 
 
 @mcp.tool()
-def well_get_triadic_snapshot(ctx: Context | None = None, actor_id: str | None = None) -> dict[str, Any]:
+def well_get_triadic_snapshot(
+    ctx: Context | None = None, actor_id: str | None = None
+) -> dict[str, Any]:
     """[Triad Phase 5] Read the canonical triadic snapshot at /state/triadic_snapshot.json.
 
     This is the read surface consumed by HUD, AAA cockpit, and FRAME observer.
@@ -4330,7 +4341,9 @@ def well_get_triadic_snapshot(ctx: Context | None = None, actor_id: str | None =
 
 
 @mcp.tool()
-def well_render_hud_panel(ctx: Context | None = None, actor_id: str | None = None) -> dict[str, Any]:
+def well_render_hud_panel(
+    ctx: Context | None = None, actor_id: str | None = None
+) -> dict[str, Any]:
     """[Triad Phase 5] Render HUD cockpit ASCII panel from triadic snapshot.
 
     F1 amanah: panel never includes per-biometric fields, only aggregate scores.
@@ -4340,7 +4353,9 @@ def well_render_hud_panel(ctx: Context | None = None, actor_id: str | None = Non
 
 
 @mcp.tool()
-def well_frame_read_snapshot(ctx: Context | None = None, actor_id: str | None = None) -> dict[str, Any]:
+def well_frame_read_snapshot(
+    ctx: Context | None = None, actor_id: str | None = None
+) -> dict[str, Any]:
     """[Triad Phase 5] FRAME observer reads snapshot as evidence, never verdict.
 
     F12 verdict hygiene: returns `snapshot` (observation) + `frame_verdict:
@@ -4351,7 +4366,9 @@ def well_frame_read_snapshot(ctx: Context | None = None, actor_id: str | None = 
 
 # internal -- not MCP-facing (collapsed 2026-05-26)
 # @mcp.tool() REMOVED — KUTIP SAMPAH: redundant with canonical tool()
-def well_get_readiness(ctx: Context | None = None, actor_id: str | None = None) -> dict[str, Any]:
+def well_get_readiness(
+    ctx: Context | None = None, actor_id: str | None = None
+) -> dict[str, Any]:
     """
     Return current readiness score + W-floor status (Phase 2).
     Includes GREEN|AMBER|RED tiering and human_decision_required flag.
@@ -4416,7 +4433,8 @@ def well_get_readiness(ctx: Context | None = None, actor_id: str | None = None) 
 # internal -- not MCP-facing (collapsed 2026-05-26)
 # @mcp.tool() REMOVED — KUTIP SAMPAH: internal/superseded()
 def well_check_floor(
-    floor_id: str | None = None, ctx: Context | None = None,
+    floor_id: str | None = None,
+    ctx: Context | None = None,
     actor_id: str | None = None,
 ) -> dict[str, Any]:
     """
@@ -4519,7 +4537,9 @@ def well_check_floor(
 
 # internal -- not MCP-facing (collapsed 2026-05-26)
 # @mcp.tool() REMOVED — KUTIP SAMPAH: redundant with canonical tool()
-def well_list_log(limit: int = 10, ctx: Context | None = None, actor_id: str | None = None) -> dict[str, Any]:
+def well_list_log(
+    limit: int = 10, ctx: Context | None = None, actor_id: str | None = None
+) -> dict[str, Any]:
     """List recent biological state log entries (Phase 1/2)."""
     if not EVENTS_PATH.exists():
         return {"ok": True, "entries": []}
@@ -4542,7 +4562,8 @@ def well_list_log(limit: int = 10, ctx: Context | None = None, actor_id: str | N
 # internal -- not MCP-facing (collapsed 2026-05-26)
 @mcp.tool(task=True)
 async def well_seal_vault(
-    force: bool = False, ctx: Context | None = None,
+    force: bool = False,
+    ctx: Context | None = None,
     actor_id: str | None = None,
 ) -> dict[str, Any]:
     """
@@ -4568,7 +4589,9 @@ async def well_seal_vault(
 
 
 @mcp.tool()
-def well_trend_analysis(ctx: Context | None = None, actor_id: str | None = None) -> dict[str, Any]:
+def well_trend_analysis(
+    ctx: Context | None = None, actor_id: str | None = None
+) -> dict[str, Any]:
     """
     Detect directional trajectory across all WELL metrics.
     Answers: improving / stable / degrading / collapse-risk.
@@ -4678,7 +4701,9 @@ def well_trend_analysis(ctx: Context | None = None, actor_id: str | None = None)
 
 
 @mcp.tool()
-def well_bandwidth_recommendation(ctx: Context | None = None, actor_id: str | None = None) -> dict[str, Any]:
+def well_bandwidth_recommendation(
+    ctx: Context | None = None, actor_id: str | None = None
+) -> dict[str, Any]:
     """
     [DEPRECATED -- use well_assess_metabolism(mode='bandwidth')]
     Legacy bandwidth/action-mode mapper. Retained for compatibility.
@@ -4782,7 +4807,9 @@ def well_bandwidth_recommendation(ctx: Context | None = None, actor_id: str | No
 
 
 # internal -- not MCP-facing (collapsed 2026-05-26)
-def well_recovery_protocol(ctx: Context | None = None, actor_id: str | None = None) -> dict[str, Any]:
+def well_recovery_protocol(
+    ctx: Context | None = None, actor_id: str | None = None
+) -> dict[str, Any]:
     """
     Suggest stabilizing actions based on current WELL state.
     Not medical advice -- operational self-regulation support.
@@ -5387,7 +5414,9 @@ W0_TELEMETRY_PURPOSES = [
 
 
 # internal -- not MCP-facing (collapsed 2026-05-26)
-def well_consent_status(ctx: Context | None = None, actor_id: str | None = None) -> dict[str, Any]:
+def well_consent_status(
+    ctx: Context | None = None, actor_id: str | None = None
+) -> dict[str, Any]:
     """
     Return W0 Sovereignty & Telemetry Consent status.
     This is a hard floor -- WELL never operates without operator consent.
@@ -5618,7 +5647,9 @@ def well_pressure_ledger(
 
 # internal -- not MCP-facing (collapsed 2026-05-26)
 @mcp.tool()
-def well_daily_brief(ctx: Context | None = None, actor_id: str | None = None) -> dict[str, Any]:
+def well_daily_brief(
+    ctx: Context | None = None, actor_id: str | None = None
+) -> dict[str, Any]:
     """
     Daily operator dashboard -- one consolidated briefing.
     Readiness / Main Risk / Best Task Class / Avoid / Recovery Move / arifOS Mode
@@ -6006,7 +6037,9 @@ def well_readiness(
 # M-WELL State -- loads machine telemetry from state.json (m_machine section)
 # DEPRECATED: Use well_assess_reliability(mode="vitals") instead.
 # @mcp.tool() removed -- internal use only.
-def well_machine_state(ctx: Context | None = None, actor_id: str | None = None) -> dict[str, Any]:
+def well_machine_state(
+    ctx: Context | None = None, actor_id: str | None = None
+) -> dict[str, Any]:
     """
     Read current machine substrate state.
     Tracks: model reliability, tool availability, latency, context pressure,
@@ -6816,7 +6849,9 @@ def well_forge_pressure_update(
 
 
 # INTERNAL -- called by well_777_forge(mode="mode")
-def well_forge_mode_recommend(ctx: Context | None = None, actor_id: str | None = None) -> dict[str, Any]:
+def well_forge_mode_recommend(
+    ctx: Context | None = None, actor_id: str | None = None
+) -> dict[str, Any]:
     """
     Returns current forge mode recommendation for A-FORGE.
     Based on H-WELL + M-WELL + C-WELL state.
@@ -7067,7 +7102,9 @@ def _check_data_freshness(state: dict[str, Any]) -> dict[str, Any]:
 # NOTE: Expose=False in SOMATIC_TOOLS -- not in public MCP tools/list, not a phantom
 # @mcp.tool() REMOVED by FORGE entropy audit 2026-07-03 -- reduces callable surface.
 # @mcp.tool()
-def well_get_health(ctx: Context | None = None, actor_id: str | None = None) -> dict[str, Any]:
+def well_get_health(
+    ctx: Context | None = None, actor_id: str | None = None
+) -> dict[str, Any]:
     """
     Canonical three-layer health check.
 
@@ -7243,7 +7280,8 @@ def well_get_health(ctx: Context | None = None, actor_id: str | None = None) -> 
 # internal -- not MCP-facing (collapsed 2026-05-26)
 # @mcp.tool() REMOVED — KUTIP SAMPAH: redundant with canonical tool()
 def well_get_state(
-    domain: str | None = None, ctx: Context | None = None,
+    domain: str | None = None,
+    ctx: Context | None = None,
     actor_id: str | None = None,
 ) -> dict[str, Any]:
     """
@@ -7290,7 +7328,8 @@ def well_get_state(
 # internal -- not MCP-facing (collapsed 2026-05-26)
 # @mcp.tool() REMOVED — KUTIP SAMPAH: internal/superseded()
 def well_check_invariant(
-    floor_id: str | None = None, ctx: Context | None = None,
+    floor_id: str | None = None,
+    ctx: Context | None = None,
     actor_id: str | None = None,
 ) -> dict[str, Any]:
     """
@@ -7482,7 +7521,9 @@ async def well_log_signal(
 # internal -- not MCP-facing (collapsed 2026-05-26)
 # @mcp.tool() REMOVED — KUTIP SAMPAH: internal/superseded()
 def well_list_events(
-    limit: int = 10, redact: bool = True, ctx: Context | None = None,
+    limit: int = 10,
+    redact: bool = True,
+    ctx: Context | None = None,
     actor_id: str | None = None,
 ) -> dict[str, Any]:
     """
@@ -7502,7 +7543,8 @@ def well_list_events(
 # ── WELL-06 well_reflect_trend ────────────────────────────────────────────────
 # @mcp.tool() REMOVED — KUTIP SAMPAH: redundant with canonical tool()
 def well_reflect_trend(
-    lookback_days: int = 30, ctx: Context | None = None,
+    lookback_days: int = 30,
+    ctx: Context | None = None,
     actor_id: str | None = None,
 ) -> dict[str, Any]:
     """
@@ -7566,7 +7608,9 @@ def well_suggest_mode(
 # [INTERNAL] Suggest non-medical stabilizing actions. Suggest, not prescribe.
 # Use well_recovery_protocol(ctx=ctx) directly instead.
 # @mcp.tool() REMOVED — KUTIP SAMPAH: redundant with canonical tool()
-def well_suggest_recovery(ctx: Context | None = None, actor_id: str | None = None) -> dict[str, Any]:
+def well_suggest_recovery(
+    ctx: Context | None = None, actor_id: str | None = None
+) -> dict[str, Any]:
     return well_recovery_protocol(ctx=ctx)
 
 
@@ -7780,8 +7824,7 @@ def _subtype_relational_dynamic(combined: str) -> str:
     only. F2 TRUTH: this is a guess, not a diagnosis.
     """
     if any(
-        _kw_in_text(p, combined)
-        for p in ["worship", "admiration", "objectification"]
+        _kw_in_text(p, combined) for p in ["worship", "admiration", "objectification"]
     ):
         return "embodied_worship_validation_loop"
     if any(
@@ -8123,7 +8166,9 @@ def _well_classify_substrate_impl(
         "forge bridge",
     ]
 
-    machine_core_count = sum(1 for kw in MACHINE_CORE_INDICATORS if _kw_in_text(kw, combined))
+    machine_core_count = sum(
+        1 for kw in MACHINE_CORE_INDICATORS if _kw_in_text(kw, combined)
+    )
     machine_phrase_blocked = any(phrase in combined for phrase in MACHINE_PHRASE_BLOCKS)
 
     # ── I1b REPRESENTATION-IS-NOT-REFERENT (2026-09-16, F13 invariant) ──────
@@ -8134,20 +8179,52 @@ def _well_classify_substrate_impl(
     # first-person distress phrasing ("I am not a person anymore"), which is
     # a human speaking, never a system self-declaring.
     REPRESENTATION_PHRASES = [
-        "human-modeling", "human modeling", "models human", "models humans",
-        "models people", "models a person", "models the operator",
-        "models perspective", "models interior", "simulates human",
-        "simulating human", "human simulation", "digital twin",
+        "human-modeling",
+        "human modeling",
+        "models human",
+        "models humans",
+        "models people",
+        "models a person",
+        "models the operator",
+        "models perspective",
+        "models interior",
+        "simulates human",
+        "simulating human",
+        "human simulation",
+        "digital twin",
     ]
     EXPLICIT_NON_PERSON_DECLARATIONS = [
-        "not a person", "not a human", "not an organism", "not conscious",
-        "not a conscious", "software subsystem", "is software",
+        "not a person",
+        "not a human",
+        "not an organism",
+        "not conscious",
+        "not a conscious",
+        "software subsystem",
+        "is software",
     ]
     _first_person_distress = any(
         p in combined
         for p in (
-            "i am not a person", "i'm not a person", "i feel like not",
-            "bukan manusia", "aku bukan", "im not a person",
+            "i am not a person",
+            "i'm not a person",
+            "i feel like not",
+            "bukan manusia",
+            "aku bukan",
+            "im not a person",
+            # F13 2026-09-16: metaphor about substrate must not mutate substrate
+            # identity — first-person machine/alienation metaphors are a human
+            # speaking ("Aku robot dah"), never a system self-declaring.
+            "aku robot",
+            "aku mesin",
+            "rasa macam robot",
+            "rasa macam mesin",
+            "i feel like a robot",
+            "i feel like a machine",
+            "im a robot",
+            "i am a robot",
+            "i'm just a machine",
+            "im just a machine",
+            "feel like a robot",
         )
     )
     representation_count = sum(
@@ -8157,9 +8234,7 @@ def _well_classify_substrate_impl(
         _kw_in_text(p, combined) for p in EXPLICIT_NON_PERSON_DECLARATIONS
     )
     effective_machine = (
-        machine_core_count
-        + representation_count
-        + (3 if explicit_non_person else 0)
+        machine_core_count + representation_count + (3 if explicit_non_person else 0)
     )
     machine_blocked = (
         machine_core_count >= 1
@@ -8170,7 +8245,23 @@ def _well_classify_substrate_impl(
 
     # If machine/representation indicators present → NEVER allow HUMAN_PERSON
     if machine_blocked:
-        human_indicators_strict = ["human", "person", "man", "woman", "child"]
+        # First-person pronouns count as human-side evidence: a speaker saying
+        # "Aku robot dah" is a human using a metaphor, so the worst legal
+        # outcome is COUPLED — never MACHINE_SYSTEM (F13 2026-09-16).
+        human_indicators_strict = [
+            "human",
+            "person",
+            "man",
+            "woman",
+            "child",
+            "aku",
+            "saya",
+            "kau",
+            "engkau",
+            "i",
+            "me",
+            "myself",
+        ]
         human_matches_strict = sum(
             1 for kw in human_indicators_strict if _kw_in_text(kw, combined)
         )
@@ -11015,7 +11106,11 @@ def _read_machine_state_field(field: str, default: Any = None) -> Any:
     from pathlib import Path as _PathRf
 
     try:
-        p = _PathRf(_os.environ.get("WELL_MACHINE_STATE_PATH", "/var/lib/well/machine_state.json"))
+        p = _PathRf(
+            _os.environ.get(
+                "WELL_MACHINE_STATE_PATH", "/var/lib/well/machine_state.json"
+            )
+        )
         if not p.exists():
             return default
         ms = _json_rf.loads(p.read_text())
@@ -11143,7 +11238,9 @@ def _well_assess_machine_telemetry() -> dict[str, Any]:
     import json as _json_mt
     from pathlib import Path as _PathMt
 
-    state_path = _PathMt(_os.environ.get("WELL_MACHINE_STATE_PATH", "/var/lib/well/machine_state.json"))
+    state_path = _PathMt(
+        _os.environ.get("WELL_MACHINE_STATE_PATH", "/var/lib/well/machine_state.json")
+    )
     if not state_path.exists():
         return _omega_well_output(
             ok=False,
@@ -11384,7 +11481,9 @@ def well_machine_diagnose(
     import json as _json_md
     from pathlib import Path as _PathMd
 
-    state_path = _PathMd(_os.environ.get("WELL_MACHINE_STATE_PATH", "/var/lib/well/machine_state.json"))
+    state_path = _PathMd(
+        _os.environ.get("WELL_MACHINE_STATE_PATH", "/var/lib/well/machine_state.json")
+    )
     if not state_path.exists():
         return _omega_well_output(
             ok=False,
@@ -11652,7 +11751,9 @@ def well_machine_recommend(
 
     issue_type = issue_type or "swap"  # defensive default for FastMCP unmarshal gap
 
-    state_path = _PathMr(_os.environ.get("WELL_MACHINE_STATE_PATH", "/var/lib/well/machine_state.json"))
+    state_path = _PathMr(
+        _os.environ.get("WELL_MACHINE_STATE_PATH", "/var/lib/well/machine_state.json")
+    )
     ms = {}
     if state_path.exists():
         try:
@@ -13241,6 +13342,7 @@ from mcp.server.streamable_http import StreamableHTTPServerTransport
 _orig_check = getattr(StreamableHTTPServerTransport, "_check_accept_headers", None)
 
 if _orig_check is not None:
+
     def _patched_check(self, request):
         if getattr(self, "is_json_response_enabled", False):
             return True, True
@@ -13249,6 +13351,7 @@ if _orig_check is not None:
     StreamableHTTPServerTransport._check_accept_headers = _patched_check
 else:
     import logging as _logging
+
     _logging.getLogger("well").warning(
         "StreamableHTTPServerTransport._check_accept_headers not found (mcp>=2.0); "
         "skipping 406 Accept-header patch"
@@ -17970,8 +18073,15 @@ def well_registry_status(
         "well_machine_diagnose",
         "well_machine_recommend",
     }
-    # Legacy aliases: still callable, NEVER listed as canonical
-    LEGACY_ALIASES = {
+    # Legacy aliases: NEVER listed as canonical.
+    # 2026-09-16 surface-entropy cleanup (Arif chain #1): entries past
+    # removal_date are TOMBSTONED — no longer advertised by this registry.
+    # Invariant: Discoverable(x) ⇒ Callable(x) ∨ ExplicitAlias(x).
+    # Handlers for all six were unregistered 2026-08-04 (KUTIP SAMPAH);
+    # 30d call count = 0 (VAULT999 audit 2026-09-16); removal dates lapsed
+    # 2026-09-01. Full deletion from this file tracked in
+    # /root/AAA/docs/deprecation-registry.json (deprecated_tools).
+    _LEGACY_ALIASES_ALL: dict[str, dict[str, Any]] = {
         "well_readiness": {
             "replacement": "well_validate_vitality",
             "replacement_args": {"mode": "readiness"},
@@ -18005,6 +18115,12 @@ def well_registry_status(
             "deprecation_epoch": "2026-07-01",
             "removal_date": "2026-09-01",
         },
+    }
+    _today = datetime.datetime.now(datetime.timezone.utc).date()
+    LEGACY_ALIASES = {
+        name: info
+        for name, info in _LEGACY_ALIASES_ALL.items()
+        if datetime.date.fromisoformat(info["removal_date"]) >= _today
     }
     # Ω-stage internal aliases (not public canonical)
     known_aliases = {
