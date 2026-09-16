@@ -206,6 +206,17 @@ def main():
             intake_files.extend(sorted(src_dir.glob("*.json")))
 
     if not intake_files:
+        # HEARTBEAT (2026-09-16): this path used to exit with no output, which made the job
+        # unwitnessable — a */30 cron that writes nothing on an empty queue is indistinguishable
+        # from a cron that has been dead for days, and /var/log/well/intake.log had been quiet
+        # for 11.6h with nothing able to say whether that was idleness or death. One line per
+        # tick costs ~4KB/day and buys the only property the old shape could not have: the job
+        # can FAIL to appear.
+        print(json.dumps({
+            "tool": "well_ingest", "ts": datetime.now(timezone.utc).isoformat(),
+            "status": "NO_INTAKE", "state_path": str(STATE_FILE), "state_written": False,
+            "note": "intake queue empty — heartbeat; live state timestamp NOT advanced",
+        }))
         sys.exit(0)
 
     for intake_path in intake_files:
