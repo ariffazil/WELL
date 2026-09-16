@@ -8126,22 +8126,64 @@ def _well_classify_substrate_impl(
     machine_core_count = sum(1 for kw in MACHINE_CORE_INDICATORS if _kw_in_text(kw, combined))
     machine_phrase_blocked = any(phrase in combined for phrase in MACHINE_PHRASE_BLOCKS)
 
-    # If machine indicators present → NEVER allow HUMAN_PERSON
-    if machine_core_count >= 1 or machine_phrase_blocked:
+    # ── I1b REPRESENTATION-IS-NOT-REFERENT (2026-09-16, F13 invariant) ──────
+    # A system that MODELS humans is never a human person. Word-form variants
+    # ("human-modeling", "models humans") escape word-boundary matching on the
+    # singular stem "model" — that gap produced HUMAN_PERSON for software.
+    # Explicit non-person declarations outrank every other signal — EXCEPT
+    # first-person distress phrasing ("I am not a person anymore"), which is
+    # a human speaking, never a system self-declaring.
+    REPRESENTATION_PHRASES = [
+        "human-modeling", "human modeling", "models human", "models humans",
+        "models people", "models a person", "models the operator",
+        "models perspective", "models interior", "simulates human",
+        "simulating human", "human simulation", "digital twin",
+    ]
+    EXPLICIT_NON_PERSON_DECLARATIONS = [
+        "not a person", "not a human", "not an organism", "not conscious",
+        "not a conscious", "software subsystem", "is software",
+    ]
+    _first_person_distress = any(
+        p in combined
+        for p in (
+            "i am not a person", "i'm not a person", "i feel like not",
+            "bukan manusia", "aku bukan", "im not a person",
+        )
+    )
+    representation_count = sum(
+        1 for p in REPRESENTATION_PHRASES if _kw_in_text(p, combined)
+    )
+    explicit_non_person = (not _first_person_distress) and any(
+        _kw_in_text(p, combined) for p in EXPLICIT_NON_PERSON_DECLARATIONS
+    )
+    effective_machine = (
+        machine_core_count
+        + representation_count
+        + (3 if explicit_non_person else 0)
+    )
+    machine_blocked = (
+        machine_core_count >= 1
+        or machine_phrase_blocked
+        or representation_count >= 1
+        or explicit_non_person
+    )
+
+    # If machine/representation indicators present → NEVER allow HUMAN_PERSON
+    if machine_blocked:
         human_indicators_strict = ["human", "person", "man", "woman", "child"]
         human_matches_strict = sum(
             1 for kw in human_indicators_strict if _kw_in_text(kw, combined)
         )
-        if human_matches_strict >= 1 and machine_core_count >= 1:
+        if human_matches_strict >= 1 and effective_machine >= 1:
             detected_class = "COUPLED_HUMAN_MACHINE_SYSTEM"
-            max_matches = machine_core_count + human_matches_strict
+            max_matches = effective_machine + human_matches_strict
         elif human_matches_strict >= 1:
             # Human words present but machine also present → coupled
             detected_class = "COUPLED_HUMAN_MACHINE_SYSTEM"
-            max_matches = machine_core_count + human_matches_strict
+            max_matches = effective_machine + human_matches_strict
         else:
             detected_class = "MACHINE_SYSTEM"
-            max_matches = machine_core_count
+            max_matches = effective_machine
     else:
         # No machine indicators → use normal keyword matching
         detected_class = None

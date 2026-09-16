@@ -39,6 +39,19 @@ def _tag(r: Any, tool: str, mode: str) -> Any:
     return r
 
 
+async def _res(r: Any) -> Any:
+    """Normalize a _call() result: await coroutines, pass values through.
+
+    Fixes the NameError that broke well_registry and well_bridge on the v2
+    surface (2026-09-16) — `_res` was referenced but never defined. Monolith
+    tools return sync dicts; FastMCP-decorated callables may return
+    coroutines. Both shapes are handled here.
+    """
+    if inspect.iscoroutine(r):
+        return await r
+    return r
+
+
 # ── R-WELL v1 source registry (Phase 4, 2026-09-16) ─────────────────────────
 # Live probes only. class: OBSERVED (live-probed) · VERIFIED (cross-checked) ·
 # ASSUMED (declared only) · STALE (probed but old). Edited ≠ Executed.
