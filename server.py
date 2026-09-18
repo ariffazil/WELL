@@ -1753,6 +1753,11 @@ mcp = FastMCP(
     name="WELL",
     version="v2026.07.24",
     website_url="https://well.arif-fazil.com",
+    # MCP spec 2026-07-28 compliance: declare listChanged capabilities
+    experimental_capabilities={
+        "resources": {"listChanged": True},
+        "prompts": {"listChanged": True},
+    },
     instructions=(
         "WELL is the Universal Substrate Vitality Mirror for arifOS. "
         "H-WELL reflects operator Arif's biological and cognitive state. "
