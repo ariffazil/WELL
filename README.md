@@ -127,3 +127,9 @@ WELL:
 
 Full technical README: [docs/README-FULL.md](./docs/README-FULL.md) ·
 MCP door: [well.arif-fazil.com/mcp](https://well.arif-fazil.com/mcp)
+
+## fastMCP
+
+Pinned to `fastmcp[tasks]==4.0.5` (the `[tasks]` extras are preserved). When upgrading across the 3.x → 4.x boundary, *middleware must be re-attached*: the registration surface changed and any code that registered middleware against the 3.x default server will silently no-op after the bump. Re-register against the 4.x `FastMCP(...)` instance before relying on middleware-bearing tools. Pinned 2026-09-19.
+
+Constitution — substrate & human-readiness doctrine — lives in `/root/AAA/AAA-CONSTITUTION.md`; this README does not duplicate it.
