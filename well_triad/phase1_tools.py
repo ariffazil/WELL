@@ -54,13 +54,47 @@ ALLOWED_BIOMETRIC_KEYS: frozenset[str] = frozenset({
 # would re-trigger the arifOS import chain).
 _load_state_fn = None
 _save_state_fn = None
+# Claim-class gate (2026-09-19, ADDITIVE): server.py also binds its fail-closed
+# _claim_gate shim here, so this module uses ONE gate implementation rather than
+# a second copy. Unbound => the gate is unreachable => fail closed.
+_claim_gate_fn = None
 
 
-def install_bindings(load_state_fn, save_state_fn):
+def install_bindings(load_state_fn, save_state_fn, claim_gate_fn=None):
     """Called by server.py at module load to wire its helpers."""
-    global _load_state_fn, _save_state_fn
+    global _load_state_fn, _save_state_fn, _claim_gate_fn
     _load_state_fn = load_state_fn
     _save_state_fn = save_state_fn
+    if claim_gate_fn is not None:
+        _claim_gate_fn = claim_gate_fn
+
+
+def _claim_gate_gated(statement: str, claim_class, tool: str):
+    """Fail-closed: an unbound gate refuses, exactly like an unclassified claim."""
+    if _claim_gate_fn is None:
+        return {
+            "gate": "well_human_claim_gate",
+            "tool": tool,
+            "statement_logged": True,
+            "returned_as_assessment": False,
+            "assessment_refused": True,
+            "verdict": "CLAIM_CLASS_GATE_ERROR",
+            "declared": "UNCLASSIFIED",
+            "reasons": ["claim-class gate not bound; fail-closed"],
+            "refusal": {
+                "refused": True,
+                "code": "CLAIM_CLASS_NOT_RETURNABLE_AS_ASSESSMENT",
+                "may_be_logged": True,
+                "returned_as_assessment": False,
+                "drives_recommendation": False,
+                "reason": "Claim-class gate unbound. Fail-closed.",
+                "remedy": "Call install_bindings(load, save, claim_gate).",
+                "dignity_hold": False,
+            },
+            "person_label_assigned": False,
+            "governs": "EPISTEMIC_CLASS_OF_A_SENTENCE_ABOUT_A_PERSON",
+        }
+    return _claim_gate_fn(statement, claim_class, tool=tool)
 
 
 def _load_state() -> dict[str, Any]:
@@ -127,10 +161,19 @@ def well_log_intake(
     confidence: float = 0.6,
     consent_scope: str = "intake.basic",
     note: Optional[str] = None,
+    claim_class: Optional[str] = None,
     ctx: Optional[Context] = None,
 ) -> dict[str, Any]:
-    """Log a meal/snack/intake event with kcal + macro breakdown."""
+    """Log a meal/snack/intake event with kcal + macro breakdown.
 
+    claim_class (2026-09-19, ADDITIVE) declares the explanatory class of the
+    claim this record makes: MEASURED | MECHANISM | PATTERN | NARRATIVE |
+    UNCLASSIFIED. Undeclared (None) fails closed: the event IS recorded, but the
+    record is not returned as an assessment that drives a recommendation.
+
+    The gate governs the CLASS OF THE CLAIM, never the person. No field here
+    attaches a class to a human being; there is no such field by construction.
+    """
 
     # ── F2: provenance ──────────────────────────────────────────────────────
     if source not in INTAKE_SOURCES:
@@ -230,9 +273,24 @@ def well_log_intake(
         evidence_label=truth_class,
         note=note,
         timestamp_utc=eaten_at.isoformat(),
+        claim_class=claim_class,
     )
 
-    return {
+    # ── Claim-class gate (2026-09-19, ADDITIVE) ─────────────────────────────
+    # The record is a claim about a person's intake. Its explanatory class is
+    # declared by the caller; undeclared fails closed. The event above is ALWAYS
+    # written (logging is permitted); what is gated is whether the record may
+    # come back as an assessment that drives a recommendation.
+    #
+    # GOVERNANCE NOTE: this governs the CLASS OF THE CLAIM, never the person's
+    # dignity. Nothing is labelled, scored or modelled about a human here.
+    _gate = _claim_gate_gated(
+        note or f"{meal_label}: {kcal} kcal, source {source}",
+        claim_class,
+        "well_log_intake",
+    )
+
+    result = {
         "ok": True,
         "event_id": event_id,
         "received": {
@@ -256,7 +314,14 @@ def well_log_intake(
         "truth_class": truth_class,
         "evidence_label": truth_class,
         "w0": "OPERATOR_VETO_INTACT / HIERARCHY_INVARIANT",
+        # -- additive, 2026-09-19 (claim_kernel/v1) --
+        "claim_class": _gate.get("declared"),
+        "assessment_eligible": _gate["returned_as_assessment"],
+        "claim_class_gate": _gate,
     }
+    if _gate.get("refusal"):
+        result["claim_class_refusal"] = _gate["refusal"]
+    return result
 
 
 # ── Tool 2: well_log_recovery_event ──────────────────────────────────────────

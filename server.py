@@ -1830,6 +1830,101 @@ from well_triad.phase5_observability import (
 
 # Note: _wt_events.install(_append_event) is wired below at the line where
 # _append_event is defined (around line 2909 in the original layout).
+
+# ══════════════════════════════════════════════════════════════════════════════
+# CLAIM-CLASS GATE — claim_kernel/v1 (forged 2026-09-19, ADDITIVE)
+# ══════════════════════════════════════════════════════════════════════════════
+# WELL's subject is a real person's body and state. A *narrative* about a person
+# is the most dangerous claim class of all: it is unfalsifiable and it reads as
+# insight. This gate makes the explanatory class OF THE SENTENCE explicit and
+# fail-closed wherever WELL records or reports an observation about a human.
+#
+# WHAT IT GOVERNS: the epistemic class of a CLAIM.
+# WHAT IT NEVER DOES: label, score, tier or model the PERSON. There is no field
+# in any gated result that carries a class for a human being — only for a
+# sentence about one. See claim_class_gate.py, section "WHAT THIS GATE GOVERNS".
+#
+# RECORD points: well_log, well_log_intake.
+# REPORT point:  well_guard_dignity — where the sentence comes back as an
+#                assessment that drives a recommendation, and where the refusal
+#                bites hardest. It consumes WELL's existing dignity guard
+#                (gate/dignity_shadow.py) rather than sitting beside it.
+_CLAIM_CLASS_GATE_MODULE = None
+try:  # WELL root is prepended to sys.path at import time (see line ~57 above)
+    import claim_class_gate as _CLAIM_CLASS_GATE_MODULE  # type: ignore
+except Exception:  # noqa: BLE001
+    try:
+        import importlib.util as _ccg_ilu
+
+        _ccg_spec = _ccg_ilu.spec_from_file_location(
+            "claim_class_gate", WELL_DIR / "claim_class_gate.py"
+        )
+        if _ccg_spec is not None and _ccg_spec.loader is not None:
+            _CLAIM_CLASS_GATE_MODULE = _ccg_ilu.module_from_spec(_ccg_spec)
+            _ccg_spec.loader.exec_module(_CLAIM_CLASS_GATE_MODULE)
+    except Exception:  # noqa: BLE001
+        _CLAIM_CLASS_GATE_MODULE = None
+
+CLAIM_CLASS_GATE_SCHEMA_NAME = "claim_class_gate/human_assessment/v1"
+
+
+def _claim_gate(
+    statement: str,
+    claim_class: str | None,
+    *,
+    tool: str,
+    subject: str | None = None,
+    confidence: float = 0.5,
+    dignity: dict | None = None,
+) -> dict[str, Any]:
+    """Fail-closed shim over claim_class_gate.gate_human_claim.
+
+    An unreachable gate must not read as an available one: if the module cannot
+    be loaded, the verdict is a refusal, exactly as for an unclassified claim.
+    """
+    if _CLAIM_CLASS_GATE_MODULE is None:
+        return {
+            "gate": "well_human_claim_gate",
+            "schema": CLAIM_CLASS_GATE_SCHEMA_NAME,
+            "tool": tool,
+            "subject": subject,
+            "statement_logged": True,
+            "returned_as_assessment": False,
+            "assessment_refused": True,
+            "verdict": "CLAIM_CLASS_GATE_ERROR",
+            "declared": "UNCLASSIFIED",
+            "action_eligible": False,
+            "reasons": ["claim_class_gate module unreachable; fail-closed"],
+            "note": "",
+            "refusal": {
+                "refused": True,
+                "code": "CLAIM_CLASS_NOT_RETURNABLE_AS_ASSESSMENT",
+                "may_be_logged": True,
+                "returned_as_assessment": False,
+                "drives_recommendation": False,
+                "reason": (
+                    "The claim-class gate is unreachable, so no assessment may be "
+                    "returned. The statement is still logged."
+                ),
+                "remedy": "Restore /root/WELL/claim_class_gate.py.",
+                "dignity_hold": False,
+            },
+            "dignity": dignity or {},
+            "dignity_guard_unchanged": True,
+            "person_label_assigned": False,
+            "governs": "EPISTEMIC_CLASS_OF_A_SENTENCE_ABOUT_A_PERSON",
+            "w0": "OPERATOR_VETO_INTACT / HIERARCHY_INVARIANT",
+        }
+    return _CLAIM_CLASS_GATE_MODULE.gate_human_claim(
+        statement,
+        claim_class,
+        tool=tool,
+        subject=subject,
+        confidence=confidence,
+        dignity=dignity,
+    )
+
+
 from fastmcp.server.middleware import Middleware as _MiddlewareBase
 
 
@@ -3052,7 +3147,9 @@ _wt_events.install(_append_event)
 # Register server's _load_state / _save_state with phase1_tools so the 4 tools
 # can read/write state.json without re-importing server.py (which would
 # re-trigger the arifOS import chain via from-server-import statements).
-_wt_install_bindings(_load_state, _save_state)
+# 2026-09-19: the claim-class gate is bound here too, so the triad intake tools
+# use the SAME fail-closed gate as the rest of WELL rather than a second copy.
+_wt_install_bindings(_load_state, _save_state, _claim_gate)
 from well_triad.phase3_tools import install_bindings as _wt_p3_install_bindings
 
 _wt_p3_install_bindings(_load_state, _save_state)
@@ -3336,6 +3433,12 @@ def well_log(
     movement_count: float | None = None,
     # Optional note
     note: str | None = None,
+    # Claim-class gate (2026-09-19, ADDITIVE). Declare the explanatory class of
+    # the claim this record makes about the body: MEASURED | MECHANISM |
+    # PATTERN | NARRATIVE | UNCLASSIFIED. UNDECLARED (None) FAILS CLOSED: the
+    # record is still written, but no assessment is returned for it.
+    # This gates the CLASS OF THE CLAIM. It never labels the person.
+    claim_class: str | None = None,
     ctx: Context | None = None,
     actor_id: str | None = None,
 ) -> dict[str, Any]:
@@ -3343,6 +3446,10 @@ def well_log(
     Log a biological telemetry update for operator Arif.
     Updates state.json, recomputes WELL score, checks floor violations.
     Only provide dimensions you're logging -- omitted fields are unchanged.
+
+    claim_class is REQUIRED for an assessment to be returned. Omitted or
+    NARRATIVE -> the record is logged, the readiness advisory is HELD, and
+    ``assessment_eligible`` is False. See claim_class_gate.py.
     """
     state = _load_state()
     metrics = state.get("metrics", {})
@@ -3440,16 +3547,78 @@ def well_log(
         event["note"] = note
     _append_event(event)
 
-    return {
+    # ── Claim-class gate (2026-09-19, ADDITIVE) ────────────────────────────────
+    # The record just written is a claim about a person's body/state. Its
+    # explanatory class is declared by the caller; undeclared fails closed.
+    #
+    # GOVERNANCE NOTE — this gate governs the CLASS OF THE CLAIM, never the
+    # PERSON'S DIGNITY. Nobody is labelled, scored or modelled here: the class
+    # attaches to the SENTENCE, and the gate's ``person_label_assigned`` is
+    # always False. A NARRATIVE sentence may be true and worth reading and is
+    # still refused as an assessment, because it carries no explanatory power.
+    _supplied = [
+        _name
+        for _name, _value in (
+            ("sleep_hours", sleep_hours),
+            ("sleep_debt_days", sleep_debt_days),
+            ("sleep_quality", sleep_quality),
+            ("stress_load", stress_load),
+            ("restlessness", restlessness),
+            ("hrv_proxy", hrv_proxy),
+            ("clarity", clarity),
+            ("decision_fatigue", decision_fatigue),
+            ("focus_durability", focus_durability),
+            ("fasting_hours", fasting_hours),
+            ("metabolic_stability", metabolic_stability),
+            ("hydration", hydration),
+            ("pain_sites", pain_sites),
+            ("movement_count", movement_count),
+        )
+        if _value is not None
+    ]
+    if note:
+        _claim_text = note
+    elif _supplied:
+        _claim_text = (
+            "telemetry record, source OPERATOR_REPORTED: " + ", ".join(_supplied)
+        )
+    else:
+        _claim_text = "telemetry record: no dimensions supplied"
+
+    _gate = _claim_gate(_claim_text, claim_class, tool="well_log")
+
+    if _gate["returned_as_assessment"]:
+        _recommendation: str | None = r_score["recommendation"]
+        _recommendation_status = "ASSESSMENT"
+        _held = None
+    else:
+        # REFUSAL: a NARRATIVE-class (or undeclared) statement about a person
+        # may be logged but is never returned as an assessment that drives a
+        # recommendation. The readiness advisory is HELD, not deleted.
+        _recommendation = None
+        _recommendation_status = "WITHHELD_CLAIM_CLASS"
+        _held = r_score["recommendation"]
+
+    _gated: dict[str, Any] = {
         "ok": True,
         "well_score": score,
         "floors_violated": violations,
         "status": "DEGRADED" if violations else "STABLE",
         "tier": r_score["tier"],
-        "recommendation": r_score["recommendation"],
+        "recommendation": _recommendation,
+        "recommendation_status": _recommendation_status,
         "human_decision_required": r_score["human_decision_required"],
         "w0": "OPERATOR_VETO_INTACT / HIERARCHY_INVARIANT",
+        # -- additive, 2026-09-19 (claim_kernel/v1) --
+        "claim_class": _gate.get("declared"),
+        "assessment_eligible": _gate["returned_as_assessment"],
+        "claim_class_gate": _gate,
     }
+    if _held is not None:
+        _gated["readiness_advisory_held"] = _held
+    if _gate.get("refusal"):
+        _gated["claim_class_refusal"] = _gate["refusal"]
+    return _gated
 
 
 def well_contrast_report(
@@ -3895,6 +4064,12 @@ def well_log_intake(
     confidence: float = 0.6,
     consent_scope: str = "intake.basic",
     note: str | None = None,
+    # Claim-class gate (2026-09-19, ADDITIVE). Declare the explanatory class of
+    # the claim this record makes: MEASURED | MECHANISM | PATTERN | NARRATIVE |
+    # UNCLASSIFIED. UNDECLARED (None) FAILS CLOSED: the event is still recorded,
+    # but the record is not returned as an assessment.
+    # This governs the CLASS OF THE CLAIM — never the person.
+    claim_class: str | None = None,
     ctx: Context | None = None,
     actor_id: str | None = None,
 ) -> dict[str, Any]:
@@ -3902,6 +4077,7 @@ def well_log_intake(
 
     Required scope: intake.basic (or intake.location if location_label given).
     Source: must be declared (F2). Free-form fields: PII-scanned (F4).
+    claim_class: declarative class of the claim; undeclared fails closed.
     """
     import datetime as _dt
 
@@ -3926,6 +4102,7 @@ def well_log_intake(
         confidence=confidence,
         consent_scope=consent_scope,
         note=note,
+        claim_class=claim_class,
         ctx=ctx,
     )
 
@@ -13440,6 +13617,118 @@ async def _well_write_domain_receipt(
         pass  # fire-and-forget -- never propagate
 
 
+# ══════════════════════════════════════════════════════════════════════════════
+# Tuas 2 — shared invocation telemetry at the dispatch chokepoint (2026-09-19)
+# ══════════════════════════════════════════════════════════════════════════════
+# Contract: /root/AAA/lib/invocation_log.py (frozen, 15 tests pass). One JSON
+# line per real invocation, appended to /var/lib/arifos/metrics/tool_invocations.jsonl.
+# This is the measurement that lets WELL answer "which agent exercised which
+# tool, and when" instead of resting the ceremony/exercise ratio on a proxy.
+#
+# ── BOUNDARY (F4 privacy / agent-compartment) — CORRECTNESS, NOT STYLE ───────
+# WELL handles human substrate. This call site records the CALLER IDENTITY and
+# the TOOL NAME, and NOTHING ELSE. Never arguments, never payloads, never intake
+# content, never biometric values, never recovery data, never a human's state,
+# and no `extra` counters derived from a person. A tool name and a caller id are
+# MAP; the human's substrate is STORY and never enters this log.
+# If a change here would record anything about Arif or any named human, STOP and
+# record only the tool name.
+#
+# `arguments["actor_id"]` is deliberately NOT used as the caller identity. In
+# WELL's own tool semantics `actor_id` names the HUMAN SUBJECT whose substrate is
+# read (well_assess_triadic_state -> _fetch_human_plane(actor_id), default
+# "arif"), so logging it as the executor would (a) mislabel the caller and
+# (b) write a person into federation telemetry. The caller identity is resolved
+# ONLY from the caller-identity envelope the federation attaches to the request
+# (`_envelope` / `_meta`). When no envelope is present there is no observed
+# caller and actor_id=None is the honest value — never an invented label.
+
+_WELL_INVOCATION_ORGAN = "WELL"
+_WELL_INVOCATION_LOG = None
+# Test-only sink override so a test never writes into live production telemetry.
+WELL_INVOCATION_SINK_ENV = "WELL_TOOL_INVOCATIONS_LOG"
+
+
+def _well_invocation_logger():
+    """Lazy handle on the shared federation telemetry module (AAA/lib)."""
+    global _WELL_INVOCATION_LOG
+    if _WELL_INVOCATION_LOG is None:
+        import sys as _sys_tel
+
+        if "/root/AAA/lib" not in _sys_tel.path:
+            _sys_tel.path.insert(0, "/root/AAA/lib")
+        import invocation_log as _inv_tel
+
+        _WELL_INVOCATION_LOG = _inv_tel
+    return _WELL_INVOCATION_LOG
+
+
+def _well_resolve_caller_actor(arguments):
+    """Caller (executor) identity from the federation caller envelope.
+
+    Returns a caller-declared EXECUTOR label, or None when the request carries no
+    envelope. Sources, in order:
+      1. arguments._envelope.actor_id                          (bridge envelope)
+      2. arguments._envelope.__federation_envelope.caller.actor_id
+      3. arguments._meta.actor_id | actor | caller_actor_id    (SCT/meta envelope)
+    Never returns arguments["actor_id"] — in WELL that key names the human subject.
+    """
+    try:
+        if not isinstance(arguments, dict):
+            return None
+        env = arguments.get("_envelope")
+        if isinstance(env, dict):
+            for key in ("actor_id", "actor", "caller_actor_id"):
+                val = env.get(key)
+                if isinstance(val, str) and val.strip():
+                    return val.strip()
+            fed = env.get("__federation_envelope")
+            if isinstance(fed, dict):
+                caller = fed.get("caller")
+                if isinstance(caller, dict):
+                    val = caller.get("actor_id")
+                    if isinstance(val, str) and val.strip():
+                        return val.strip()
+        meta = arguments.get("_meta")
+        if isinstance(meta, dict):
+            for key in ("actor_id", "actor", "caller_actor_id"):
+                val = meta.get(key)
+                if isinstance(val, str) and val.strip():
+                    return val.strip()
+    except Exception:
+        return None
+    return None
+
+
+def _well_log_invocation(tool, actor_id, *, ok, duration_ms=None, error=None, top_level=True):
+    """Write one invocation receipt. Never raises into the caller.
+
+    Telemetry must not break the thing it measures, so every failure here is
+    swallowed: a broken instrument must never take down a tool call.
+
+    `top_level=False` marks FastMCP's INTERNAL re-entry into call_tool (the
+    middleware chain calls `self.call_tool(..., run_middleware=False)`, which is
+    itself the patched wrapper). Without this guard one invocation would land two
+    receipts -- a fabricated 2x exercise rate, which is exactly the class of
+    measurement error this telemetry exists to remove.
+    """
+    try:
+        if not top_level:
+            return
+        sink = _os.environ.get(WELL_INVOCATION_SINK_ENV) or None
+        _well_invocation_logger().log_invocation(
+            _WELL_INVOCATION_ORGAN,
+            tool,
+            actor_id=actor_id,
+            ok=ok,
+            duration_ms=duration_ms,
+            error=error,
+            path=sink,
+        )
+    except Exception:
+        pass
+
+
 try:
     _original_call_tool = mcp.call_tool
 
@@ -13620,6 +13909,18 @@ try:
         if arguments is None:
             arguments = {}
 
+        # ── Tuas 2 invocation telemetry (2026-09-19, ADDITIVE) ────────────────
+        # Caller identity + tool name ONLY -- see the boundary note above the
+        # helper definitions. actor_id is None when the request carries no
+        # caller-identity envelope; that absence is the honest reading.
+        import time as _well_time_tel
+
+        _well_actor = _well_resolve_caller_actor(arguments)
+        _well_t0 = _well_time_tel.perf_counter()
+        # FastMCP re-enters call_tool from inside its own middleware chain with
+        # run_middleware=False; receipt the TOP-LEVEL entry only, never both.
+        _well_top_level = kwargs.get("run_middleware", True) is not False
+
         # ── SCT ingress gate (2026-07-17) ─────────────────────────────────
         # WELL is REFLECT_ONLY -- SCT optional unless presented (then verify).
         try:
@@ -13666,11 +13967,42 @@ try:
 
         verdict, error = check_governance(name, arguments)
         if error is not None:
+            # Tuas 2: a blocked call is still an EXERCISED call path -- receipt it.
+            # error is a fixed class string, never the verdict payload or arguments.
+            _well_log_invocation(
+                name,
+                _well_actor,
+                ok=False,
+                duration_ms=(_well_time_tel.perf_counter() - _well_t0) * 1000.0,
+                error="GOVERNANCE_BLOCK",
+                top_level=_well_top_level,
+            )
             # Return governance block as JSON error in MCP format
             from fastmcp.exceptions import ToolError
 
             raise ToolError(f"arifOS {verdict}: governance check blocked execution")
-        result = await _original_call_tool(name, arguments, **kwargs)
+
+        try:
+            result = await _original_call_tool(name, arguments, **kwargs)
+        except BaseException as _well_exc:
+            # Tuas 2: record the failure CLASS only (never the message, which can
+            # carry a payload by accident), then re-raise unchanged.
+            _well_log_invocation(
+                name,
+                _well_actor,
+                ok=False,
+                duration_ms=(_well_time_tel.perf_counter() - _well_t0) * 1000.0,
+                error=type(_well_exc).__name__,
+                top_level=_well_top_level,
+            )
+            raise
+        _well_log_invocation(
+            name,
+            _well_actor,
+            ok=True,
+            duration_ms=(_well_time_tel.perf_counter() - _well_t0) * 1000.0,
+            top_level=_well_top_level,
+        )
 
         # ── Supabase L4: fire-and-forget domain receipt ───────────────────
         try:
@@ -17390,10 +17722,30 @@ def well_guard_dignity(
     dignity_preservation: float | None = None,
     coercion_signals: list[str] | None = None,
     reductionism_risk: float | None = None,
+    # Claim-class gate (2026-09-19, ADDITIVE). Declare the explanatory class of
+    # the sentence being assessed about the person: MEASURED | MECHANISM |
+    # PATTERN | NARRATIVE | UNCLASSIFIED. UNDECLARED (None) FAILS CLOSED: the
+    # sentence is still logged, but it is not returned as an assessment.
+    # This governs the CLASS OF THE CLAIM, never the person's dignity.
+    claim_class: str | None = None,
     ctx: Context | None = None,
     actor_id: str | None = None,
 ) -> dict[str, Any]:
-    """Ω-WELL-12: Guard soul, personhood, meaning, and symbolic boundaries."""
+    """Ω-WELL-12: Guard soul, personhood, meaning, and symbolic boundaries.
+
+    INTEGRATION (2026-09-19): this tool is BOTH WELL's dignity guard surface AND
+    the REPORT point where a sentence about a person is returned as an
+    assessment that drives a recommendation. The claim-class gate is therefore
+    integrated HERE rather than sitting beside the guard:
+
+      * the gate CONSUMES this guard's verdict (``assess_dignity_risk``) — it
+        never re-implements it, and a guard tier of HOLD forces the gate closed;
+      * the guard can only ever REMOVE assessment eligibility, never grant it;
+      * the guard's at-risk verdict is NEVER withheld, softened or overridden —
+        a HOLD is a safety output, not an assessment about the person;
+      * ``person_label_assigned`` is always False: only the SENTENCE carries a
+        class, never the human being it is about.
+    """
     logger.info("well_guard_dignity called mode=%s", mode)
     mode = mode.lower() if isinstance(mode, str) else mode
     VALID_MODES = ["consent", "boundary", "shadow"]
@@ -17404,6 +17756,15 @@ def well_guard_dignity(
             "tool": "well_guard_dignity",
             "received": mode,
         }
+    # The gated object is this SENTENCE about a person — not the person. A
+    # NARRATIVE sentence may be logged and may be true, and still drives no
+    # recommendation.
+    _dignity_claim_text = (
+        f"Subject: {subject or 'Arif'}. "
+        f"Dignity preservation: {dignity_preservation if dignity_preservation is not None else 'unknown'}. "
+        f"Coercion signals: {coercion_signals or 'none'}. "
+        f"Reductionism risk: {reductionism_risk if reductionism_risk is not None else 'unknown'}."
+    )
     # ── mode: consent ──
     if mode == "consent":
         # Assess dignity preservation, coercion risk, and reductionism
@@ -17420,28 +17781,71 @@ def well_guard_dignity(
         if reductionism_high:
             flags.append("reductionism_risk_high")
 
+        _gate = _claim_gate(
+            _dignity_claim_text,
+            claim_class,
+            tool="well_guard_dignity",
+            subject=subject or "Arif",
+            confidence=0.5,
+        )
+        _assessable = bool(_gate["returned_as_assessment"])
+
+        _observation: dict[str, Any] = {
+            "ok": consent_ok,
+            "subject": subject or "Arif",
+            "dignity_preserved": dignity_ok,
+            "coercion_detected": coercion_risk,
+            "reductionism_safe": not reductionism_high,
+            "flags": flags,
+            "w0": "OPERATOR_VETO_INTACT / HIERARCHY_INVARIANT",
+            # claim-class gate — governs the CLAIM, never the person.
+            "assessment_eligible": _assessable,
+            "claim_class": _gate.get("declared"),
+        }
+        if _assessable:
+            _observation["recommendation"] = (
+                "Proceed -- dignity intact, no coercion, safe reductionism."
+                if consent_ok
+                else "HOLD -- dignity boundary at risk. Review flags above."
+            )
+            _signal = "consent_clear" if consent_ok else "consent_at_risk"
+        else:
+            # REFUSAL — two facts are true at once and both are preserved:
+            #   1. A NARRATIVE-class (or undeclared) sentence about a person is
+            #      logged but NOT returned as an assessment driving a
+            #      recommendation. This concerns the SENTENCE's class; it says
+            #      nothing about the person.
+            #   2. The dignity guard's at-risk instruction is a SAFETY output,
+            #      not an assessment, and is retained verbatim.
+            _observation["assessment_withheld"] = True
+            _observation["assessment_withheld_reason"] = (
+                "class=" + str(_gate.get("declared"))
+                + " is not action-eligible; the sentence is logged, not assessed."
+            )
+            if consent_ok:
+                _observation["recommendation"] = None
+                _signal = "assessment_withheld"
+            else:
+                _observation["dignity_guard_instruction"] = (
+                    "HOLD -- dignity boundary at risk. Review flags above."
+                )
+                _observation["dignity_guard_instruction_retained"] = True
+                _signal = "consent_at_risk"
+
+        _consent_result: dict[str, Any] = {
+            "ok": consent_ok,
+            "tool": "well_guard_dignity",
+            "mode": "consent",
+            "observation": _observation,
+            "uncertainty": 0.5 if not _assessable else 0.3,
+            "signal": _signal,
+            "claim_class_gate": _gate,
+            "final_authority": "Arif",
+        }
+        if _gate.get("refusal"):
+            _consent_result["claim_class_refusal"] = _gate["refusal"]
         return _to_federation_output(
-            {
-                "ok": consent_ok,
-                "tool": "well_guard_dignity",
-                "mode": "consent",
-                "observation": {
-                    "ok": consent_ok,
-                    "subject": subject or "Arif",
-                    "dignity_preserved": dignity_ok,
-                    "coercion_detected": coercion_risk,
-                    "reductionism_safe": not reductionism_high,
-                    "flags": flags,
-                    "recommendation": (
-                        "Proceed -- dignity intact, no coercion, safe reductionism."
-                        if consent_ok
-                        else "HOLD -- dignity boundary at risk. Review flags above."
-                    ),
-                    "w0": "OPERATOR_VETO_INTACT / HIERARCHY_INVARIANT",
-                },
-                "uncertainty": 0.3,
-                "signal": "consent_clear" if consent_ok else "consent_at_risk",
-            },
+            _consent_result,
             tool_name="well_guard_dignity",
         )
 
@@ -17454,15 +17858,42 @@ def well_guard_dignity(
             description="Dignity boundary guard -- checking personhood membrane integrity.",
             ctx=ctx,
         )
+        _gate = _claim_gate(
+            _dignity_claim_text,
+            claim_class,
+            tool="well_guard_dignity",
+            subject=subject or "Arif",
+            confidence=0.5,
+        )
+        _assessable = bool(_gate["returned_as_assessment"])
+        _boundary_ok = bool(b.get("ok", False))
+        _observation = dict(b) if isinstance(b, dict) else {"raw": b}
+        _observation["assessment_eligible"] = _assessable
+        _observation["claim_class"] = _gate.get("declared")
+        if _assessable:
+            _signal = "boundary_intact" if _boundary_ok else "boundary_at_risk"
+        elif _boundary_ok:
+            _observation["assessment_withheld"] = True
+            _signal = "assessment_withheld"
+        else:
+            # A boundary at risk is a safety output — never withheld.
+            _observation["assessment_withheld"] = True
+            _observation["dignity_guard_instruction_retained"] = True
+            _signal = "boundary_at_risk"
+        _boundary_result: dict[str, Any] = {
+            "ok": _boundary_ok,
+            "tool": "well_guard_dignity",
+            "mode": "boundary",
+            "observation": _observation,
+            "uncertainty": 0.4,
+            "signal": _signal,
+            "claim_class_gate": _gate,
+            "final_authority": "Arif",
+        }
+        if _gate.get("refusal"):
+            _boundary_result["claim_class_refusal"] = _gate["refusal"]
         return _to_federation_output(
-            {
-                "ok": b.get("ok", False),
-                "tool": "well_guard_dignity",
-                "mode": "boundary",
-                "observation": b,
-                "uncertainty": 0.4,
-                "signal": "boundary_intact" if b.get("ok") else "boundary_at_risk",
-            },
+            _boundary_result,
             tool_name="well_guard_dignity",
         )
 
@@ -17477,24 +17908,65 @@ def well_guard_dignity(
             f"Reductionism risk: {reductionism_risk or 'unknown'}."
         )
         shadow = assess_dignity_risk(shadow_text, confidence=0.7)
+
+        # INTEGRATION, not a second guard: the verdict computed above is passed
+        # INTO the claim-class gate. The gate never re-runs the dignity guard and
+        # never softens it. A tier of HOLD forces the gate closed.
+        _gate = _claim_gate(
+            shadow_text,
+            claim_class,
+            tool="well_guard_dignity",
+            subject=subject or "Arif",
+            confidence=0.7,
+            dignity=shadow,
+        )
+        _assessable = bool(_gate["returned_as_assessment"])
+        _shadow_tier = str(shadow.get("tier"))
+
+        _observation = {
+            "tier": _shadow_tier,
+            "violations": shadow.get("violations", []),
+            "notes": shadow.get("notes", []),
+            "safe_rephrase_hint": shadow.get("safe_rephrase_hint"),
+            "w0": "OPERATOR_VETO_INTACT / HIERARCHY_INVARIANT",
+            "boundary_notice": "Shadow assessment is advisory only. Not diagnosis. Arif remains final judge.",
+            # claim-class gate — governs the CLAIM, never the person.
+            "assessment_eligible": _assessable,
+            "claim_class": _gate.get("declared"),
+        }
+
+        if _assessable:
+            _signal = "shadow_clear" if _shadow_tier == "SAFE" else "shadow_flagged"
+        elif _shadow_tier != "SAFE":
+            # REFUSAL, but the dignity guard's risk verdict is a SAFETY output:
+            # it is never withheld, softened or hidden behind the gate.
+            _observation["assessment_withheld"] = True
+            _observation["dignity_guard_verdict_retained"] = True
+            _signal = "shadow_flagged"
+        else:
+            # REFUSAL: the sentence is logged; it is not returned as an
+            # assessment that clears or condemns anyone.
+            _observation["assessment_withheld"] = True
+            _observation["assessment_withheld_reason"] = (
+                "class=" + str(_gate.get("declared"))
+                + " is not action-eligible; the sentence is logged, not assessed."
+            )
+            _signal = "assessment_withheld"
+
+        _shadow_result: dict[str, Any] = {
+            "ok": _shadow_tier == "SAFE",
+            "tool": "well_guard_dignity",
+            "mode": "shadow",
+            "observation": _observation,
+            "uncertainty": 0.5,
+            "signal": _signal,
+            "claim_class_gate": _gate,
+            "final_authority": "Arif",
+        }
+        if _gate.get("refusal"):
+            _shadow_result["claim_class_refusal"] = _gate["refusal"]
         return _to_federation_output(
-            {
-                "ok": shadow.get("tier") == "SAFE",
-                "tool": "well_guard_dignity",
-                "mode": "shadow",
-                "observation": {
-                    "tier": shadow.get("tier"),
-                    "violations": shadow.get("violations", []),
-                    "notes": shadow.get("notes", []),
-                    "safe_rephrase_hint": shadow.get("safe_rephrase_hint"),
-                    "w0": "OPERATOR_VETO_INTACT / HIERARCHY_INVARIANT",
-                    "boundary_notice": "Shadow assessment is advisory only. Not diagnosis. Arif remains final judge.",
-                },
-                "uncertainty": 0.5,
-                "signal": "shadow_clear"
-                if shadow.get("tier") == "SAFE"
-                else "shadow_flagged",
-            },
+            _shadow_result,
             tool_name="well_guard_dignity",
         )
 

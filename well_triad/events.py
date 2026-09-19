@@ -43,9 +43,12 @@ def append_typed_event(
     truth_class: str = "INT",
     evidence_label: str = "INT",
     actor_hermes: bool = False,
+    actor_id: Optional[str] = None,
+    actor_verified: bool = False,
     note: Optional[str] = None,
     error: Optional[str] = None,
     timestamp_utc: Optional[str] = None,
+    claim_class: Optional[str] = None,
 ) -> str:
     """Append a typed triad event to the substrate ledger.
 
@@ -57,6 +60,28 @@ def append_typed_event(
         )
 
     ts = timestamp_utc or _dt.datetime.now(_dt.timezone.utc).isoformat()
+
+    # ── Caller identity (2026-09-19, ADDITIVE — DEFECT FIXED HERE) ──────────
+    # DEFECT: this payload used to carry the literal "arif" plus
+    # actor_verified=True unconditionally, for EVERY event, whoever called. A
+    # constant is not an observed identity: WELL could not witness which agent
+    # executed anything, and ASD had to be emitted as NOT_APPLICABLE. A hard-coded
+    # actor is a fake identity assertion, not telemetry.
+    # FIX: the actor is now CALLER-DERIVED. When the caller supplies an identity
+    # it is recorded; when none is supplied the field is empty (None) — that
+    # absence is the honest reading, never an invented label.
+    # `actor_verified` is False unless a caller identity exists AND the caller
+    # explicitly asserts it was verified. It is never inferred from a name.
+    #
+    # BOUNDARY (F4): this field is an EXECUTOR label — MAP, not STORY. It must
+    # never carry a human subject, intake content, biometric value or recovery
+    # datum. If a value about a person would land here, pass None instead.
+    actor_id = (
+        actor_id.strip()
+        if isinstance(actor_id, str) and actor_id.strip()
+        else None
+    )
+    actor_verified = bool(actor_verified and actor_id is not None)
 
     inputs_hash = hashlib.sha256(
         json.dumps(inputs, sort_keys=True, default=str).encode()
@@ -74,8 +99,8 @@ def append_typed_event(
         "phase": phase,
         "tool": tool,
         "event_id": str(uuid.uuid4()),
-        "actor_id": "arif",
-        "actor_verified": True,
+        "actor_id": actor_id,
+        "actor_verified": actor_verified,
         "actor_hermes": actor_hermes,
         "plane": plane,
         "consent_scope": consent_scope,
@@ -91,6 +116,10 @@ def append_typed_event(
         "w0": "OPERATOR_VETO_INTACT / HIERARCHY_INVARIANT",
         "note": note,
         "error": error,
+        # Claim-class gate (2026-09-19, ADDITIVE). The epistemic class of the
+        # CLAIM this event records — never a class for a person. `None` means
+        # undeclared, which the gate treats as fail-closed (UNCLASSIFIED).
+        "claim_class": claim_class,
     }
 
     # ── Validate required fields (caller bug, not floor block) ──────────────
