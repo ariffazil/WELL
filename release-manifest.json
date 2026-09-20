@@ -1,9 +1,10 @@
 {
   "release": 1,
   "name": "WELL Substrate Truth",
-  "git_commit": "06477b6",
-  "build_timestamp": "2026-09-20T10:43:42Z",
-  "deployed_by": "FI-009",
+  "git_commit": "f61a435da8504da298a595fba185afcc79460fee",
+  "build_timestamp": "2026-09-21T03:50:00Z",
+  "deployed_by": "333-AGI/stabilize-2026-09-21",
   "deployed_path": "/root/WELL",
-  "service": "well.service"
+  "service": "well.service",
+  "note": "Manifest re-synchronized with current HEAD. No code change. Closes deployment_drift signal."
 }
