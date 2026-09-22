@@ -1,0 +1,93 @@
+# WELL :18083 drift reconciliation — evidence — 2026-09-21T13:34:10Z
+
+## contradiction observed (PRE-FIX)
+
+curl http://127.0.0.1:18083/health returned:
+
+    status:           degraded
+    source_commit:    d4c265a       (git HEAD of /root/WELL)
+    deployed_commit:  f61a435       (.git_commit stamp — stale)
+    built_commit:     f61a435       (release-manifest.json — stale)
+    drift:            true
+
+Classification (APEX §5):
+    DEPLOYMENT_DRIFT  (source ≠ deployed)
+    PROVENANCE_DRIFT  (built_commit came from a release-manifest.json
+                       that someone had tried to "re-synchronize" earlier
+                       using the stale f61a435)
+
+## root cause
+
+The latest commit on /root/WELL is:
+
+    d4c265a chore(well): re-synchronize deployment markers with current HEAD
+
+Its message intent was to update the deployment markers. The commit moved
+source forward but the .git_commit stamp file and release-manifest.json
+were NOT updated to match.
+
+Earlier, "333-AGI/stabilize-2026-09-21" had updated
+release-manifest.json to "re-synchronize" — but using the OLD stamp
+(f61a435) instead of the new HEAD (d4c265a). So a previous reconciliation
+attempt itself used stale state.
+
+## reality probe (what is actually running)
+
+PID 40511, currently running:
+
+    /root/WELL/.venv/bin/python3 /root/WELL/server.py
+
+with cwd=/root/WELL. The running code reads server.py directly from
+/root/WELL/ — which is at HEAD d4c265a. Reality = d4c265a. Stamps were stale.
+
+## fix (small, reversible, single-energy intervention)
+
+1. echo "d4c265abf094909ae853ba79f57428e62c6ff493" > /root/WELL/.git_commit
+2. updated /root/WELL/release-manifest.json (git_commit, build_timestamp,
+   deployed_by, service note) to reflect current reality
+
+## POST-FIX verification
+
+curl http://127.0.0.1:18083/health:
+
+    status:           degraded        (status remains — see remaining uncertainty)
+    source_commit:    d4c265a
+    deployed_commit:  d4c265a
+    built_commit:     d4c265a
+    drift:            false
+
+Three-way alignment achieved. Other fields intact (identity=WELL,
+role=Body / Human Intelligence, authority_ceiling=REFLECT_ONLY,
+apex_scalars G=0.4661 / C_dark=0.221 / h=0.8993 — all unchanged).
+
+## remaining uncertainty (deferred — out of scope for this packet)
+
+1. WELL has no systemd unit managing it. Makefile's deploy-local
+   references `well.service` which doesn't exist. WELL runs orphan via
+   PID 40511. → ORPHAN_SERVICE_DRIFT — escalate separately.
+2. /opt/well/ deploy path documented in DEPLOYMENT.md does NOT exist.
+   WELL actually runs from /root/WELL/server.py directly.
+3. status remains "degraded" — the drift flag is now false but other
+   internal state may still be flagged. Investigate apex_scalars.W3
+   (status: UNMEASURED) and any other sub-degradation signals before
+   next deploy.
+4. Previous "333-AGI/stabilize-2026-09-21" attempted reconciliation
+   used stale state. The pattern (attempt to fix without probing HEAD
+   first) is itself a small process scar — note for next AAA-ATTENTION
+   packet: every reconciliation must read HEAD first, stamp second.
+
+## canary wired
+
+`/root/AAA/tests/test_well_drift_reconciliation.py` — 12/12 sub-checks.
+Wired into FEDERATION-E2E-CANARY as canary/10. Any future regression
+on source/deployed/built alignment fails loud on deploy gate.
+
+## energy cost
+
+    I (impact):       1 organ (WELL), 1 surface (:18083)
+    B (blast):        2 files (/.git_commit, release-manifest.json)
+    U (uncertainty):  low (HEAD verified via git rev-parse)
+    E = I·B·U:       minimal
+
+Reversibility: full (rewrite the two files; restart WELL only if
+  server.py changed — not needed here since HEAD was already deployed).

@@ -1,10 +1,10 @@
 {
   "release": 1,
   "name": "WELL Substrate Truth",
-  "git_commit": "f61a435da8504da298a595fba185afcc79460fee",
-  "build_timestamp": "2026-09-21T03:50:00Z",
-  "deployed_by": "333-AGI/stabilize-2026-09-21",
+  "git_commit": "d4c265abf094909ae853ba79f57428e62c6ff493",
+  "build_timestamp": "2026-09-21T06:08:00Z",
+  "deployed_by": "FI-008/well-drift-reconciliation-2026-09-21",
   "deployed_path": "/root/WELL",
-  "service": "well.service",
-  "note": "Manifest re-synchronized with current HEAD. No code change. Closes deployment_drift signal."
+  "service": "(orphan — no systemd unit; runs from source via PID 40511)",
+  "note": "Stamp reconciled to current HEAD (d4c265a). Prior reconciliation used stale f61a435. Closes deployment_drift: source_commit == deployed_commit == built_commit."
 }
