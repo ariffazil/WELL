@@ -1,8 +1,8 @@
 {
   "release": 1,
   "name": "WELL Substrate Truth",
-  "git_commit": "130e987",
-  "build_timestamp": "2026-09-26T22:51:02Z",
+  "git_commit": "d7be9cc",
+  "build_timestamp": "2026-09-26T23:11:26Z",
   "deployed_by": "FI-009",
   "deployed_path": "/root/WELL",
   "service": "well.service"
