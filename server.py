@@ -3202,8 +3202,16 @@ def _well_observation_band(state: dict | None) -> dict[str, object]:
             age_h = (_dt.datetime.now(_dt.timezone.utc) - ts).total_seconds() / 3600.0
         except ValueError:
             age_h = None
+    # A file's own write time is not an observation. If no observation clock exists,
+    # cap at STALE: presence pings and keepalive paths rewrite `timestamp`, and letting
+    # that read as FRESH is exactly how a 291h-old self-report presented itself as now.
+    clock = "observation"
+    if not (state.get("last_successful_read") or state.get("heartbeat_ts")):
+        clock = "file_write_only"
     if age_h is None:
         band, measured = "UNKNOWN", False
+    elif clock == "file_write_only" and age_h <= _WELL_H_TTL_HOURS["STALE"]:
+        band, measured = "STALE", True
     elif age_h <= _WELL_H_TTL_HOURS["FRESH"]:
         band, measured = "FRESH", True
     elif age_h <= _WELL_H_TTL_HOURS["AGING"]:
@@ -3217,6 +3225,7 @@ def _well_observation_band(state: dict | None) -> dict[str, object]:
         "age_hours": None if age_h is None else round(age_h, 1),
         "measured_at": raw if isinstance(raw, str) else None,
         "counts_toward_readiness": measured,
+        "clock": clock,
     }
 
 
@@ -3291,6 +3300,12 @@ async def _well_ready_handler(request):
 
 def _save_state(state: dict[str, Any]) -> None:
     state["timestamp"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    # Single writer of the freshness claim: derived at save time from the observation
+    # clock, never assigned by callers. Every previous writer stamped its own literal
+    # "FRESH", so the stored value drifted from reality and outlived the measurement.
+    _band = _well_observation_band(state)
+    state["freshness"] = _band["band"]
+    state["freshness_clock"] = _band["clock"]
     STATE_PATH.write_text(json.dumps(state, indent=2))
 
 
@@ -17326,8 +17341,15 @@ def well_daily_checkin(
     state["well_score"] = score
     state["floors_violated"] = violations
     state["truth_status"] = "OPERATOR_REPORTED"
-    state["confidence"] = "HIGH"
-    state["freshness"] = "FRESH"
+    state["confidence"] = "MEDIUM"
+    state["telemetry_confidence"] = "SELF_REPORT"
+    # A check-in IS an observation, so it moves the observation clock -- and then
+    # freshness follows from the clock at save time instead of being asserted here.
+    # Confidence is MEDIUM, not HIGH: this is sovereign self-report, not telemetry.
+    _now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    state["last_successful_read"] = _now_iso
+    state["last_successful_write"] = _now_iso
+    state["heartbeat_ts"] = _now_iso
 
     # ── Write event to events.jsonl ─────────────────────────────────────────
     event = {
@@ -17385,8 +17407,9 @@ def well_daily_checkin(
         "daily_input": event["daily_input"],
         "note": note_clean,
         "state_updated": True,
-        "freshness": "FRESH",
-        "confidence": "HIGH",
+        "freshness": _well_observation_band(state)["band"],
+        "confidence": "MEDIUM",
+        "telemetry_confidence": "SELF_REPORT",
         "w0": "OPERATOR_VETO_INTACT / HIERARCHY_INVARIANT",
         "boundary_notice": "Not diagnosis. Not therapy. Reflective substrate governance only. Arif remains final judge.",
     }

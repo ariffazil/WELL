@@ -13,6 +13,7 @@ freshness, or floor-compliance numbers.
 from __future__ import annotations
 
 import datetime as dt
+import json
 
 import server
 
@@ -93,3 +94,39 @@ def test_band_labels_stay_inside_existing_vocabulary():
     for ages in ((0.0, 0.0), (0.5, 2.0), (0.5, 100.0), (0.5, None), (0.0, 0.0)):
         f = server._check_data_freshness(_state(*ages))
         assert f["freshness_label"] in allowed, f
+
+
+# ── the stored claim can no longer outlive its measurement ──────────────────
+def test_file_write_time_alone_cannot_produce_fresh():
+    """Only an observation clock may say FRESH. A rewritten `timestamp` may not."""
+    s = {"timestamp": _iso(0.0), "metrics": {}}          # touched right now, never read
+    band = server._well_observation_band(s)
+    assert band["clock"] == "file_write_only", band
+    assert band["band"] == "STALE", band                  # capped, never FRESH
+    assert server._check_data_freshness(s)["freshness_label"] == "stale"
+
+
+def test_save_state_derives_freshness_and_never_stores_a_claim(tmp_path, monkeypatch):
+    """_save_state is the single writer: what lands on disk is derived, not asserted."""
+    target = tmp_path / "state.json"
+    monkeypatch.setattr(server, "STATE_PATH", target)
+    server._save_state({"metrics": {}, "operator_id": "arif"})
+    saved = json.loads(target.read_text())
+    assert saved["freshness"] in {"FRESH", "AGING", "STALE", "EXPIRED", "UNKNOWN"}
+    assert saved["freshness"] != "FRESH", saved           # no observation -> cannot be fresh
+    assert saved["freshness_clock"] == "file_write_only", saved
+
+
+def test_no_writer_in_server_asserts_a_freshness_literal():
+    src = open("/root/WELL/server.py").read()
+    assert '"freshness": "FRESH"' not in src
+    assert 'state["freshness"] = "FRESH"' not in src
+
+
+def test_keepalive_may_only_report_its_own_liveness():
+    """A cron heartbeat must not manufacture a human observation clock."""
+    src = open("/root/WELL/scripts/well_auto_keepalive.py").read()
+    for forbidden in ('data["freshness"]', 'data["last_successful_read"]',
+                      'data["last_successful_write"]'):
+        assert forbidden not in src, forbidden
+    assert 'data["keepalive_ts"]' in src

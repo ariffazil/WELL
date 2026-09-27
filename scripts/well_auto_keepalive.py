@@ -11,15 +11,17 @@ if state_path.exists():
     try:
         with open(state_path, "r", encoding="utf-8") as f:
             data = json.load(f)
-        data["timestamp"] = now_iso
-        data["last_successful_read"] = now_iso
-        data["last_successful_write"] = now_iso
-        data["freshness"] = "FRESH"
-        data["telemetry_confidence"] = data.get("telemetry_confidence") or "HIGH"
+        # This job proves the CRON is alive. It does not prove the human was measured,
+        # so it may only write its own liveness fields. Advancing last_successful_*
+        # here (the old behaviour) manufactured an observation clock, and stamping
+        # freshness "FRESH" made a stale or absent reading look current -- twice: the
+        # 2026-08-01 pytest fixture at this path stayed labelled FRESH for 8 weeks.
+        data["keepalive_ts"] = now_iso
+        data["keepalive_status"] = "ALIVE"
         with open(state_path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2)
     except Exception as e:
         pass
 
-receipt = {"tool": "well_auto_keepalive", "ts": now_iso, "status": "restored", "state_refreshed": True}
+receipt = {"tool": "well_auto_keepalive", "ts": now_iso, "status": "liveness_only", "state_refreshed": False}
 print(json.dumps(receipt))
