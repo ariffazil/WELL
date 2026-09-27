@@ -2788,8 +2788,8 @@ def _load_state() -> dict[str, Any]:
             "role": "Body / Human Intelligence",
             "authority": "REFLECT_ONLY",
             "delta_s": 0.0,
-            "peace2": 1.0,
-            "kappa_r": 0.95,
+            "peace2": None,
+            "kappa_r": None,
             "rasa": True,
             "amanah": "LOCK",
             "metrics": {},
@@ -3175,6 +3175,51 @@ def _classify_well_state(state: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+_WELL_H_TTL_HOURS = {"FRESH": 1.0, "AGING": 4.0, "STALE": 24.0}
+
+
+def _well_observation_band(state: dict | None) -> dict[str, object]:
+    """Classify a human-substrate record by the AGE OF ITS READING.
+
+    Deliberately ignores the `freshness` field stored in the state file: that field is
+    rewritten by keepalive/attestation paths, so inheriting it lets a 12-day-old reading
+    present itself as current. Presence is not measurement, and a timestamp is not data.
+    """
+    import datetime as _dt
+
+    state = state if isinstance(state, dict) else {}
+    raw = (
+        state.get("last_successful_read")
+        or state.get("heartbeat_ts")
+        or state.get("timestamp")
+    )
+    age_h: float | None = None
+    if isinstance(raw, str) and raw.strip():
+        try:
+            ts = _dt.datetime.fromisoformat(raw.strip().replace("Z", "+00:00"))
+            if ts.tzinfo is None:
+                ts = ts.replace(tzinfo=_dt.timezone.utc)
+            age_h = (_dt.datetime.now(_dt.timezone.utc) - ts).total_seconds() / 3600.0
+        except ValueError:
+            age_h = None
+    if age_h is None:
+        band, measured = "UNKNOWN", False
+    elif age_h <= _WELL_H_TTL_HOURS["FRESH"]:
+        band, measured = "FRESH", True
+    elif age_h <= _WELL_H_TTL_HOURS["AGING"]:
+        band, measured = "AGING", True
+    elif age_h <= _WELL_H_TTL_HOURS["STALE"]:
+        band, measured = "STALE", True
+    else:
+        band, measured = "EXPIRED", False
+    return {
+        "band": band,
+        "age_hours": None if age_h is None else round(age_h, 1),
+        "measured_at": raw if isinstance(raw, str) else None,
+        "counts_toward_readiness": measured,
+    }
+
+
 def _assert_sovereign_presence(operator_id: str = "arif") -> dict[str, Any]:
     """
     Manual sovereign presence assertion.
@@ -3200,8 +3245,14 @@ def _assert_sovereign_presence(operator_id: str = "arif") -> dict[str, Any]:
             "metrics": {},
             "floors_violated": [],
             "reason": "Sovereign presence asserted manually via /ready",
-            "confidence": "HIGH",
-            "freshness": "FRESH",
+            # A reachability ping is not a measurement: presence may be asserted, but
+            # it must not mint freshness, confidence, or floor-compliance numbers. The
+            # 61s kernel attestation polls /ready, so inheriting these fields turned an
+            # liveness probe into a current high-confidence human reading.
+            "confidence": "INSUFFICIENT_DATA",
+            "freshness": "UNKNOWN",
+            "presence_only": True,
+            "measured_at": None,
             "test_contamination": "NO",
             "contamination_quarantined": False,
             "safe_mode": "off",
@@ -6295,7 +6346,7 @@ def well_readiness(
         }
         if gate
         else None,
-        "freshness": state.get("freshness", "UNKNOWN"),
+        "freshness": _well_observation_band(state)["band"],  # derived from reading age, not the stored label
         "confidence": state.get("confidence", "UNKNOWN"),
         "w0": "OPERATOR_VETO_INTACT / HIERARCHY_INVARIANT",
         # Discovery 8+9: Memory + Epistemic signals
@@ -7356,30 +7407,21 @@ def _check_tool_surface() -> dict[str, Any]:
 
 
 def _check_data_freshness(state: dict[str, Any]) -> dict[str, Any]:
-    """Check age of last body telemetry and machine state."""
-    state.get("metrics", {})
-    ts_str = state.get("timestamp")
-    now = datetime.datetime.now(datetime.timezone.utc)
+    """Age the HUMAN reading, not the file.
 
-    # Parse state timestamp
-    state_age_hours = None
-    if ts_str:
-        try:
-            ts = datetime.datetime.fromisoformat(ts_str)
-            state_age_hours = (now - ts).total_seconds() / 3600.0
-        except Exception:
-            pass
-
-    # Per-metric freshness (if any metric has a timestamp)
-    # For now, use state timestamp as proxy
-    if state_age_hours is None:
-        freshness = "unknown"
-    elif state_age_hours < 3:
-        freshness = "fresh"
-    elif state_age_hours < 24:
-        freshness = "stale"
-    else:
-        freshness = "expired"
+    Previously this measured the age of state["timestamp"], which presence assertions
+    and keepalive paths rewrite -- so a 291h-old self-report scored "fresh" and the
+    readiness number was treated as current. The observation timestamp is the only
+    honest clock: last_successful_read / heartbeat_ts first, file timestamp last
+    (see _well_observation_band). Labels stay inside the existing four values so
+    consumers keep working; AGING is folded into "stale" rather than "fresh" because
+    data older than an hour is not fresh, and the finer band is exposed separately.
+    """
+    band = _well_observation_band(state)
+    state_age_hours = band["age_hours"]
+    _LABEL = {"FRESH": "fresh", "AGING": "stale", "STALE": "stale",
+              "EXPIRED": "expired", "UNKNOWN": "unknown"}
+    freshness = _LABEL[str(band["band"])]
 
     has_telemetry = _has_verified_telemetry(state)
 
@@ -7388,6 +7430,9 @@ def _check_data_freshness(state: dict[str, Any]) -> dict[str, Any]:
         if state_age_hours is not None
         else None,
         "freshness_label": freshness,
+        "observation_band": band["band"],
+        "measured_at": band["measured_at"],
+        "counts_toward_readiness": band["counts_toward_readiness"],
         "has_telemetry": has_telemetry,
         "truth_status": state.get("truth_status", "UNVERIFIED"),
     }
@@ -14491,7 +14536,7 @@ def well_attest_to_kernel(
         "final_authority": "ARIF",
         "verdict_local": _state.get("verdict", "WELL_HOLD"),
         "well_score": _state.get("well_score"),
-        "freshness": _state.get("freshness", "UNKNOWN"),
+        "freshness": _well_observation_band(_state)["band"],  # derived from reading age, not the stored label
         "actor_id": _actor,
         "ts": datetime.datetime.now(datetime.timezone.utc).isoformat() + "Z",
     }

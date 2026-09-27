@@ -214,3 +214,16 @@ authoritative:
 ---
 
 **DITEMPA BUKAN DIBERI — Forged, not given.  Federation is composed, not assumed.**
+
+## WELL post-commit — version bump must re-lock (added 2026-09-28, FI-003)
+
+`Well`'s `post-commit` hook rewrites `[project] version` in `pyproject.toml` and stages it.
+It did **not** re-lock, and `uv lock --check` is a required status check on `main`. Every
+commit therefore left `uv.lock` desynced and main unable to go green — measured on
+2026-09-28: the committed lock still pinned `well-mcp v2026.9.12` while `pyproject.toml`
+said `2026.09.28`, i.e. roughly 16 days and many bumps of a permanently failing check, with
+each push bypassing it rather than satisfying it.
+
+The hook now runs `uv lock` and stages `uv.lock` after a bump, warning loudly if `uv` is
+missing or the re-lock fails. Hooks are `.git/hooks` (untracked, host-local): apply this to
+any new clone/host, or move the hook into tracked repo state and symlink it.
