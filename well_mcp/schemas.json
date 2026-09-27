@@ -126,7 +126,7 @@
         "properties": {
           "mode": {
             "type": "string",
-            "enum": ["role", "cashflow", "purpose", "support"],
+            "enum": ["role", "meaning", "dignity", "population"],
             "default": "role"
           },
           "subject": {
