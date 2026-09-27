@@ -9,10 +9,16 @@ WELL informs. arifOS judges. A-FORGE executes. Hierarchy is invariant.
 from __future__ import annotations
 
 # ── PORT FIX 2026-07-20: Prevent arifOS import from overriding PORT to 8088 ──
+# 2026-09-28: setdefault, not assignment. The defense still holds — the value is
+# present in the environment before any arifOS import runs — but an operator can
+# now point a throwaway instance at another port to dry-run a change instead of
+# colliding with the live bind, which is what produced 8 failed boots tonight.
+# Production is unaffected: /etc/well/well.env already supplies PORT=18083 and
+# HOST was never set outside this file.
 import os as _os_portfix
 
-_os_portfix.environ["PORT"] = "18083"
-_os_portfix.environ["HOST"] = "127.0.0.1"
+_os_portfix.environ.setdefault("PORT", "18083")
+_os_portfix.environ.setdefault("HOST", "127.0.0.1")
 
 try:
     import uvloop
@@ -1978,6 +1984,16 @@ class WellSessionValidationMiddleware(_MiddlewareBase):
                         session_id = req.headers.get("mcp-session-id")
                 except Exception:
                     pass
+            # P0-1 (2026-09-28): mirror the session this middleware authenticated
+            # into the telemetry context, so the invocation receipt for this call
+            # names the session that caused it. Nothing is invented here -- if the
+            # resolution above found no session, the receipt reads null.
+            try:
+                _WELL_TELEMETRY_SESSION.set(
+                    session_id.strip() if isinstance(session_id, str) and session_id.strip() else None
+                )
+            except Exception:
+                pass
             if not session_id or (
                 isinstance(session_id, str) and not session_id.strip()
             ):
@@ -2122,6 +2138,104 @@ DEPRECATED_TOOLS_MAP: dict[str, dict[str, Any]] = {
         "removal_date": "2026-09-01",
     },
 }
+
+
+# ── Deprecation shims (P0-3b, 2026-09-28) ────────────────────────────────────
+# This map has promised a migration signal since 2026-08-05, but the six legacy
+# handlers were unregistered 2026-08-04 -- callers of well_readiness got a bare
+# "Unknown tool" and the promise could never fire (verified live 2026-09-28). A
+# shim resolves the name and returns the signal ONLY: no delegation to the legacy
+# body, no writes, no side effects. They stay unlisted on tools/list because they
+# are absent from SOMATIC_TOOLS, which the somatic filter is the only listing gate.
+
+_WELL_DEPRECATION_TRANSPORT_ARGS = (
+    "session_id",
+    "actor_id",
+    "trace_id",
+    "_envelope",
+    "_meta",
+)
+
+
+def _well_overdue_days(removal_date: str) -> int:
+    """Days past the announced removal date, measured now (0 = window still open)."""
+    try:
+        removal = datetime.date.fromisoformat(str(removal_date))
+    except (TypeError, ValueError):
+        return 0
+    return max(
+        0, (datetime.datetime.now(datetime.timezone.utc).date() - removal).days
+    )
+
+
+def _well_deprecation_payload(name: str) -> dict[str, Any]:
+    """The structured DEPRECATED_MOVED signal for one legacy name."""
+    info = DEPRECATED_TOOLS_MAP.get(name) or {}
+    overdue = _well_overdue_days(str(info.get("removal_date", "")))
+    return {
+        "ok": False,
+        "error": "DEPRECATED_MOVED",
+        "tool": name,
+        "replacement": info.get("replacement"),
+        "replacement_args": info.get("replacement_args", {}),
+        "deprecation_epoch": info.get("deprecation_epoch"),
+        "removal_date": info.get("removal_date"),
+        "overdue_days": overdue,
+        "signal": (
+            "migrate now; removal already past due"
+            if overdue > 0
+            else "migrate now; removal window still open"
+        ),
+    }
+
+
+def _make_deprecation_shim(name: str):
+    """Build a tool that answers exactly one question: this name moved, here is where.
+
+    Its schema mirrors the unregistered legacy function's own parameters (plus
+    transport metadata) so a caller that has not migrated yet still receives the
+    signal instead of a schema rejection.
+    """
+    import inspect as _inspect_dep
+
+    allowed: list[str] = []
+    legacy = globals().get(name)
+    if callable(legacy):
+        try:
+            for pname, param in _inspect_dep.signature(legacy).parameters.items():
+                if pname == "ctx" or param.kind in (
+                    _inspect_dep.Parameter.VAR_POSITIONAL,
+                    _inspect_dep.Parameter.VAR_KEYWORD,
+                ):
+                    continue
+                allowed.append(pname)
+        except (TypeError, ValueError):
+            allowed = []
+    for extra in _WELL_DEPRECATION_TRANSPORT_ARGS:
+        if extra not in allowed:
+            allowed.append(extra)
+
+    params = [
+        _inspect_dep.Parameter(
+            pname, _inspect_dep.Parameter.KEYWORD_ONLY, annotation=Any, default=None
+        )
+        for pname in allowed
+    ]
+
+    def _shim(*_args: Any, **_kwargs: Any) -> dict:
+        return _well_deprecation_payload(name)
+
+    _shim.__name__ = f"{name}_deprecated_shim"
+    _shim.__qualname__ = _shim.__name__
+    _shim.__doc__ = (
+        f"DEPRECATED: {name} -> "
+        f"{(DEPRECATED_TOOLS_MAP.get(name) or {}).get('replacement')}. "
+        "Returns the migration signal only; never runs the legacy handler."
+    )
+    _shim.__signature__ = _inspect_dep.Signature(params)
+    _shim.__annotations__ = {p.name: Any for p in params}
+    _shim.__annotations__["return"] = dict
+    return _shim
 
 
 class WellDeprecationHeaderMiddleware(_MiddlewareBase):
@@ -13643,6 +13757,8 @@ async def _well_write_domain_receipt(
 # (`_envelope` / `_meta`). When no envelope is present there is no observed
 # caller and actor_id=None is the honest value — never an invented label.
 
+import contextvars  # P0-1 (2026-09-28): carries the session of the call in flight
+
 _WELL_INVOCATION_ORGAN = "WELL"
 _WELL_INVOCATION_LOG = None
 # Test-only sink override so a test never writes into live production telemetry.
@@ -13700,7 +13816,56 @@ def _well_resolve_caller_actor(arguments):
     return None
 
 
-def _well_log_invocation(tool, actor_id, *, ok, duration_ms=None, error=None, top_level=True):
+# P0-1 (2026-09-28): the MCP session id behind a call is transport metadata --
+# the session middleware strips it out of `arguments` before the tool runs, so a
+# receipt resolved from arguments at log time would always read null. A ContextVar
+# is the seam: set where the dispatch already knows the session, read at the log.
+# Reset on every top-level dispatch so a receipt can never inherit the session of
+# a previous request that shared this context.
+_WELL_TELEMETRY_SESSION: contextvars.ContextVar = contextvars.ContextVar(
+    "well_telemetry_session_id", default=None
+)
+
+
+def _well_resolve_session_id(arguments=None, *, inherit=True):
+    """Session id of the request in flight, or None. Never invented.
+
+    Sources, in order: the ambient context var, the middleware-only `session_id`
+    argument (still present at the dispatch chokepoint), then the streamable-HTTP
+    `mcp-session-id` header -- the same header WellSessionValidationMiddleware
+    authenticates against.
+    """
+    try:
+        if inherit:
+            current = _WELL_TELEMETRY_SESSION.get()
+            if isinstance(current, str) and current.strip():
+                return current.strip()
+        if isinstance(arguments, dict):
+            sid = arguments.get("session_id")
+            if isinstance(sid, str) and sid.strip():
+                return sid.strip()
+        from fastmcp.server.dependencies import get_http_request
+
+        req = get_http_request()
+        if req is not None:
+            sid = req.headers.get("mcp-session-id")
+            if isinstance(sid, str) and sid.strip():
+                return sid.strip()
+    except Exception:
+        return None
+    return None
+
+
+def _well_log_invocation(
+    tool,
+    actor_id,
+    *,
+    ok,
+    duration_ms=None,
+    error=None,
+    top_level=True,
+    session_id=None,
+):
     """Write one invocation receipt. Never raises into the caller.
 
     Telemetry must not break the thing it measures, so every failure here is
@@ -13715,6 +13880,8 @@ def _well_log_invocation(tool, actor_id, *, ok, duration_ms=None, error=None, to
     try:
         if not top_level:
             return
+        if session_id is None:
+            session_id = _WELL_TELEMETRY_SESSION.get()
         sink = _os.environ.get(WELL_INVOCATION_SINK_ENV) or None
         _well_invocation_logger().log_invocation(
             _WELL_INVOCATION_ORGAN,
@@ -13722,6 +13889,7 @@ def _well_log_invocation(tool, actor_id, *, ok, duration_ms=None, error=None, to
             actor_id=actor_id,
             ok=ok,
             duration_ms=duration_ms,
+            session_id=session_id,
             error=error,
             path=sink,
         )
@@ -13920,6 +14088,17 @@ try:
         # FastMCP re-enters call_tool from inside its own middleware chain with
         # run_middleware=False; receipt the TOP-LEVEL entry only, never both.
         _well_top_level = kwargs.get("run_middleware", True) is not False
+        # P0-1: resolve the session BEFORE dispatch so even a governance HOLD or a
+        # rejected call is receipted against the session that attempted it. Set
+        # only at the top-level entry, and set even when nothing is found -- an
+        # un-reset var would hand the next receipt a previous request's session.
+        if _well_top_level:
+            try:
+                _WELL_TELEMETRY_SESSION.set(
+                    _well_resolve_session_id(arguments, inherit=False)
+                )
+            except Exception:
+                pass
 
         # ── SCT ingress gate (2026-07-17) ─────────────────────────────────
         # WELL is REFLECT_ONLY -- SCT optional unless presented (then verify).
@@ -18466,7 +18645,11 @@ def well_registry_status(
       - deprecated_callable: legacy wrappers that still work
       - canonical_callable: primary implementations that work
       - alias_conflicts: aliases that route to broken targets
-      - verdict: REGISTRY_DRIFT | REGISTRY_PASS
+      - verdict: REGISTRY_DRIFT | REGISTRY_PASS | MIGRATION_IN_FLIGHT
+        (MIGRATION_IN_FLIGHT = drift while the v2 removal window declared in
+        `migration` is open -- the counts are unchanged, the label is honest)
+      - migration: {epoch, removal_date, days_to_removal, in_migration_window,
+        target_surface, current_public_surface, legacy_still_registered}
     """
     # ── Safe dry-call arguments for each tool category ──────────────────────
     safe_args: dict[str, dict] = {
@@ -18677,7 +18860,45 @@ def well_registry_status(
         and not deprecated_exported
         and len(deprecated_callable) == 0  # callable must equal exported
     )
+    # ── P0-3a (2026-09-28): report the migration window this registry is IN ────
+    # 40 registered against 10 intended has been a SCHEDULED state since the v2
+    # surface (F13 rank #3, epoch 2026-09-16 -> removal 2026-10-16). well_reality
+    # already names that window; this tool answered REGISTRY_DRIFT as if the state
+    # were unplanned. One window, one source: the same _DEPRECATION the reality
+    # plane reads, so the two surfaces cannot drift apart.
+    try:
+        from well_v2 import surface as _v2_surface_mod
+
+        _migration_declared = dict(getattr(_v2_surface_mod, "_DEPRECATION", {}) or {})
+    except Exception:
+        _migration_declared = {}
+    _epoch_str = str(_migration_declared.get("epoch") or "")
+    _removal_str = str(_migration_declared.get("removal") or "")
+    _days_to_removal: int | None = None
+    _in_window = False
+    try:
+        _epoch_date = datetime.date.fromisoformat(_epoch_str)
+        _removal_date = datetime.date.fromisoformat(_removal_str)
+        _days_to_removal = (_removal_date - _today).days
+        _in_window = _epoch_date <= _today <= _removal_date
+    except (TypeError, ValueError):
+        pass  # no trustworthy window declared -- keep the plain drift verdict
+
+    migration = {
+        "epoch": _epoch_str or None,
+        "removal_date": _removal_str or None,
+        "days_to_removal": _days_to_removal,
+        "in_migration_window": _in_window,
+        "target_surface": intended_count,
+        "current_public_surface": len(somatic_tools),
+        "legacy_still_registered": len(somatic_tools) > intended_count,
+        "note": _migration_declared.get("note") or "",
+    }
+
     verdict = "REGISTRY_PASS" if surface_aligned else "REGISTRY_DRIFT"
+    if _in_window and verdict == "REGISTRY_DRIFT":
+        # Raw counts below stay exactly as measured; only the label names the state.
+        verdict = "MIGRATION_IN_FLIGHT"
 
     # Return blueprint canonical format directly -- no _to_federation_output wrapping.
     # well_registry_status is a registry diagnostic, not a constitutional judgment tool.
@@ -18701,6 +18922,7 @@ def well_registry_status(
         "unexpected_public_tools": unexpected_public_tools,
         "alias_conflicts": alias_conflicts,
         "verdict": verdict,
+        "migration": migration,
         "measurement_boundary": "/root/AAA/docs/MEASUREMENT_BOUNDARY_CONTRACT.md",
         "well_system_registry_status": "DEPRECATED -- use well_registry_status",
         "registry_note": (
@@ -18731,6 +18953,7 @@ def well_registry_status(
             "unexpected_public_tools_count": len(payload["unexpected_public_tools"]),
             "alias_conflicts_count": len(payload["alias_conflicts"]),
             "verdict": payload["verdict"],
+            "migration": payload["migration"],
             "authority": "ADVISORY_ONLY",
             "final_authority": "ARIF",
             "w0": payload["w0"],
@@ -20560,6 +20783,25 @@ else:  # pragma: no cover
 from well_v2.surface import register_v2_tools as _register_v2_surface
 
 _register_v2_surface(globals())
+
+# ── Deprecation shims armed (P0-3b, 2026-09-28) ──────────────────────────────
+# Registered last so they cannot enter any listing built from the canonical
+# surface: absent from SOMATIC_TOOLS, the six legacy names stay callable but never
+# discoverable -- a migration signal, not a revived tool.
+_shimmed_names: list[str] = []
+for _dep_name in DEPRECATED_TOOLS_MAP:
+    try:
+        mcp.tool(name=_dep_name)(_make_deprecation_shim(_dep_name))
+        _shimmed_names.append(_dep_name)
+    except Exception as _dep_shim_exc:  # pragma: no cover -- defensive
+        logger.warning(
+            "WELL_DEPRECATION: shim for %s not armed: %s", _dep_name, _dep_shim_exc
+        )
+logger.info(
+    "WELL deprecation shims armed -- %d legacy names return DEPRECATED_MOVED, unlisted: %s",
+    len(_shimmed_names),
+    sorted(_shimmed_names),
+)
 
 if __name__ == "__main__":
     # ── Transport mode selection (fallback entry) ────────────────────────

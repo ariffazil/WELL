@@ -167,6 +167,131 @@ def test_no_envelope_records_honest_absence(sink, dispatch_tool) -> None:
     assert len(recs) == 1, recs
     assert recs[0]["actor_id"] is None
     assert recs[0]["tool"] == TEST_TOOL
+    # Caller identity and session are independent: not knowing the caller says
+    # nothing about the session, which the transport did supply.
+    assert recs[0]["session_id"] == SESSION_ID
+
+
+# ── P0-1 (2026-09-28): the session behind the call ───────────────────────────
+
+
+def test_receipt_names_the_session_that_called(sink, dispatch_tool) -> None:
+    """P0-1: the receipt carries the MCP session of the request that caused it.
+
+    Before this, `session_id` was null on 0 of 447 live WELL records even though
+    the middleware reads it from the transport -- receipts could not be joined to
+    a session, so a burst of calls from one session was indistinguishable from
+    forty sessions.
+    """
+    asyncio.run(
+        server.mcp.call_tool(
+            TEST_TOOL,
+            {"_envelope": {"actor_id": "hermes-asi"}, "session_id": SESSION_ID},
+        )
+    )
+    recs = _read_receipts(sink)
+    assert len(recs) == 1, recs
+    assert recs[0]["session_id"] == SESSION_ID
+    assert recs[0]["actor_id"] == "hermes-asi"
+    assert recs[0]["ok"] is True
+
+
+def test_session_context_is_replaced_not_inherited(sink, dispatch_tool) -> None:
+    """A previous request's session must never leak into the next receipt."""
+    server._WELL_TELEMETRY_SESSION.set("SESSION-OF-A-PREVIOUS-REQUEST")
+    asyncio.run(
+        server.mcp.call_tool(TEST_TOOL, {"session_id": SESSION_ID})
+    )
+    recs = _read_receipts(sink)
+    assert len(recs) == 1, recs
+    assert recs[0]["session_id"] == SESSION_ID
+    assert "PREVIOUS" not in json.dumps(recs[0])
+    server._WELL_TELEMETRY_SESSION.set(None)
+
+
+def test_receipt_uses_the_transport_header_when_no_argument_is_passed(
+    sink, dispatch_tool, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """P0-1 on the production path: the session arrives as an HTTP header.
+
+    Stateless/streamable-HTTP clients never pass session_id as an argument -- the
+    middleware reads it off `mcp-session-id`. Only the ASGI request object is
+    stubbed here; the resolver, the middleware and the dispatch wrapper all run
+    for real, so this exercises the header branch end to end.
+    """
+    from starlette.requests import Request
+
+    scope = {
+        "type": "http",
+        "http_version": "1.1",
+        "method": "POST",
+        "path": "/mcp",
+        "raw_path": b"/mcp",
+        "query_string": b"",
+        "scheme": "http",
+        "headers": [(b"mcp-session-id", b"HEADER-SESSION-42")],
+        "client": ("127.0.0.1", 55555),
+        "server": ("testserver", 80),
+        "root_path": "",
+    }
+
+    monkeypatch.setattr(
+        "fastmcp.server.dependencies.get_http_request",
+        lambda: Request(scope),
+    )
+    asyncio.run(
+        server.mcp.call_tool(TEST_TOOL, {"_envelope": {"actor_id": "hermes-asi"}})
+    )
+    recs = _read_receipts(sink)
+    assert len(recs) == 1, recs
+    assert recs[0]["session_id"] == "HEADER-SESSION-42"
+
+
+def test_no_session_known_records_null_not_an_invention(sink) -> None:
+    """Nothing resolved -> session_id null. Never a hostname, never 'well'."""
+    server._WELL_TELEMETRY_SESSION.set(None)
+    server._well_log_invocation("well_test_no_session_at_all", None, ok=True)
+    recs = _read_receipts(sink)
+    assert len(recs) == 1, recs
+    assert recs[0]["session_id"] is None
+    assert recs[0]["actor_id"] is None
+
+
+def test_session_id_is_resolved_only_from_known_sources() -> None:
+    """The resolver reads arguments/header/context -- and invents nothing."""
+    server._WELL_TELEMETRY_SESSION.set(None)
+    assert server._well_resolve_session_id({"session_id": "  "}, inherit=False) is None
+    assert server._well_resolve_session_id({}, inherit=False) is None
+    assert (
+        server._well_resolve_session_id({"session_id": " real "}, inherit=False)
+        == "real"
+    )
+    server._WELL_TELEMETRY_SESSION.set("ambient-session")
+    assert server._well_resolve_session_id({}, inherit=True) == "ambient-session"
+    # inherit=False is the top-level reset path: ambient must not win there.
+    assert server._well_resolve_session_id({}, inherit=False) is None
+    server._WELL_TELEMETRY_SESSION.set(None)
+
+
+def test_receipt_still_carries_no_content_with_session(sink, dispatch_tool) -> None:
+    """P0-1 adds one join key and nothing else -- the F4 boundary still holds."""
+    asyncio.run(
+        server.mcp.call_tool(
+            TEST_TOOL,
+            {
+                "_envelope": {"actor_id": "aaa-auditor"},
+                "actor_id": "arif",
+                "session_id": SESSION_ID,
+                "note": "sleep 3h, biometric 999",
+            },
+        )
+    )
+    recs = _read_receipts(sink)
+    assert len(recs) == 1, recs
+    assert set(recs[0]) <= CONTRACT_KEYS, sorted(set(recs[0]) - CONTRACT_KEYS)
+    assert "arif" not in json.dumps(recs[0])
+    assert "biometric" not in json.dumps(recs[0])
+    assert "sleep" not in json.dumps(recs[0])
 
 
 def test_logger_failure_does_not_break_the_call(
