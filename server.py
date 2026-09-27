@@ -20743,10 +20743,29 @@ def _enforce_somatic_boundary(mcp_server: FastMCP) -> None:
 
 
 # Server bootstrap -- somatic boundary applied before uvicorn starts
-if (
-    _os.environ.get("FEDERATION_SOMATIC_BOUNDARY", "0") == "1"
-    or _os.environ.get("WELL_SOMATIC_BOUNDARY", "0") == "1"
-):
+# Fail-closed (F13 order 2026-09-28): this boundary is what keeps the autonomic surface
+# off the public wire, so a missing flag must not publish it by accident. Measured the
+# same night: an instance booted without WELL_SOMATIC_BOUNDARY advertised 81 tools
+# instead of 40, exposing unlisted seal/attest-class verbs to any client. An explicit
+# opt-out still exists for deliberate development use.
+_WELL_SOMATIC_OPT_OUT = {"0", "false", "off", "no"}
+
+
+def _somatic_boundary_armed(environ: dict[str, str] | None = None) -> bool:
+    """Whether the public tool listing must be filtered to SOMATIC_TOOLS.
+
+    Pure and total on purpose: the previous inline expression was untestable without
+    re-importing the server, and untestable security defaults drift. Anything that is
+    not an explicit falsy token arms the boundary, so a typo fails closed.
+    """
+    env = _os.environ if environ is None else environ
+    if str(env.get("FEDERATION_SOMATIC_BOUNDARY", "0")).strip().lower() == "1":
+        return True
+    value = str(env.get("WELL_SOMATIC_BOUNDARY", "1")).strip().lower()
+    return value not in _WELL_SOMATIC_OPT_OUT
+
+
+if _somatic_boundary_armed():
     _enforce_somatic_boundary(mcp)
 
 # PR 6 -- apply reflect-only boundary to the 13 canonical SOMATIC_TOOLS.
