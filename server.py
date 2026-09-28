@@ -1217,7 +1217,7 @@ def _check_human_readiness_168h_ceiling(state: dict[str, Any]) -> dict[str, Any]
             "risk_level": "UNKNOWN",
             "recommended_mode": "pause",
             "ground_state": "UNSAFE",
-            "decision_ceiling": "C0",
+            "decision_ceiling": None,  # authority: arifOS
             "human_confirmation_required": True,
             "reason": "No state timestamp. Cannot verify telemetry age. WELL cannot infer human readiness.",
             "well_score": state.get("well_score", 0),
@@ -1241,7 +1241,7 @@ def _check_human_readiness_168h_ceiling(state: dict[str, Any]) -> dict[str, Any]
             "risk_level": "UNKNOWN",
             "recommended_mode": "pause",
             "ground_state": "UNSAFE",
-            "decision_ceiling": "C0",
+            "decision_ceiling": None,  # authority: arifOS
             "human_confirmation_required": True,
             "reason": "Cannot parse state timestamp. WELL cannot infer human readiness.",
             "well_score": state.get("well_score", 0),
@@ -1257,7 +1257,7 @@ def _check_human_readiness_168h_ceiling(state: dict[str, Any]) -> dict[str, Any]
             "risk_level": "UNKNOWN",
             "recommended_mode": "pause",
             "ground_state": "UNSAFE",
-            "decision_ceiling": "C0",
+            "decision_ceiling": None,  # authority: arifOS
             "human_confirmation_required": True,
             "reason": f"State age {age_hours:.0f}h exceeds 168h hard ceiling. WELL cannot infer human readiness from stale telemetry.",
             "well_score": state.get("well_score", 0),
@@ -1313,8 +1313,15 @@ def _federation_health_reconcile(
 # ── WELL Identity Invariant (F10 Coherence + F01 Amanah) ───────────────────────
 def is_well(state: dict[str, Any] | None = None) -> bool:
     """
-    Verify that a state object carries the canonical WELL identity.
-    Returns True only if all constitutional fields are present and valid.
+    Verify that a state object carries the canonical WELL *organ* identity.
+
+    AS OF 2026-09-28 this checks IDENTITY INTEGRITY ONLY -- identity, role and
+    authority. It deliberately no longer reads peace2 / kappa_r / rasa / amanah /
+    delta_s: those are the operator's self-report, and folding them in meant a
+    human's mood could declare the organ "corrupted or impersonated", and meant
+    _ensure_well_identity had to inject passing boilerplate to keep the organ
+    serving at all. Operator state is reported by _human_datum(), separately and
+    with its provenance attached.
 
     When state.json is missing identity fields (pre-migration), returns False
     WITHOUT triggering corruption/alarm -- the organ is healthy, just not yet
@@ -1326,11 +1333,6 @@ def is_well(state: dict[str, Any] | None = None) -> bool:
     # Explicit field presence check -- distinguish "missing" from "invalid"
     identity = state.get("identity")
     role = state.get("role")
-    delta_s = state.get("delta_s")
-    peace2 = state.get("peace2")
-    kappa_r = state.get("kappa_r")
-    rasa = state.get("rasa")
-    amanah = state.get("amanah")
     authority = state.get("authority")
 
     # If identity/role/authority are completely absent, state needs migration
@@ -1342,16 +1344,77 @@ def is_well(state: dict[str, Any] | None = None) -> bool:
         identity == "WELL"
         and role
         in ["Body", "Body / Human Intelligence", "Biological Substrate Governance"]
-        and isinstance(delta_s, (int, float))
-        and delta_s >= 0
-        and isinstance(peace2, (int, float))
-        and peace2 >= 1.0
-        and isinstance(kappa_r, (int, float))
-        and kappa_r >= 0.95
-        and rasa is True
-        and amanah in ["LOCK", "🔐", True]
         and authority == "REFLECT_ONLY"
     )
+
+
+# ── Operator self-report: presence and provenance, never a health verdict ──────
+_HUMAN_DATUM_FIELDS = ("delta_s", "peace2", "kappa_r", "rasa", "amanah")
+
+
+def _human_datum(state: dict[str, Any] | None = None) -> dict[str, Any]:
+    """
+    Report what the operator has actually told us about their own state, and where
+    it came from. This is a REFLECTION, not a gate: it cannot make the organ
+    unhealthy, cannot cap a decision class, and never infers a value when none was
+    given. Values written by _ensure_well_identity are recorded in
+    _identity_defaults_injected and are reported as ABSENT, never as a report.
+
+    Precedence: state["biometric"] (where biometric_inject.sh actually writes) wins
+    over the legacy top-level fields.
+    """
+    if state is None:
+        state = _load_state()
+
+    injected = set(state.get("_identity_defaults_injected") or [])
+    bio = state.get("biometric") if isinstance(state.get("biometric"), dict) else {}
+
+    observed: dict[str, Any] = {}
+    absent: list[str] = []
+    stripped: list[str] = []
+    for key in _HUMAN_DATUM_FIELDS:
+        value = bio.get(key)
+        source = "biometric"
+        if value is None:
+            value, source = state.get(key), "top_level"
+        if value is None:
+            absent.append(key)
+            continue
+        if source == "top_level" and key in injected:
+            # The only value on record is boilerplate the seeder wrote to satisfy a
+            # former gate. It is not a report about the operator.
+            absent.append(key)
+            stripped.append(key)
+            continue
+        observed[key] = value
+        observed[f"{key}__source"] = source
+
+    truth = str(state.get("truth_status") or state.get("evidence_class") or "")
+    verified = _has_verified_telemetry(state)
+    if not observed:
+        provenance = "NO_OPERATOR_DATUM"
+    elif verified:
+        provenance = "SENSOR_VERIFIED"
+    elif stripped:
+        provenance = "PARTIAL_DEFAULTS_STRIPPED"
+    else:
+        provenance = "OPERATOR_SELF_REPORT"
+
+    return {
+        "operator_datum_present": bool(observed),
+        "observed": observed,
+        "absent_fields": sorted(absent),
+        "injected_defaults_stripped": sorted(stripped),
+        "provenance": provenance,
+        "truth_status": truth,
+        "sensor_verified": verified,
+        "interpretation": (
+            "Absent fields mean nobody reported. They do NOT mean the operator is "
+            "at peace, resilient, or well-rested."
+        ),
+        "authority": "REFLECT_ONLY",
+        "w0": "OPERATOR_VETO_INTACT / HIERARCHY_INVARIANT",
+    }
 
 
 def _clamp(value: float | int | None, minimum: float, maximum: float) -> float | None:
@@ -1533,7 +1596,7 @@ def _resolve_readiness(state: dict[str, Any]) -> dict[str, Any]:
             "risk_level": "AMBER",
             "recommended_mode": "review_or_draft",
             "ground_state": ceiling.get("ground_state", "DEGRADED"),
-            "decision_ceiling": "C1",
+            "decision_ceiling": None,  # authority: arifOS
             "human_confirmation_required": True,
             "reason": "WELL identity invariant failed. Readiness is capped until identity is restored.",
             "well_score": score,
@@ -1567,7 +1630,7 @@ def _resolve_readiness(state: dict[str, Any]) -> dict[str, Any]:
             "risk_level": "RED",
             "recommended_mode": "pause",
             "ground_state": "UNSAFE",
-            "decision_ceiling": "C0",
+            "decision_ceiling": None,  # authority: arifOS
             "human_confirmation_required": True,
             "reason": "WELL telemetry is unverified or contaminated. Manual Arif confirmation required.",
             "well_score": score,
@@ -5639,19 +5702,19 @@ def _build_arifos_packet(ctx: Context | None = None) -> dict[str, Any]:
             degraded = True
 
         if ground_ok:
-            decision_ceiling = "C5"
+            decision_ceiling = None
             ground_state = "GROUND"
         elif strained:
-            decision_ceiling = "C3"
+            decision_ceiling = None
             ground_state = "STRAINED"
         elif degraded:
-            decision_ceiling = "C1"
+            decision_ceiling = None
             ground_state = "DEGRADED"
         else:
-            decision_ceiling = "C0"
+            decision_ceiling = None
             ground_state = "UNSAFE"
     else:
-        decision_ceiling = "C0"
+        decision_ceiling = None
         ground_state = "UNKNOWN"
 
     # What to avoid (only if we have real data to base it on)
@@ -5730,6 +5793,7 @@ def _build_arifos_packet(ctx: Context | None = None) -> dict[str, Any]:
         "readiness": resolved["readiness"],
         "ground_state": ground_state,
         "decision_ceiling": decision_ceiling,
+        "ceiling_authority": "arifOS adjudicates decision class; WELL is REFLECT_ONLY and does not cap the sovereign",
         "safe_mode": mode,
         "well_score": score,
         "decision_classes_allowed": classes_allowed,
@@ -15417,10 +15481,13 @@ def well_machine_health_probe(
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
-def _compute_decision_ceiling(state: dict[str, Any]) -> dict[str, str]:
+def _compute_decision_ceiling(state: dict[str, Any]) -> dict[str, Any]:
     """
-    Compute ground_state and decision_ceiling from current state.
-    Used by _resolve_readiness and all derived tool outputs.
+    Compute ground_state (an OBSERVATION of substrate condition) from state.
+
+    decision_ceiling is returned as None by design. As of 2026-09-28 WELL does not
+    set a ceiling on the sovereign's decision class: a human's sleep debt is not an
+    authority grant or revocation. arifOS adjudicates class; WELL reflects substrate.
     """
     metrics = state.get("metrics", {})
     violations = state.get("floors_violated", [])
@@ -15428,14 +15495,15 @@ def _compute_decision_ceiling(state: dict[str, Any]) -> dict[str, str]:
     vcount = len(violations)
     result = {
         "ground_state": "UNKNOWN",
-        "decision_ceiling": "C0",
+        "decision_ceiling": None,  # authority: arifOS
+        "ceiling_authority": "arifOS adjudicates decision class; WELL is REFLECT_ONLY and does not cap the sovereign",
         "basis": [],
         "reason": "",
     }
 
     if not has_telemetry:
         result["ground_state"] = "UNKNOWN"
-        result["decision_ceiling"] = "C0"
+        result["decision_ceiling"] = None
         result["reason"] = "No verified body telemetry."
         return result
 
@@ -15474,23 +15542,23 @@ def _compute_decision_ceiling(state: dict[str, Any]) -> dict[str, str]:
 
     if vcount == 0 and debt <= 0 and load <= 4 and clarity >= 7 and fatigue <= 3:
         result["ground_state"] = "GROUND"
-        result["decision_ceiling"] = "C5"
+        result["decision_ceiling"] = None
         result["reason"] = "All floors clear, optimal regulation."
     elif vcount <= 1 and debt <= 1 and load <= 7 and clarity >= 5 and fatigue <= 6:
         result["ground_state"] = "STRAINED"
-        result["decision_ceiling"] = "C3"
+        result["decision_ceiling"] = None
         result["reason"] = (
             f"Mild strain detected: {', '.join(basis) if basis else 'borderline'}."
         )
     elif vcount <= 3:
         result["ground_state"] = "DEGRADED"
-        result["decision_ceiling"] = "C1"
+        result["decision_ceiling"] = None
         result["reason"] = (
             f"Regulation compromised: {', '.join(basis) if basis else 'multiple floors violated'}."
         )
     else:
         result["ground_state"] = "UNSAFE"
-        result["decision_ceiling"] = "C0"
+        result["decision_ceiling"] = None
         result["reason"] = (
             f"Critical substrate state: {', '.join(basis)}. Professional care recommended if medical symptoms present."
         )

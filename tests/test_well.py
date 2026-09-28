@@ -144,28 +144,44 @@ def test_identity_invariant_missing_role():
 
 
 def test_identity_invariant_low_delta_s():
+    """Amended 2026-09-28 (F13 "fix is_well"): the operator's entropy report is not
+    organ health. It must still be REPORTED, by _human_datum, with provenance."""
     _write_canonical_state(delta_s=-0.1)
-    assert server_module.is_well() is False
+    assert server_module.is_well() is True
+    d = server_module._human_datum()
+    assert d["observed"]["delta_s"] == -0.1
+    assert d["observed"]["delta_s__source"] == "top_level"
 
 
 def test_identity_invariant_low_peace2():
+    """A low peace2 used to make the organ 'not well' and cap readiness at C1.
+    Peace is a human state, not an integrity fault; is_well() no longer reads it."""
     _write_canonical_state(peace2=0.5)
-    assert server_module.is_well() is False
+    assert server_module.is_well() is True
+    assert server_module._human_datum()["observed"]["peace2"] == 0.5
 
 
 def test_identity_invariant_low_kappa_r():
     _write_canonical_state(kappa_r=0.5)
-    assert server_module.is_well() is False
+    assert server_module.is_well() is True
+    assert server_module._human_datum()["observed"]["kappa_r"] == 0.5
 
 
 def test_identity_invariant_rasa_false():
     _write_canonical_state(rasa=False)
-    assert server_module.is_well() is False
+    assert server_module.is_well() is True
+    assert server_module._human_datum()["observed"]["rasa"] is False
 
 
 def test_identity_invariant_amanah_unlocked():
+    """The breach must still be DETECTED -- it moved layers, it was not dropped.
+    An unlocked amanah is a governance-coherence flag (G-WELL), not an organ
+    impersonation verdict, so it no longer renders the organ unhealthy."""
     _write_canonical_state(amanah="UNLOCKED")
-    assert server_module.is_well() is False
+    assert server_module.is_well() is True
+    state = server_module._load_state()
+    flags = server_module._g_well_assess(state).get("governance_flags", [])
+    assert "amanah_unlocked" in flags, f"posture breach went unflagged: {flags}"
 
 
 def test_identity_invariant_authority_overclaim():
