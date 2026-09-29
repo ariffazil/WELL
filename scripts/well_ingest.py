@@ -32,10 +32,27 @@ import os
 import shutil
 import sys
 import hashlib
+import fcntl
+import contextlib
 from datetime import datetime, timezone
 from pathlib import Path
 
 STATE_FILE = Path(os.environ.get("WELL_STATE_PATH", "/var/lib/well/state.json"))
+
+
+@contextlib.contextmanager
+def state_lock():
+    """Shared exclusive lock with well_auto_keepalive (both run at the same */30
+    tick, both are read-modify-write on STATE_FILE; the split decoy path used to
+    hide the collision — 2026-09-29 reconciliation)."""
+    fh = open(str(STATE_FILE) + ".lock", "w")
+    fcntl.flock(fh, fcntl.LOCK_EX)
+    try:
+        yield
+    finally:
+        fcntl.flock(fh, fcntl.LOCK_UN)
+        fh.close()
+
 INTAKE_DIR = Path("/root/WELL/intake")
 PROCESSED_DIR = INTAKE_DIR / "processed"
 AUDIT_LOG = Path("/root/WELL/data/intake_log.jsonl")
@@ -244,7 +261,8 @@ def main():
         sys.exit(0)
 
     for intake_path in intake_files:
-        result = process_intake_file(intake_path)
+        with state_lock():
+            result = process_intake_file(intake_path)
         print(f"[well_ingest] {intake_path.name}: {result}")
 
 

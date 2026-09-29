@@ -6,7 +6,7 @@
 
 set -euo pipefail
 
-STATE_FILE="/root/WELL/state.json"
+STATE_FILE="${WELL_STATE_PATH:-/var/lib/well/state.json}"  # LIVE organ; decoy retired 2026-09-29
 LOG_FILE="/var/log/well-biometric-snooze.log"
 MAX_AGE_HOURS=24
 TS="$(date -u +%Y-%m-%dT%H:%M:%S+00:00)"

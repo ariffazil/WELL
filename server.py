@@ -185,7 +185,11 @@ except ImportError:
 # ── Paths (re-export for external use) ────────────────────────────────────────
 import os as _os
 
-STATE_PATH = Path(_os.environ.get("WELL_STATE_PATH", "/root/WELL/state.json"))
+STATE_PATH = Path(_os.environ.get("WELL_STATE_PATH", "/var/lib/well/state.json"))
+# Default aligned to LIVE organ 2026-09-29: the old default was /root/WELL/state.json —
+# a 2026-08-01 test fixture kept ticked by keepalive (environment=TEST). Any process
+# starting without the systemd drop-in silently wrote reality into that decoy.
+# Running service unaffected (its env already points here); takes effect next restart.
 EVENTS_PATH = Path(_os.environ.get("WELL_EVENTS_PATH", "/root/WELL/events.jsonl"))
 VAULT_LEDGER_PATH = Path(
     _os.environ.get("WELL_VAULT_PATH", "/root/WELL/vault_ledger.jsonl")

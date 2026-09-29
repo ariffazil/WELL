@@ -20,7 +20,7 @@ import httpx
 logger = logging.getLogger("well_vault_bridge")
 
 # ── Paths ────────────────────────────────────────────────────────
-WELL_STATE_PATH = Path("/root/WELL/state.json")
+WELL_STATE_PATH = Path(os.environ.get("WELL_STATE_PATH", "/var/lib/well/state.json"))  # LIVE organ; decoy retired 2026-09-29
 LEGACY_VAULT_LOG_PATH = Path("/root/arifOS/core/vault999/well_ledger.jsonl")
 
 # ── VAULT999 API (Phase 2: primary seal path) ────────────────────

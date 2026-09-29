@@ -12,11 +12,12 @@ Exit codes:
 """
 
 import json
+import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-STATE_FILE = Path("/root/WELL/state.json")
+STATE_FILE = Path(os.environ.get("WELL_STATE_PATH", "/var/lib/well/state.json"))  # LIVE organ; decoy retired 2026-09-29
 TTL_FRESH_HOURS = 12
 
 
