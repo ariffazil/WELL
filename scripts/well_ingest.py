@@ -211,6 +211,22 @@ def process_intake_file(intake_path: Path) -> str:
         "evidence_class", "SOVEREIGN_SELF_REPORT"
     )
     state["honesty_banner"] = banner_map.get(src, "UNKNOWN SOURCE — treat as UNVERIFIED")
+    # Sleep-word retention: the morning mirror's sleep lane needs a data source.
+    # No wearable exists (Fit bridge retired 2026-09-29), so the sovereign's own
+    # sleep words are the only honest signal — keep last report with polarity,
+    # never fabricate hours. (F13 consent grant 2026-09-29, biometric.full)
+    sleep_cats = [c for c in (payload.get("signals") or {}).get("categories", [])
+                  if c in ("sleep_pos", "sleep_neg")]
+    if sleep_cats:
+        state.setdefault("signals_meta", {})
+        state["signals_meta"]["last_sleep_report"] = {
+            "ts": payload["ts"],
+            "polarity": "ok" if sleep_cats == ["sleep_pos"] else "deficit",
+            "categories": sleep_cats,
+            "source": src,
+            "confidence": payload["confidence"],
+            "class": "VERBAL_QUALITATIVE — reported word, not measured hours",
+        }
     state["confidence"] = payload["confidence"]
     state["telemetry_confidence"] = payload["confidence"]
     state["arif_decision_required"] = False
