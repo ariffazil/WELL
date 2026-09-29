@@ -122,9 +122,12 @@ def merge_into_state(state: dict, payload: dict) -> dict:
         state["metrics"].update(payload["metrics"])
 
     state["well_score"] = compute_well_score(state.get("metrics", {}))
-    state["freshness"] = compute_freshness(state)
+    # Stamp read/write time FIRST, then compute freshness against it — the old order
+    # measured freshness against the previous ingest, so the first live drop after a
+    # long stale window was written as STALE even while fresh data merged (2026-09-29).
     state["last_successful_read"] = datetime.now(timezone.utc).isoformat()
     state["last_successful_write"] = state["last_successful_read"]
+    state["freshness"] = compute_freshness(state)
     return state
 
 
