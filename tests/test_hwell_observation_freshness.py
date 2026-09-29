@@ -130,3 +130,107 @@ def test_keepalive_may_only_report_its_own_liveness():
                       'data["last_successful_write"]'):
         assert forbidden not in src, forbidden
     assert 'data["keepalive_ts"]' in src
+
+
+# ── D1, trace_id HRFID-20260929: the band must BE the arithmetic it advertises ──
+# Measured 2026-09-29 14:53Z on :18083/health — age_seconds 37803.6 against
+# max_fresh_age_seconds 3600 / stale_after_seconds 14400, while the same payload said
+# status "fresh", freshness_band "FRESH", honesty.is_stale false. The band came from a
+# private 12h/24h/72h ladder over `state["timestamp"]` — a clock the keepalive and
+# /ready paths rewrite — so the thresholds printed beside it were decoration.
+
+def test_age_beyond_stale_after_is_never_fresh():
+    """The exact shape of the 14:53Z payload: 37,803.6s old, thresholds 3600/14400."""
+    age = 37803.6
+    state = {
+        "last_successful_read": _iso(age / 3600),
+        "timestamp": _iso(0.0),           # file just rewritten
+        "keepalive_ts": _iso(0.0),        # keepalive just ticked
+        "metrics": {},
+    }
+    band = server._get_freshness_band(state)
+    assert band != "FRESH", band
+    assert band == "EXPIRED", band
+    assert server._is_stale_band(band) is True
+
+
+def test_band_ladder_is_the_configured_thresholds():
+    assert server._freshness_band_from_age(0) == "FRESH"
+    assert server._freshness_band_from_age(server.WELL_MAX_FRESH_AGE_SECONDS) == "FRESH"
+    assert server._freshness_band_from_age(server.WELL_MAX_FRESH_AGE_SECONDS + 1) == "STALE"
+    assert server._freshness_band_from_age(server.WELL_STALE_AFTER_SECONDS) == "STALE"
+    assert server._freshness_band_from_age(server.WELL_STALE_AFTER_SECONDS + 1) == "EXPIRED"
+    assert server._freshness_band_from_age(37803.6) == "EXPIRED"
+
+
+def test_band_fails_closed_without_a_clock():
+    """Absence, garbage, or a clock in the future may not read as fresh."""
+    assert server._freshness_band_from_age(None) == "EXPIRED"
+    assert server._freshness_band_from_age(-5) == "EXPIRED"
+    assert server._get_freshness_band({}) == "EXPIRED"
+    assert server._get_freshness_band({"timestamp": "not-a-date"}) == "EXPIRED"
+    assert server._is_stale_band(None) is True          # a missing band is not freshness
+
+
+def test_is_stale_follows_the_same_arithmetic_as_the_band():
+    for band, expected in (
+        ("FRESH", False), ("STALE", True), ("EXPIRED", True), ("AGED", True), (None, True),
+    ):
+        assert server._is_stale_band(band) is expected, band
+        honesty = server._honesty_block("VERIFIED", source_type="SENSOR", freshness_band=band)
+        assert honesty["is_stale"] is expected, (band, honesty)
+
+
+def test_ticks_cannot_reach_the_health_payload():
+    """The payload's own numbers must agree with each other, not only with the ladder."""
+    state = {
+        "identity": "WELL",
+        "role": "Body / Human Intelligence",
+        "authority": "REFLECT_ONLY",
+        "operator_id": "arif",
+        "metrics": {},
+        "well_score": 88.4,
+        "truth_status": "OPERATOR_REPORTED",
+        "environment": "PROD",
+        "last_successful_read": _iso(37803.6 / 3600),
+        "timestamp": _iso(0.0),
+        "keepalive_ts": _iso(0.0),
+    }
+    c = server._classify_well_state(state)
+    f = c["freshness"]
+    assert f["age_seconds"] > f["stale_after_seconds"], f
+    assert f["status"] == "expired", f
+    assert c["freshness_band"] == "EXPIRED", c
+    assert c["honesty"]["is_stale"] is True
+    # the thresholds advertised are the thresholds used — no decoration keys
+    assert f["max_fresh_age_seconds"] == server.WELL_MAX_FRESH_AGE_SECONDS
+    assert f["stale_after_seconds"] == server.WELL_STALE_AFTER_SECONDS
+    assert f["expired_after_seconds"] == server.WELL_STALE_AFTER_SECONDS
+    assert f["age_clock"] == "observation", f
+
+
+def test_genuine_recent_observation_is_still_allowed_to_be_fresh():
+    """The fix must not flatten honest data — a reading actually taken now is fresh."""
+    state = {"last_successful_read": _iso(0.001), "timestamp": _iso(0.001), "metrics": {}}
+    assert server._get_freshness_band(state) == "FRESH"
+    assert server._is_stale_band(server._get_freshness_band(state)) is False
+
+
+def test_stored_claim_and_health_band_share_one_clock():
+    """The two ladders used to disagree about the same file. One clock now feeds both."""
+    state = _state(file_age_h=0.0, read_age_h=291.0)
+    assert server._well_observation_band(state)["band"] == "EXPIRED"
+    assert server._get_freshness_band(state) == "EXPIRED"
+
+
+def test_no_freshness_writer_keeps_a_private_threshold_ladder():
+    """The human plane must not hold a second, undeclared freshness ladder.
+
+    The 12h/24h/72h ladder that produced the 14:53Z lie is gone; the configured
+    thresholds are the only human-band arithmetic. (The machine-substrate probe has
+    its own ladder over machine_state.json — a different object, not human freshness,
+    and deliberately out of scope here.)
+    """
+    src = open("/root/WELL/server.py").read()
+    for stale in ("age_hours <= 12", "age_hours <= 24", "age_hours <= 72"):
+        assert stale not in src, f"the undeclared human freshness ladder is back: {stale}"

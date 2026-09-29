@@ -470,7 +470,99 @@ WELL_FRESHNESS_BANDS = {
         "max_readiness": "UNKNOWN",
         "max_confidence": "LOW",
     },
+    # Produced by the configured arithmetic below (age > stale_after_seconds). Named
+    # here so a ceiling lookup never has to silently fall through to the STALE default.
+    "EXPIRED": {
+        "max_age_hours": float("inf"),
+        "max_readiness": "UNKNOWN",
+        "max_confidence": "LOW",
+    },
 }
+
+# ── Configured freshness thresholds (D1, trace_id HRFID-20260929) ──────────────
+# These two numbers ARE the arithmetic. Before this fix the health payload advertised
+# max_fresh_age_seconds=3600 / stale_after_seconds=14400 while the band came from a
+# separate 12h/24h/72h ladder over `state["timestamp"]` — a clock the keepalive and
+# /ready paths rewrite. Result: a 37,803s-old reading reported status "fresh".
+WELL_MAX_FRESH_AGE_SECONDS = 3600
+WELL_STALE_AFTER_SECONDS = 14400
+
+
+def _freshness_band_from_age(age_seconds: float | None) -> str:
+    """Band from age alone: fresh ≤ max_fresh_age, stale ≤ stale_after, expired beyond.
+
+    Fail-closed by construction — no age, a future age, or an unparseable clock all
+    land on EXPIRED, never FRESH. A value that cannot be witnessed cannot be fresh.
+    """
+    if age_seconds is None:
+        return "EXPIRED"
+    try:
+        age = float(age_seconds)
+    except (TypeError, ValueError):
+        return "EXPIRED"
+    if age < 0:
+        return "EXPIRED"
+    if age <= WELL_MAX_FRESH_AGE_SECONDS:
+        return "FRESH"
+    if age <= WELL_STALE_AFTER_SECONDS:
+        return "STALE"
+    return "EXPIRED"
+
+
+def _freshness_status_from_band(band: str | None) -> str:
+    """Wire label for the band. Vocabulary stays inside {fresh, stale, expired}."""
+    if band == "FRESH":
+        return "fresh"
+    if band == "STALE":
+        return "stale"
+    return "expired"
+
+
+def _is_stale_band(band: str | None) -> bool:
+    """Same arithmetic as the band: only FRESH is not stale.
+
+    Absent/unknown band counts as stale (fail closed) — the old check
+    `band in ("STALE", "AGED", "EXPIRED")` treated a missing band as fresh.
+    """
+    return (band or "EXPIRED") != "FRESH"
+
+
+def _observation_clock(state: dict[str, Any] | None) -> tuple[Any, float | None, str]:
+    """Pick the clock that says when a human reading was last actually taken.
+
+    Shared by the stored `freshness` label (_well_observation_band) and the health
+    band (_get_freshness_band) so one arithmetic governs both. `keepalive_ts` is
+    deliberately NOT in this list: a liveness tick may report that the cron is alive,
+    it may never promote a reading's freshness (D1).
+
+    Returns (raw_timestamp, age_seconds, clock_kind).
+    """
+    state = state if isinstance(state, dict) else {}
+    raw = (
+        state.get("last_successful_read")
+        or state.get("heartbeat_ts")
+        or state.get("timestamp")
+    )
+    # A file's own write time is not an observation. Presence is not measurement.
+    clock = (
+        "observation"
+        if (state.get("last_successful_read") or state.get("heartbeat_ts"))
+        else "file_write_only"
+    )
+    age_seconds: float | None = None
+    if isinstance(raw, (int, float)):
+        age_seconds = None  # numeric clocks are not ISO observations — fail closed
+    elif isinstance(raw, str) and raw.strip():
+        try:
+            ts = datetime.datetime.fromisoformat(raw.strip().replace("Z", "+00:00"))
+            if ts.tzinfo is None:
+                ts = ts.replace(tzinfo=datetime.timezone.utc)
+            age_seconds = (
+                datetime.datetime.now(datetime.timezone.utc) - ts
+            ).total_seconds()
+        except ValueError:
+            age_seconds = None
+    return raw, age_seconds, clock
 
 
 # ── Thermodynamic Flux Engine (Phase 3) ──────────────────────────────────────────
@@ -1148,28 +1240,18 @@ def _compute_metabolic_flux(state: dict[str, Any]) -> dict[str, Any]:
 
 
 def _get_freshness_band(state: dict[str, Any]) -> str:
-    """Determine freshness band from state timestamp."""
-    ts = state.get("timestamp", "")
-    if not ts:
-        return "STALE"
-    try:
-        if isinstance(ts, str):
-            dt = datetime.datetime.fromisoformat(ts.replace("Z", "+00:00"))
-        else:
-            dt = ts
-        age_hours = (
-            datetime.datetime.now(datetime.timezone.utc) - dt
-        ).total_seconds() / 3600
-        if age_hours <= 12:
-            return "FRESH"
-        elif age_hours <= 24:
-            return "CURRENT"
-        elif age_hours <= 72:
-            return "AGED"
-        else:
-            return "STALE"
-    except Exception:
-        return "STALE"
+    """Freshness band from the age of the last real observation.
+
+    D1 (trace_id HRFID-20260929): the band used to come from its own 12h/24h/72h ladder
+    over `state["timestamp"]`, which `_save_state` rewrites on every save and the
+    keepalive / /ready paths tick without taking a new reading — so the health endpoint
+    printed `age_seconds 37803.6` next to `status "fresh"`, `freshness_band "FRESH"` and
+    `is_stale false` while the same payload admitted `truth_status INSUFFICIENT_DATA`.
+    The band is now pure arithmetic against the thresholds the payload advertises, over
+    the observation clock, and it fails closed when there is no clock to read.
+    """
+    _raw, age_seconds, _clock = _observation_clock(state)
+    return _freshness_band_from_age(age_seconds)
 
 
 def _cap_readiness_by_freshness(readiness: str, freshness_band: str) -> str:
@@ -1355,6 +1437,61 @@ def is_well(state: dict[str, Any] | None = None) -> bool:
 # ── Operator self-report: presence and provenance, never a health verdict ──────
 _HUMAN_DATUM_FIELDS = ("delta_s", "peace2", "kappa_r", "rasa", "amanah")
 
+# What the identity seeder used to mint for each field above when nobody reported.
+# Boilerplate that once satisfied a gate — not a reading of a human (D4).
+_IDENTITY_DEFAULT_FIELDS: dict[str, Any] = {
+    "delta_s": 0.0,
+    "peace2": 1.0,
+    "kappa_r": 0.95,
+    "rasa": True,
+    "amanah": "LOCK",
+}
+SEEDER_PRODUCER = "kernel:ensure_well_identity"
+
+# D4 (trace_id HRFID-20260929): every human-plane field carries who wrote it
+# (`producer`) and what kind of evidence it is (`source_class`).
+WELL_SOURCE_CLASSES = ("SELF_REPORT", "SENSOR", "AGENT_INFERRED", "EXTERNAL", "INJECTED_DEFAULT")
+# Classes that describe a computation, not a person speaking. These may never be
+# written into a field whose name claims the operator reported it themselves.
+NON_REPORT_CLASSES = ("AGENT_INFERRED", "INJECTED_DEFAULT")
+
+
+def _stamp_field_provenance(
+    holder: dict[str, Any], key: str, producer: str, source_class: str
+) -> None:
+    """Attach producer + source_class next to the value it describes.
+
+    Sibling keys, the convention `_human_datum` already uses for `__source`: the
+    provenance travels with the field instead of living in a second ledger.
+    """
+    holder[f"{key}__producer"] = producer
+    holder[f"{key}__source_class"] = (
+        source_class if source_class in WELL_SOURCE_CLASSES else "EXTERNAL"
+    )
+
+
+def _inherited_source_class(state: dict[str, Any]) -> str:
+    """Best honest label for a value already on disk when provenance was not recorded.
+
+    Unknown is reported as EXTERNAL — never as a self-report, and never as an
+    injected default, because a silent default is how D3/D4 happened.
+    """
+    truth = str(state.get("truth_status") or "").upper()
+    evidence = str(state.get("evidence_class") or "").upper()
+    if "SELF_REPORT" in truth or "SELF_REPORT" in evidence or truth in (
+        "OPERATOR_REPORTED",
+        "OPERATOR_VERBAL",
+    ):
+        return "SELF_REPORT"
+    if truth in ("VERIFIED", "VOICE_TELEMETRY") and "SELF_REPORT" not in evidence:
+        return "SENSOR"
+    return "EXTERNAL"
+
+
+def _is_self_report_field(name: str) -> bool:
+    """Does this field's NAME claim to be the operator reporting on themselves?"""
+    return name in _HUMAN_DATUM_FIELDS or "self_report" in name.lower()
+
 
 def _human_datum(state: dict[str, Any] | None = None) -> dict[str, Any]:
     """
@@ -1384,9 +1521,13 @@ def _human_datum(state: dict[str, Any] | None = None) -> dict[str, Any]:
         if value is None:
             absent.append(key)
             continue
-        if source == "top_level" and key in injected:
+        if key in injected and (
+            source == "top_level"
+            or bio.get(f"{key}__source_class") == "INJECTED_DEFAULT"
+        ):
             # The only value on record is boilerplate the seeder wrote to satisfy a
-            # former gate. It is not a report about the operator.
+            # former gate. It is not a report about the operator — whichever plane it
+            # sits in (D4 made the nested block authoritative, so the mark follows it).
             absent.append(key)
             stripped.append(key)
             continue
@@ -1505,8 +1646,12 @@ def _honesty_block(
 ) -> dict[str, Any]:
     """Permanent honesty surface for cockpit / agents (STALE · MOCK · SELF-REPORT)."""
     reasons = list(insufficient_reasons or [])
-    is_mock = truth_status in ("TEST",) or any(
-        "mock" in r.lower() or "fixture" in r.lower() for r in reasons
+    is_mock = (
+        truth_status in ("TEST",)
+        # D2 (HRFID-20260929): a record downgraded to AGENT_TEST_RECORD by the intake
+        # lane must show as what it is — a probe, not the human.
+        or (source_type or "").upper() == "AGENT_TEST_RECORD"
+        or any("mock" in r.lower() or "fixture" in r.lower() for r in reasons)
     )
     is_self = truth_status in ("OPERATOR_REPORTED",) or (source_type or "").upper() in (
         "OPERATOR_REPORTED",
@@ -1514,7 +1659,7 @@ def _honesty_block(
         "SOVEREIGN_SELF_REPORT",
         "SELF_REPORT",
     )
-    is_stale = (freshness_band or "") in ("STALE", "AGED", "EXPIRED")
+    is_stale = _is_stale_band(freshness_band)
     is_sensor = truth_status == "VERIFIED" and not is_self and not is_mock
 
     if is_mock:
@@ -2832,17 +2977,57 @@ def _ensure_well_identity(state: dict[str, Any]) -> dict[str, Any]:
     else:
         return state
 
-    defaults = {
-        "delta_s": 0.0,
-        "peace2": 1.0,
-        "kappa_r": 0.95,
-        "rasa": True,
-        "amanah": "LOCK",
-    }
-    for key, value in defaults.items():
-        if key not in state:
-            state[key] = value
-            state.setdefault("_identity_defaults_injected", []).append(key)
+    # D4 (trace_id HRFID-20260929): one authoritative value per human-plane field.
+    #
+    # The old shape minted these at top level whenever a field was missing, while the
+    # inject lanes wrote the same names inside state["biometric"] — so the live organ
+    # file carried two contradicting answers about one human (peace2 1.0 vs
+    # biometric.peace2 0.9, rasa true vs "ready", amanah "LOCK" vs 0.95, delta_s 0.0 vs
+    # 0.1, kappa_r 0.95 vs 0.85). `biometric` is the authoritative home, which is what
+    # _human_datum's documented precedence already said. The legacy top-level key is
+    # kept as a mirror carrying the SAME value, because four read sites (including the
+    # amanah governance gate) look there — deleting it would have turned the sovereign's
+    # intact veto into a false "amanah_unlocked" alarm.
+    bio = state.get("biometric") if isinstance(state.get("biometric"), dict) else {}
+    injected = state.setdefault("_identity_defaults_injected", [])
+    for key, seeded in _IDENTITY_DEFAULT_FIELDS.items():
+        if bio.get(key) is not None:
+            state[key] = bio[key]  # mirror of the authoritative value, never a rival
+            if key in injected:
+                injected.remove(key)  # a real value is now on record
+            _stamp_field_provenance(
+                bio,
+                key,
+                str(
+                    bio.get(f"{key}__producer")
+                    or state.get("producer")
+                    or "operator:biometric_inject"
+                ),
+                str(
+                    bio.get(f"{key}__source_class") or _inherited_source_class(state)
+                ),
+            )
+        elif state.get(key) is not None:
+            # Only the legacy home holds a value: leave it there, the field appears once.
+            _stamp_field_provenance(
+                state,
+                key,
+                str(state.get("producer") or "unknown:legacy_state_file"),
+                str(
+                    state.get(f"{key}__source_class") or _inherited_source_class(state)
+                ),
+            )
+        else:
+            # Nobody reported it. The default is minted once, in the authoritative home,
+            # named in _identity_defaults_injected and stamped INJECTED_DEFAULT, so no
+            # reader can mistake boilerplate for the operator speaking (D3/D4).
+            bio[key] = seeded
+            _stamp_field_provenance(bio, key, SEEDER_PRODUCER, "INJECTED_DEFAULT")
+            state[key] = seeded  # mirror of that same single value
+            if key not in injected:
+                injected.append(key)
+    if bio:
+        state["biometric"] = bio
     return state
 
 
@@ -3030,6 +3215,11 @@ def _state_is_insufficient(state: dict[str, Any]) -> tuple[bool, list[str]]:
 
     if raw_truth in ("VOID", "TEST", "UNVERIFIED", "INSUFFICIENT_DATA"):
         reasons.append(f"truth_status:{raw_truth}")
+    # D2 (HRFID-20260929): a test/probe record that reached the state file must not be
+    # readable as the sovereign's condition, whoever wrote it or when. This is checked
+    # on read so state written before the ingest fix is neutralised too.
+    if state.get("test_contamination") == "YES":
+        reasons.append("test_contamination:YES")
     if environment == "TEST":
         reasons.append("environment:TEST")
     if any(
@@ -3087,33 +3277,24 @@ def _classify_well_state(state: dict[str, Any]) -> dict[str, Any]:
     Never fabricates biological readiness from fixtures or missing data.
     """
     insufficient, insufficient_reasons = _state_is_insufficient(state)
-    state_age_hours = None
-    ts = state.get("timestamp", "")
-    if ts:
-        try:
-            dt = datetime.datetime.fromisoformat(str(ts).replace("Z", "+00:00"))
-            state_age_hours = (
-                datetime.datetime.now(datetime.timezone.utc) - dt
-            ).total_seconds() / 3600
-        except Exception:
-            state_age_hours = None
+    # One clock, one arithmetic: the age reported below, the band, and the status label
+    # all come out of the same observation reading (D1, HRFID-20260929).
+    data_ts, age_seconds, age_clock = _observation_clock(state)
+    state_age_hours = None if age_seconds is None else age_seconds / 3600
+    freshness_band = _freshness_band_from_age(age_seconds)
+    freshness_status = _freshness_status_from_band(freshness_band)
 
     if insufficient:
         # F3-honest: truth_status reflects biometric data quality (INSUFFICIENT_DATA)
-        # but freshness_band reflects actual timestamp age independently.
-        # A state can be insufficient (no real biometrics) but still fresh (recent heartbeat).
+        # but freshness_band reflects the actual age of the last observation,
+        # independently. A state can be insufficient and still fresh (a reading taken
+        # minutes ago that carried no usable biometrics) — but "fresh" now means the
+        # configured window, not a keepalive tick.
         truth_status = "INSUFFICIENT_DATA"
-        freshness_band = _get_freshness_band(
-            state
-        )  # Compute from timestamp, not hardcoded to VOID
         well_score = None
 
         # Degrade signal only if state is actually old (> 168h ceiling)
-        if (
-            freshness_band == "STALE"
-            and state_age_hours is not None
-            and state_age_hours > 168
-        ):
+        if state_age_hours is not None and state_age_hours > 168:
             well_signal = "WELL_HOLD"
             owner_summary = {
                 "color": "RED",
@@ -3123,7 +3304,7 @@ def _classify_well_state(state: dict[str, Any]) -> dict[str, Any]:
                     "human_injection_required",
                 ],
             }
-        elif freshness_band in ("FRESH", "CURRENT"):
+        elif freshness_band == "FRESH":
             well_signal = "WELL_HOLD"  # Insufficient data but fresh -- hold, not crisis
             owner_summary = {
                 "color": "YELLOW",
@@ -3142,18 +3323,9 @@ def _classify_well_state(state: dict[str, Any]) -> dict[str, Any]:
                     "human_injection_required",
                 ],
             }
-
-        freshness_status = (
-            "fresh"
-            if freshness_band in ("FRESH", "CURRENT")
-            else "stale"
-            if freshness_band == "AGED"
-            else "expired"
-        )
     else:
         raw_truth = _normalize_truth_status(state)
         truth_status = raw_truth
-        freshness_band = _get_freshness_band(state)
         well_score = state.get("well_score")
         if raw_truth == "OPERATOR_REPORTED":
             well_signal = "WELL_OPERATOR_PRESENT"  # signal, not verdict
@@ -3171,43 +3343,36 @@ def _classify_well_state(state: dict[str, Any]) -> dict[str, Any]:
                 if well_score is not None and well_score >= 60
                 else "WELL_HOLD"
             )  # signal, not verdict
-            owner_summary = {
-                "color": (
-                    "GREEN"
-                    if freshness_band in ("FRESH", "CURRENT")
-                    else "YELLOW"
-                    if freshness_band == "AGED"
-                    else "RED"
-                ),
-                "reasons": (
-                    ["biometric_state_fresh", "truth_status_verified"]
-                    if freshness_band in ("FRESH", "CURRENT")
-                    else ["biometric_state_aged_contact_arif"]
-                    if freshness_band == "AGED"
-                    else [
+            if freshness_band == "FRESH":
+                owner_summary = {
+                    "color": "GREEN",
+                    "reasons": ["biometric_state_fresh", "truth_status_verified"],
+                }
+            elif freshness_band == "STALE":
+                owner_summary = {
+                    "color": "YELLOW",
+                    "reasons": ["biometric_state_aged_contact_arif"],
+                }
+            else:
+                owner_summary = {
+                    "color": "RED",
+                    "reasons": [
                         "biometric_state_stale_or_expired",
                         "human_injection_required",
-                    ]
-                ),
-            }
-        freshness_status = (
-            "fresh"
-            if freshness_band in ("FRESH", "CURRENT")
-            else "stale"
-            if freshness_band == "AGED"
-            else "expired"
-        )
+                    ],
+                }
 
     freshness = {
         "status": freshness_status,
         "checked_at_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-        "source_timestamp_utc": ts or None,
-        "age_seconds": round(state_age_hours * 3600, 1)
-        if state_age_hours is not None
-        else None,
-        "max_fresh_age_seconds": 3600,
-        "stale_after_seconds": 14400,
-        "expired_after_seconds": 86400,
+        "source_timestamp_utc": data_ts if isinstance(data_ts, str) else None,
+        "age_seconds": round(age_seconds, 1) if age_seconds is not None else None,
+        "age_clock": age_clock,
+        "max_fresh_age_seconds": WELL_MAX_FRESH_AGE_SECONDS,
+        "stale_after_seconds": WELL_STALE_AFTER_SECONDS,
+        # The band becomes EXPIRED immediately past stale_after_seconds. There is no
+        # second, larger number that the code quietly ignores — that gap was D1's root.
+        "expired_after_seconds": WELL_STALE_AFTER_SECONDS,
     }
 
     source_type = (
@@ -3252,29 +3417,14 @@ def _well_observation_band(state: dict | None) -> dict[str, object]:
     rewritten by keepalive/attestation paths, so inheriting it lets a 12-day-old reading
     present itself as current. Presence is not measurement, and a timestamp is not data.
     """
-    import datetime as _dt
-
     state = state if isinstance(state, dict) else {}
-    raw = (
-        state.get("last_successful_read")
-        or state.get("heartbeat_ts")
-        or state.get("timestamp")
-    )
-    age_h: float | None = None
-    if isinstance(raw, str) and raw.strip():
-        try:
-            ts = _dt.datetime.fromisoformat(raw.strip().replace("Z", "+00:00"))
-            if ts.tzinfo is None:
-                ts = ts.replace(tzinfo=_dt.timezone.utc)
-            age_h = (_dt.datetime.now(_dt.timezone.utc) - ts).total_seconds() / 3600.0
-        except ValueError:
-            age_h = None
+    # One clock for every freshness claim in the organ (shared with the health band),
+    # so WELL cannot hold two answers to "how old is this reading?".
+    raw, _age_seconds, clock = _observation_clock(state)
+    age_h: float | None = None if _age_seconds is None else _age_seconds / 3600.0
     # A file's own write time is not an observation. If no observation clock exists,
     # cap at STALE: presence pings and keepalive paths rewrite `timestamp`, and letting
     # that read as FRESH is exactly how a 291h-old self-report presented itself as now.
-    clock = "observation"
-    if not (state.get("last_successful_read") or state.get("heartbeat_ts")):
-        clock = "file_write_only"
     if age_h is None:
         band, measured = "UNKNOWN", False
     elif clock == "file_write_only" and age_h <= _WELL_H_TTL_HOURS["STALE"]:
@@ -3310,11 +3460,12 @@ def _assert_sovereign_presence(operator_id: str = "arif") -> dict[str, Any]:
             "identity": "WELL",
             "role": "Body / Human Intelligence",
             "authority": "REFLECT_ONLY",
-            "delta_s": 0.0,
-            "peace2": 1.0,
-            "kappa_r": 0.95,
-            "rasa": True,
-            "amanah": "LOCK",
+            # D4 (trace_id HRFID-20260929): this path used to mint delta_s 0.0,
+            # peace2 1.0, kappa_r 0.95, rasa True, amanah "LOCK" into the fields whose
+            # names claim the operator reported them. Nobody reported those — a liveness
+            # ping cannot speak for a human. Presence is asserted here; the human-datum
+            # fields belong to _ensure_well_identity (which labels them INJECTED_DEFAULT
+            # and reports them ABSENT) and to the intake lanes that carry real words.
             "truth_status": "OPERATOR_REPORTED",
             "environment": "PROD",
             "well_score": None,
@@ -3339,6 +3490,13 @@ def _assert_sovereign_presence(operator_id: str = "arif") -> dict[str, Any]:
     # Ensure we never carry over mocked-score pretense.
     if "well_score" in state and state.get("environment") != "PROD":
         del state["well_score"]
+    # D4 — what this path does write is attributed: the sovereign asserted presence at
+    # this endpoint, so the presence fields carry that producer, and nothing else does.
+    presence_producer = "well:ready-presence"
+    state["producer"] = presence_producer
+    for _field in ("truth_status", "confidence", "presence_only", "test_contamination"):
+        if _field in state:
+            _stamp_field_provenance(state, _field, presence_producer, "SELF_REPORT")
     _save_state(state)
     _append_event(
         {
@@ -3946,6 +4104,10 @@ def well_contrast_report(
     if len(events) < CONTRAST_MIN_EVENTS:
         confidence_band = "LOW -- insufficient baseline events"
         confidence_level = 0.3
+    elif freshness_band == "EXPIRED":
+        # Fail closed: an expired reading cannot buy a HIGH band (D1 vocabulary).
+        confidence_band = "LOW -- telemetry expired"
+        confidence_level = 0.2
     elif freshness_band == "STALE":
         confidence_band = "LOW -- telemetry stale"
         confidence_level = 0.4

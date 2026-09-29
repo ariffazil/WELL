@@ -299,13 +299,17 @@ state = {
     "last_successful_write": "$TIMESTAMP_UTC",
     "state_file_access": "PASS",
     "vault_access": "OK",
-    "test_contamination": "NO",
+    # An injector cannot certify its own cleanliness, and a typed-in number is not
+    # the sovereign's spoken self-report. Class it as what it is: manual injection,
+    # contamination unknown until a reader with a receipt vouches for it.
+    # (trace HRFID-20260929 — this lane wrote test_contamination:"NO" about itself.)
+    "test_contamination": "UNKNOWN",
     "contamination_quarantined": False,
     "confidence": "MEDIUM",
     "freshness": "FRESH",
     "truth_status": "OPERATOR_REPORTED",
-    "source_type": "OPERATOR_REPORTED",
-    "evidence_class": "SOVEREIGN_SELF_REPORT",
+    "source_type": "MANUAL_INJECT",
+    "evidence_class": "MANUAL_INJECT",
     "environment": "PROD",
     "telemetry_confidence": "SELF_REPORT",
     "reason": "Sovereign biometric injection (biometric_inject.sh) — SELF-REPORT not sensor",
