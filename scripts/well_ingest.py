@@ -39,7 +39,7 @@ STATE_FILE = Path(os.environ.get("WELL_STATE_PATH", "/var/lib/well/state.json"))
 INTAKE_DIR = Path("/root/WELL/intake")
 PROCESSED_DIR = INTAKE_DIR / "processed"
 AUDIT_LOG = Path("/root/WELL/data/intake_log.jsonl")
-SOURCES = ("voice", "manual", "cron")
+SOURCES = ("voice", "manual", "cron", "verbal")
 
 REQUIRED_FIELDS = {"ts", "source", "operator_id", "signals", "confidence"}
 
@@ -170,6 +170,27 @@ def process_intake_file(intake_path: Path) -> str:
     state["timestamp"] = datetime.now(timezone.utc).isoformat()
     state["backend_status"] = "PIPELINE_FEEDING"  # mark as live-fed but env still TEST
     state["state_file_access"] = "PASS"
+    # Truth provenance per source — the honesty banner must name how reality entered.
+    # Added 2026-09-29 (verbal lane, F13 "aku malas nak inject apa2 kat terminal").
+    truth_map = {
+        "verbal": "OPERATOR_VERBAL",
+        "voice": "VOICE_TELEMETRY",
+        "manual": "OPERATOR_REPORTED",
+        "cron": "DERIVED_FROM_LOGS",
+    }
+    banner_map = {
+        "verbal": "VERBAL — sovereign's own words, event-captured from Telegram DM. Words are signals about experience, not access to it (ε_qualia > 0). Not wearable telemetry.",
+        "voice": "VOICE — prosody telemetry from voice lane.",
+        "manual": "SELF-REPORT — sovereign inject, not wearable telemetry",
+        "cron": "DERIVED — synthesized from logs, not sovereign-stated.",
+    }
+    src = payload["source"]
+    state["truth_status"] = truth_map.get(src, "OPERATOR_REPORTED")
+    state["source_type"] = state["truth_status"]
+    state["evidence_class"] = (payload.get("provenance") or {}).get(
+        "evidence_class", "SOVEREIGN_SELF_REPORT"
+    )
+    state["honesty_banner"] = banner_map.get(src, "UNKNOWN SOURCE — treat as UNVERIFIED")
     state["confidence"] = payload["confidence"]
     state["telemetry_confidence"] = payload["confidence"]
     state["arif_decision_required"] = False

@@ -4,12 +4,16 @@
 - `voice/` — output from Hermes voice_state.py (auto-written)
 - `manual/` — output from biometric_inject.sh (human-triggered)
 - `cron/` — synthesized from logs (auto-written)
+- `verbal/` — sovereign's own Telegram DM words, event-captured by
+  `~/.hermes/hooks/state-intake-hook` (auto-written, zero-manual; F13 2026-09-29).
+  Optional `provenance` block carries `evidence_class: SOVEREIGN_VERBAL_SELF_REPORT`;
+  ingest stamps truth_status/honesty_banner accordingly.
 
 ## File Format (per ingest)
 ```json
 {
   "ts": "ISO-8601 UTC",
-  "source": "voice|manual|cron",
+  "source": "voice|manual|cron|verbal",
   "operator_id": "arif",
   "signals": {
     "speech_rate": float,
