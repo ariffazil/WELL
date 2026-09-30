@@ -275,7 +275,23 @@ fi
 python3 <<EOF
 import json, os, time
 
-state = {
+# Merge semantics (FI-003 2026-09-30): an injection must never erase blocks it
+# does not own. Load the live state and deep-merge the fresh fields into it.
+# (Rebuild-not-merge wiped consent.scopes + producer + last_ingest on 2026-09-30.)
+try:
+    with open("$STATE_FILE") as _f:
+        state = json.load(_f)
+except Exception:
+    state = {}
+
+def _deep(base, add):
+    for k, v in add.items():
+        if isinstance(v, dict) and isinstance(base.get(k), dict):
+            _deep(base[k], v)
+        else:
+            base[k] = v
+
+fresh = {
     "schema": "AFWELL State Schema v2026.05.12",
     "timestamp": "$TIMESTAMP_UTC",
     "operator_id": "arif",
@@ -323,21 +339,30 @@ state = {
 _signal_raw = """$SIGNAL_JSON_BLOCK"""
 if _signal_raw:
     try:
-        state["signals"] = json.loads(_signal_raw)
-        state["signals_meta"] = {
+        fresh["signals"] = json.loads(_signal_raw)
+        fresh["signals_meta"] = {
             "injected_count": $SIGNAL_COUNT,
             "injection_ts": "$TIMESTAMP_UTC",
             "source": "biometric_inject.sh --signals",
         }
     except json.JSONDecodeError as _e:
         print(f"  ✗ signals JSON parse failed: {_e}", file=os.sys.stderr)
-        state["signals_error"] = str(_e)
+        fresh["signals_error"] = str(_e)
+
+_deep(state, fresh)
+# Re-attribute every scalar this injection wrote — deep-merge would otherwise
+# leave stale cron:well_ingest producer stamps on now-manual data.
+for _k in fresh.get("biometric", {}):
+    if not _k.endswith("__producer") and not _k.endswith("__source_class"):
+        state["biometric"][_k + "__producer"] = "manual:biometric_inject.sh"
+        state["biometric"][_k + "__source_class"] = "SELF_REPORT"
+state["producer"] = "manual:biometric_inject.sh"
 
 tmp = "$STATE_FILE.tmp"
 with open(tmp, "w") as f:
     json.dump(state, f, indent=2)
 os.replace(tmp, "$STATE_FILE")
-print("  ✓ state.json written")
+print("  ✓ state.json written (merged, %d top-level blocks)" % len(state))
 if _signal_raw:
     print(f"  ✓ signals block: {$SIGNAL_COUNT} signal(s)")
 EOF

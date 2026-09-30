@@ -1,9 +1,13 @@
 {
   "release": 1,
   "name": "WELL Substrate Truth",
-  "git_commit": "a3676a3",
-  "build_timestamp": "2026-09-27T06:28:32Z",
+  "git_commit": "14b3ff217166b66c61d5a475712c5a7b957ce805",
+  "build_timestamp": "2026-09-28T04:44:21Z",
   "deployed_by": "FI-009",
   "deployed_path": "/root/WELL",
-  "service": "well.service"
+  "service": "well.service",
+  "built_at": "2026-09-29T07:08:33.999566+00:00",
+  "stamp_note": "No build step for this organ: ExecStart runs /root/WELL/server.py from this checkout. Advanced f0fa71b->dae610b on 2026-09-29 restart (pid 3815907) during state-path reconciliation; running process IS this commit.",
+  "aligned_at": "2026-09-30T01:20:00Z",
+  "alignment_note": "live service runs from this working tree (/root/WELL/server.py) at HEAD; stamps re-tied to source; WELL has no separate build stage (single-origin)"
 }
