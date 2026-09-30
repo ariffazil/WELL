@@ -66,3 +66,19 @@ forge_work/
 sado-human-state.md
 sessions/
 .ua/
+
+# ── 2026-09-30 (333-AGI): human intake data must not be swept into a PUBLIC repo ──
+# This repository's GitHub remote is PUBLIC (measured: visibility=PUBLIC).
+# intake/processed/*.json records now carry `signals.quote` — a VERBATIM sovereign
+# utterance from a Telegram DM, tagged evidence_class=SOVEREIGN_VERBAL_SELF_REPORT.
+# The previously tracked intake/processed/voice-2026-09-07*.json has NO quote field,
+# so committing the new one would have been the first verbatim personal quote
+# published here — permanently, since removal needs a history rewrite and forks or
+# caches may already hold it. F6 MARUAH / F4: excluded, not published.
+# Quarantine is by definition withheld-from-circulation content (this batch includes
+# REDACTED-VERSE and an item flagged `laundered-as-self-report`), so it must never
+# be committed at all. Already-tracked files stay tracked; gitignore does not untrack.
+# DURABLE FIX (organ owner, not a gitignore): redact or hash `signals.quote` at
+# write time, or move intake records out of the repo tree entirely.
+intake/_quarantine*/
+intake/processed/*.json
