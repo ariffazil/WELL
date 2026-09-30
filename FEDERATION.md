@@ -10,6 +10,11 @@
 
 WELL is the **Readiness Intelligence** organ of the arifOS federation. It observes vitality across human, machine, and governance substrates. It never diagnoses, never prescribes.
 
+```yaml
+role: DOMAIN
+layer: L3
+```
+
 For the full federation architecture, planes, organ taxonomy, and boundary classification, see the canonical source above.
 
 ---
