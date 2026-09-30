@@ -14,8 +14,11 @@ from __future__ import annotations
 
 import datetime as dt
 import json
+from pathlib import Path
 
 import server
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
 
 NOW = dt.datetime.now(dt.timezone.utc)
 
@@ -80,7 +83,7 @@ def test_heartbeat_clock_used_when_no_read_field():
 # ── presence must not fabricate epistemic status ────────────────────────────
 def test_ready_presence_no_longer_mints_fresh_high():
     """Pins the source shape so the fabricated trio cannot return unnoticed."""
-    src = open("/root/WELL/server.py").read()
+    src = open(REPO_ROOT / "server.py").read()
     forbidden = '"confidence": "HIGH",\n            "freshness": "FRESH"'
     assert forbidden not in src, (
         "presence assertion is again minting HIGH-confidence FRESH state from a liveness ping"
@@ -118,14 +121,14 @@ def test_save_state_derives_freshness_and_never_stores_a_claim(tmp_path, monkeyp
 
 
 def test_no_writer_in_server_asserts_a_freshness_literal():
-    src = open("/root/WELL/server.py").read()
+    src = open(REPO_ROOT / "server.py").read()
     assert '"freshness": "FRESH"' not in src
     assert 'state["freshness"] = "FRESH"' not in src
 
 
 def test_keepalive_may_only_report_its_own_liveness():
     """A cron heartbeat must not manufacture a human observation clock."""
-    src = open("/root/WELL/scripts/well_auto_keepalive.py").read()
+    src = open(REPO_ROOT / "scripts" / "well_auto_keepalive.py").read()
     for forbidden in ('data["freshness"]', 'data["last_successful_read"]',
                       'data["last_successful_write"]'):
         assert forbidden not in src, forbidden
@@ -231,6 +234,6 @@ def test_no_freshness_writer_keeps_a_private_threshold_ladder():
     its own ladder over machine_state.json — a different object, not human freshness,
     and deliberately out of scope here.)
     """
-    src = open("/root/WELL/server.py").read()
+    src = open(REPO_ROOT / "server.py").read()
     for stale in ("age_hours <= 12", "age_hours <= 24", "age_hours <= 72"):
         assert stale not in src, f"the undeclared human freshness ladder is back: {stale}"
