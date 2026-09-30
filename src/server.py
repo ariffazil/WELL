@@ -316,7 +316,7 @@ try:
           - NO biometric template storage (ephemeral)
           - NO identity vector/embedding
           - F6 MARUAH output (dignified language, not raw metrics)
-          - REFLECT_ONLY (state observation, never diagnosis)
+          - REFLECT_ONLY (state observation, never clinical interpretation)
 
         DITEMPA BUKAN DIBERI — Forged, Not Given.
         """
