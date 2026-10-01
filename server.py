@@ -17214,6 +17214,36 @@ def well_validate_vitality(
                 "verdict": "UNAVAILABLE",
                 "error": str(_gate_err),
             }
+
+    if isinstance(result, dict):
+        # P0 Fix: Break self-deprecation loop (well_validate_vitality is canonical, not deprecated)
+        result.pop("deprecated", None)
+        result.pop("replacement", None)
+        result.pop("replacement_args", None)
+        result.pop("deprecation_epoch", None)
+        result.pop("removal_date", None)
+        if isinstance(result.get("observation"), dict):
+            result["observation"].pop("deprecated", None)
+            result["observation"].pop("replacement", None)
+            result["observation"].pop("replacement_args", None)
+
+        # P1 Contract: Enforce advisory readiness signal, forbid constitutional verdict leakage
+        _gate_v = (result.get("vitality_gate") or {}).get("verdict", "")
+        _readiness_state = "READY"
+        if _gate_v in ("HOLD", "RECOVER"):
+            _readiness_state = "NOT_READY"
+        elif _gate_v in ("REDUCE_LOAD", "DEGRADED"):
+            _readiness_state = "DEGRADED"
+        elif _gate_v in ("INSUFFICIENT_DATA", "UNAVAILABLE"):
+            _readiness_state = "UNKNOWN"
+
+        result["readiness"] = _readiness_state
+        result["authority"] = "ADVISORY_ONLY"
+        if result.get("action") in ("HOLD", "BLOCKED"):
+            result["action"] = "ADVISORY_REDUCE_LOAD" if _readiness_state == "DEGRADED" else "ADVISORY_PAUSE"
+        if result.get("verdict") in ("HOLD", "SEAL", "VOID"):
+            result["verdict"] = _readiness_state
+
     return _inject_apex(result, "well_validate_vitality")
 
 
@@ -18971,7 +19001,7 @@ def well_registry_status(
         "well_assess_reliability": {"mode": "health"},
         "well_compute_metabolic_flux": {"mode": "status"},
         "well_guard_dignity": {},
-        "well_system_registry_status": {},
+        "well_registry_status": {"mode": "status"},
         # Legacy / aliases (W-A5-FIX 2026-08-08: 6 entries removed; @mcp.tool() decorators already gone)
         # well_get_health → replaced by well_assess_reliability (deprecated 2026-06-28)
         # well_state → replaced by well_validate_vitality mode=state (deprecated 2026-06-01)
@@ -19123,7 +19153,22 @@ def well_registry_status(
         "well_seal_recommendation_log",
     }
 
-    phantom_tools = sorted(registered_in_somatic - all_tools_in_code)
+    # Live provider verification for phantom tools (Declared = Listed = Exported = Callable)
+    _provider = getattr(mcp, "_local_provider", None)
+    _provider_tools: set[str] = set()
+    if _provider:
+        try:
+            _provider_tools = {
+                c.name for c in getattr(_provider, "_components", {}).values()
+                if getattr(c, "type", None) == "tool" or (hasattr(c, "name") and hasattr(c, "fn"))
+            }
+        except Exception:
+            pass
+    if not _provider_tools:
+        _provider_tools = {n for n in registered_in_somatic if callable(globals().get(n))}
+
+    # Phantom = tool in somatic or canonical surface that is NOT registered on live provider
+    phantom_tools = sorted((registered_in_somatic | set(somatic_tools)) - _provider_tools)
     # Canonical = public set that is registered/known (never dual-list with deprecated)
     # Do not require safe_args membership -- safe_args is only for dry-call harness.
     known_names = registered_in_somatic | all_known | set(safe_args.keys())
@@ -19647,10 +19692,10 @@ def well_classify_state(
 #   well_guard_dignity         → CRITIQUE axis / meaning (arifOS 666_HEART)
 #   well_anchor_evidence       → SEAL axis / vault (arifOS 999_VAULT)
 SOMATIC_TOOLS = {
-    # ── Canonical Public Surface (10 tools) -- 2026-07-29 M-WELL activation ──
+    # ── Canonical Public Surface (10 tools) -- Declared = Listed = Exported = Callable = Routed ──
     # Only these 10 tools are exposed on the default public MCP wire.
-    # All other @mcp.tool() functions remain callable internally but are
-    # removed from the public surface by _enforce_somatic_boundary().
+    # All other @mcp.tool() functions remain callable internally via tools/call for
+    # backward-compatibility, but are filtered out of public tools/list discovery.
     "well_classify_substrate",
     "well_trace_lineage",
     "well_assess_homeostasis",
@@ -19659,44 +19704,8 @@ SOMATIC_TOOLS = {
     "well_assess_reliability",
     "well_guard_dignity",
     "well_registry_status",
-    "well_machine_diagnose",  # M-WELL: full VPS diagnostic with recommendations
-    "well_machine_recommend",  # M-WELL: concrete fix commands with risk assessment
-    # ── Triadic Substrate Phase 1 (FORGED 2026-08-20, F13 SEALED) ──────────
-    "well_log_intake",  # intake write-path (kcal + macros)
-    "well_log_recovery_event",  # recovery/restorative events
-    "well_log_substance",  # caffeine, alcohol, supplements, nootropics
-    "well_inject_biometric",  # Hermes-only biometric injection
-    # ── Triadic Substrate Phase 2 (FORGED 2026-08-20, F13 SEALED) ──────────
-    "well_observe_machine",  # per-organ thermal/drift/scar/evidence
-    "well_observe_federation_thermal",  # aggregate across 5 live organs
-    "well_observe_scar_load",  # scar volume (graceful UNKNOWN)
-    "well_observe_drift_field",  # FRAME observer drift
-    "well_observe_evidence_backlog",  # receipt queue depth (graceful UNKNOWN)
-    "well_classify_machine_state",  # OPTIMAL/WATCH/DEGRADED/CRITICAL
-    # ── Triadic Substrate Phase 3 (FORGED 2026-08-20, F13 SEALED) ──────────
-    "well_attest_to_kernel",  # bridge fire → arifOS /attest
-    "well_handoff_dignity_to_arifos",  # bridge fire → arifOS /dignity/handoff
-    "well_propose_seal_recommendation",  # proposer → arifOS /recommendation/inbox
-    "well_propose_governance_signal",  # proposer → arifOS /signal/inbox
-    "well_consent_set_scope",  # Hermes-only F11 scope grant/revoke
-    "well_consent_audit",  # read consent registry
-    "well_seal_recommendation_log",  # read recommendation history
-    # ── Triadic Substrate Phase 4 (FORGED 2026-08-20, F13 SEALED) ──────────
-    "well_assess_triadic_state",  # headline: human × machine × governance → 1 signal
-    # ── Triadic Substrate Phase 5 (FORGED 2026-08-20, F13 SEALED) ──────────
-    "well_get_triadic_snapshot",  # read /state/triadic_snapshot.json
-    "well_render_hud_panel",  # HUD cockpit ASCII panel
-    "well_frame_read_snapshot",  # FRAME observer evidence-only reader
-    # ── WELL v2 surface (F13 rank #3, 2026-09-16; epoch → removal 2026-10-16) ─
-    "well_human",  # H plane: homeostasis|readiness|dignity
-    "well_machine",  # M plane: diagnose|recommend|classify|observe
-    "well_triad",  # G+C plane: assess|snapshot|hud
-    "well_reality",  # R plane v0: confidence|lineage|witness|patterns
-    "well_adaptation",  # A plane v0: precheck|readiness|mttr|gaps
-    "well_intake",  # H-write: meal|recovery|substance|biometric
-    "well_consent",  # G-write: audit|grant|revoke
-    "well_bridge",  # G-outbound witness: attest|signal|recommend|dignity|log
-    "well_registry",  # meta: status|full|contradictions
+    "well_machine_diagnose",
+    "well_machine_recommend",
 }
 # NOTE: well_registry_status is the canonical blueprint format tool.
 # well_system_registry_status is deprecated (internal only, no MCP registration).
