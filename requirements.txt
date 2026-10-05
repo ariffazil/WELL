@@ -27,7 +27,7 @@
 # a getattr/None guard, so the code is correct under both mcp 1.x and 2.x.
 #
 # fastapi is intentionally ABSENT: WELL neither declares nor installs it.
-mcp==1.28.1
+mcp==2.2.0
 fastmcp==3.4.4
 fastmcp-slim==3.4.4
 pydantic==2.13.4
