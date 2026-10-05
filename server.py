@@ -21574,6 +21574,38 @@ if __name__ == "__main__":
 
         async def dispatch(self, request: _MWRequest, call_next):
             if request.method == "POST" and request.url.path.startswith("/mcp"):
+                # F13 SAH 2026-10-05: 2026-07-28 G0.7 RATCHET (SEP-2567) + stateless bypass.
+                # When client declares MCP-Protocol-Version=2026-07-28, Mcp-Method header
+                # is REQUIRED and the legacy Mcp-Session-Id check is bypassed. Legacy
+                # 2025-11-25 sessions still work during the 12-month deprecation window.
+                proto_version = (
+                    request.headers.get("MCP-Protocol-Version")
+                    or request.headers.get("mcp-protocol-version")
+                )
+                if proto_version == "2026-07-28":
+                    mcp_method = (
+                        request.headers.get("Mcp-Method")
+                        or request.headers.get("mcp-method")
+                    )
+                    if not mcp_method:
+                        return _MWResponse(
+                            content=json.dumps(
+                                {
+                                    "jsonrpc": "2.0",
+                                    "error": {
+                                        "code": -32020,
+                                        "message": "HeaderMismatch: Mcp-Method header is required on MCP 2026-07-28 requests (G0.7 ratchet, fail-closed)",
+                                    }
+                                }
+                            ),
+                            status_code=400,
+                            media_type="application/json",
+                        )
+                    # 2026-07-28 stateless: pass through without session check
+                    body = await request.body()
+                    request._body = body
+                    return await call_next(request)
+
                 body = await request.body()
                 method = None
                 if body:
@@ -21631,8 +21663,111 @@ if __name__ == "__main__":
 
             return await call_next(request)
 
-    app.add_middleware(WellMcpSessionEnforcement)
+    # F13 SAH 2026-10-05: 2026-07-28 cacheable list (SEP-2549) — innermost so it
+    # wraps the response from the route, augmenting tools/list with cacheScope + ttlMs.
+    class _CacheableListResponseMiddleware(BaseHTTPMiddleware):
+        """Augment tools/list responses with cacheScope + ttlMs per MCP 2026-07-28 SEP-2549.
+
+        Federation consistency. cacheScope=private (per-host), ttlMs=300000 (5 min).
+        """
+
+        async def dispatch(self, request, call_next):
+            if request.method != "POST" or not request.url.path.startswith("/mcp"):
+                return await call_next(request)
+
+            body = await request.body()
+            try:
+                req_data = json.loads(body)
+            except Exception:
+                return await call_next(request)
+
+            if req_data.get("method") != "tools/list":
+                return await call_next(request)
+
+            async def replay_receive():
+                return {"type": "http.request", "body": body, "more_body": False}
+
+            request._receive = replay_receive
+
+            response = await call_next(request)
+
+            try:
+                chunks = []
+                async for chunk in response.body_iterator:
+                    chunks.append(chunk if isinstance(chunk, bytes) else chunk.encode())
+                full_body = b"".join(chunks)
+            except Exception:
+                return response
+
+            try:
+                data = json.loads(full_body)
+                result = data.get("result")
+                if isinstance(result, dict) and "tools" in result and "cacheScope" not in result:
+                    result["cacheScope"] = "private"
+                    result["ttlMs"] = 300000
+                    result["resultType"] = "complete"
+                    new_body = json.dumps(data).encode("utf-8")
+                    new_resp = _MWResponse(
+                        content=json.loads(new_body),
+                        status_code=response.status_code,
+                    )
+                    for k, v in response.headers.items():
+                        if k.lower() not in ("content-length", "content-type"):
+                            new_resp.headers[k] = v
+                    new_resp.headers["content-length"] = str(len(new_body))
+                    return new_resp
+            except Exception:
+                pass
+
+            return response
+
+    # F13 SAH 2026-10-05: Translate MCP-Protocol-Version: 2026-07-28 → 2025-11-25
+    # for FastMCP 3.4.7 compat. FastMCP 3.x only knows 2024-11-05 → 2025-11-25.
+    # Until FastMCP 4.x is adopted in the WELL venv, this middleware transparently
+    # rewrites the version header so FastMCP accepts the call. The original
+    # 2026-07-28 is preserved in X-MCP-Original-Protocol-Version for downstream
+    # observability. Innermost (added last) so it fires just before FastMCP.
+    class _ProtocolVersionTranslationMiddleware:
+        def __init__(self, app):
+            self.app = app
+
+        async def __call__(self, scope, receive, send):
+            if scope["type"] != "http":
+                await self.app(scope, receive, send)
+                return
+
+            new_headers = []
+            rewrote = False
+            for name, value in scope.get("headers", []):
+                if name == b"mcp-protocol-version":
+                    val = value.decode("latin-1", "ignore")
+                    if val == "2026-07-28":
+                        new_headers.append((b"mcp-protocol-version", b"2025-11-25"))
+                        new_headers.append((b"x-mcp-original-protocol-version", value))
+                        rewrote = True
+                        continue
+                new_headers.append((name, value))
+
+            if rewrote:
+                scope = dict(scope)
+                scope["headers"] = new_headers
+
+            await self.app(scope, receive, send)
+
+    # F13 SAH 2026-10-05: 2026-10-05 middleware order.
+    # In Starlette, LAST add_middleware = OUTERMOST (fires first on request, last on response).
+    # WellMcpSessionEnforcement must be OUTERMOST so it sees the ORIGINAL 2026-07-28
+    # header BEFORE the translation middleware rewrites to 2025-11-25. The G0.7
+    # ratchet + 2026-07-28 bypass in WellMcpSessionEnforcement must run first.
+    app.add_middleware(_ProtocolVersionTranslationMiddleware)  # 2026-07-28 → 2025-11-25 (FastMCP 3.x compat) — INNERMOST
     app.add_middleware(OriginValidationMiddleware)
+    # F13 SAH 2026-10-05: 2026-07-28 cacheable list (SEP-2549) — DEFERRED.
+    # The cacheable list middleware is defined above but NOT registered because
+    # FastMCP 3.4.7 may return SSE stream (not pure JSON) for tools/list, and
+    # the body-rewrap approach produces an h11 Content-Length mismatch on the
+    # response. Fix pending FastMCP 4.x upgrade in the WELL venv.
+    # app.add_middleware(_CacheableListResponseMiddleware)  # DEFERRED
+    app.add_middleware(WellMcpSessionEnforcement)  # G0.7 ratchet + 2026-07-28 bypass — OUTERMOST
     logger.info("WELL MCP server starting on %s:%d", host, port)
     uvicorn.run(
         app, host=host, port=port, log_level=_os.environ.get("LOG_LEVEL", "info")
