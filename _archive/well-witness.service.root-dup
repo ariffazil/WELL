@@ -1,0 +1,41 @@
+[Unit]
+Description=WELL Witness Observer (Phase 1)
+Documentation=https://arif-fazil.com/well
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=well-witness
+Group=well-witness
+WorkingDirectory=/root/WELL
+Environment=PYTHONPATH=/root/WELL
+Environment=WITNESS_LEDGER=/var/witness/ledger.jsonl
+Environment=WITNESS_PORT=18084
+ExecStart=/root/WELL/.venv/bin/python -m well_witness.server
+Restart=on-failure
+RestartSec=5s
+
+# F1 AMANAH + F8 LAW — hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/witness /var/log/well-witness
+ReadOnlyPaths=/root/WELL /proc
+
+# Allow /proc read for the observer (default is strict)
+ProcSubset=pid,net,loadavg,meminfo
+
+# Resource limits
+LimitNOFILE=4096
+MemoryMax=256M
+CPUQuota=25%
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=well-witness
+
+[Install]
+WantedBy=multi-user.target
