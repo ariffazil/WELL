@@ -102,8 +102,12 @@ def test_deprecated_name_is_still_absent_from_the_public_surface(name: str, list
 
 
 def test_public_surface_is_unchanged_by_the_shims(listed_tool_names) -> None:
-    """40 listed before, 40 listed after -- the shims are registered, not exported."""
-    assert len(listed_tool_names) == len(server.SOMATIC_TOOLS) == 40, sorted(
+    """Surface stable before and after -- the shims are registered, not exported.
+
+    Count is 10 since the P0 Surface Integrity Release (7a145bf, 2026-10-03)
+    contracted the public surface from 40 to the 10 intended tools. The shim
+    layer must not move that number either direction."""
+    assert len(listed_tool_names) == len(server.SOMATIC_TOOLS) == 10, sorted(
         set(listed_tool_names) ^ set(server.SOMATIC_TOOLS)
     )
 
@@ -208,8 +212,10 @@ def test_registry_reports_the_v2_migration_window() -> None:
     assert mig["in_migration_window"] is (_dt.date(2026, 9, 16) <= today <= _dt.date(2026, 10, 16))
     assert mig["days_to_removal"] == (_dt.date(2026, 10, 16) - today).days
     assert mig["target_surface"] == 10
-    assert mig["current_public_surface"] == 40
-    assert mig["legacy_still_registered"] is True
+    # P0 Surface Integrity Release (7a145bf, 2026-10-03) closed the 10-vs-40 gap
+    # early: the legacy tools were unregistered ahead of the 2026-10-16 removal date.
+    assert mig["current_public_surface"] == 10
+    assert mig["legacy_still_registered"] is False
 
     # Inside the window the label is the truth: a plan in flight, not drift.
     if mig["in_migration_window"]:
@@ -220,7 +226,7 @@ def test_registry_counts_are_unchanged_by_the_window() -> None:
     """Only the verdict label may move. Every raw count stays as measured."""
     status = server.well_registry_status(mode="status", session_id=SESSION_ID)
     assert status["intended_tools"] == 10
-    assert status["registered_tools"] == 40
+    assert status["registered_tools"] == 10
     for key in ("exported_tools", "callable_tools", "phantom_tools_count",
                 "missing_public_tools_count", "unexpected_public_tools_count",
                 "alias_conflicts_count", "verdict"):
