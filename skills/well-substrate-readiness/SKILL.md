@@ -1,6 +1,6 @@
 ---
 id: well-substrate-readiness
-name: well-substrate-readiness
+name: WELL-substrate-readiness
 version: 1.0.0-2026.06.25
 description: Human readiness — vitality, fatigue, dignity. Reflect, never diagnose.
 owner: WELL team
@@ -126,3 +126,8 @@ If WELL is ❌ → proceed without WELL input, note degraded state.
 ---
 
 *DITEMPA BUKAN DIBERI — Readiness reflected, never commanded.*
+
+promoted_from: /root/.claude/skills/well-substrate-readiness
+promoted_by: opencode/FI-001
+promoted_at: 2026-10-09T15:52:36Z
+promotion_basis: KVM4-local original absent from federation library; promoted per sovereign recursive-upgrade directive 2026-10-09
