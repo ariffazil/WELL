@@ -3673,8 +3673,8 @@ def _compose_verdict(
     epistemic_integrity: float = 1.0,
     authority_level: str = "advisory_only",
     risk_level: str = "GREEN",
-    human_readiness: str = "OPTIMAL",
-    machine_readiness: str = "HEALTHY",
+    human_readiness: str | None = None,
+    machine_readiness: str | None = None,
     failure_class: str | None = None,
     failure_severity: str = "LOW",
     impact_summary: str | None = None,
@@ -3686,6 +3686,29 @@ def _compose_verdict(
     federation_reconcile: dict | None = None,
 ) -> dict[str, Any]:
     """Canonical arifOS MCP verdict schema (Spec v1.0) with Failure Doctrine v1.0."""
+
+    # ABSENCE-LAUNDERING GUARD (2026-10-15, AUTHORITY: ARIF; class = P4 bug
+    # already fixed in well_777_forge precheck, now closed at the source).
+    # Default human/machine readiness MUST derive from domain_verdict — never
+    # fabricate OPTIMAL/HEALTHY when the domain verdict says unknown/degraded.
+    # Callers with real evidence pass explicit values and are unaffected.
+    if human_readiness is None:
+        _dv = (domain_verdict or "").upper()
+        if "UNKNOWN" in _dv or "UNVERIFIED" in _dv:
+            human_readiness = "UNKNOWN"
+        elif "DEGRADED" in _dv or "VIOLATED" in _dv or "LOW" in _dv:
+            human_readiness = "DEGRADED"
+        else:
+            human_readiness = "UNMEASURED"
+    if machine_readiness is None:
+        _dv = (domain_verdict or "").upper()
+        if "UNKNOWN" in _dv or "UNVERIFIED" in _dv:
+            machine_readiness = "UNKNOWN"
+        elif "DEGRADED" in _dv or "VIOLATED" in _dv or "LOW" in _dv:
+            machine_readiness = "DEGRADED"
+        else:
+            machine_readiness = "UNMEASURED"
+
 
     # Failure Doctrine Overrides
     if failure_class:
@@ -18454,6 +18477,11 @@ def well_guard_dignity(
     if mode == "consent":
         # Assess dignity preservation, coercion risk, and reductionism
         dignity_ok = dignity_preservation is None or dignity_preservation >= 0.5
+        # ABSENCE-LAUNDERING GUARD (2026-10-15, AUTHORITY: ARIF): an absent
+        # dignity_preservation input is UNMEASURED, not "preserved". The gate
+        # logic above keeps its conservative pass-through, but the observation
+        # must not emit a reassuring boolean with zero evidence.
+        dignity_measured = dignity_preservation is not None
         coercion_risk = bool(coercion_signals and len(coercion_signals) > 0)
         reductionism_high = reductionism_risk is not None and reductionism_risk > 0.7
 
@@ -18478,9 +18506,18 @@ def well_guard_dignity(
         _observation: dict[str, Any] = {
             "ok": consent_ok,
             "subject": subject or "Arif",
-            "dignity_preserved": dignity_ok,
-            "coercion_detected": coercion_risk,
-            "reductionism_safe": not reductionism_high,
+            # P0 fix: measured value, or None with an explicit reason — a
+            # boolean true with no input is absence laundering.
+            "dignity_preserved": dignity_ok if dignity_measured else None,
+            "dignity_preservation_input": (
+                dignity_preservation if dignity_measured else "UNMEASURED"
+            ),
+            "coercion_detected": coercion_risk if coercion_signals is not None else None,
+            "reductionism_safe": (
+                (not reductionism_high)
+                if reductionism_risk is not None
+                else None
+            ),
             "flags": flags,
             "w0": "OPERATOR_VETO_INTACT / HIERARCHY_INVARIANT",
             # claim-class gate — governs the CLAIM, never the person.
