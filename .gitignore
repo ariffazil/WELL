@@ -85,3 +85,8 @@ intake/processed/*.json
 # gitignore is inert on already-tracked paths — the four human-data records below
 # were tracked before this rule existed and are now `git rm --cached` (2026-09-30).
 state.json.*
+
+# machine-written deploy stamps — rewritten by scripts/refresh_deploy_stamp.sh on every
+# boot (well.service.d/p0-stamp-refresh.conf ExecStartPre). Never committable.
+.git_commit
+release-manifest.json
