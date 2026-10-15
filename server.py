@@ -16582,6 +16582,23 @@ def well_assess_homeostasis(
                 "status": "UNKNOWN",
                 "error": f"readiness_science unavailable: {_rs_err}"[:200],
             }
+        # OBSERVATION_CONTRACT (2026-10-15, AUTHORITY: ARIF): subject-bound,
+        # provenance-carrying observations. Invalid observations are reported,
+        # never silently dropped; self-reports are never merged with measured.
+        _obs_summary = None
+        _raw_obs = ri.get("observations")
+        if _raw_obs:
+            try:
+                from observation_contract import observations_summary, validate_batch
+
+                _obs_subject = ri.get("subject_id") or subject or "arif"
+                _obs_batch = validate_batch(_raw_obs, expected_subject=_obs_subject)
+                _obs_summary = {
+                    "subject_id": _obs_subject,
+                    **observations_summary(_obs_batch),
+                }
+            except Exception as _oc_err:  # pragma: no cover
+                _obs_summary = {"error": f"observation_contract unavailable: {_oc_err}"[:200]}
         return _to_federation_output(
             _omega_well_output(
                 ok=True,
@@ -16592,6 +16609,7 @@ def well_assess_homeostasis(
                 telemetry_status="computed_from_caller_inputs",
                 data={
                     "readiness": _readiness,
+                    "observations": _obs_summary,
                     "authority": "ADVISORY_ONLY",
                     "evidence_note": (
                         "Two-process sleep model (Borbély 1982/2016), circadian "
