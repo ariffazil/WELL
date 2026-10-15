@@ -12175,6 +12175,21 @@ def _telemetry_age_seconds(ms: dict) -> float:
         return -1
 
 
+# ── P0: helper for evidence-honesty recovery digest plumbing (added 2026-10-15) ──
+def expected_state_digest_for_recovery() -> str | None:
+    """sha256[:32] of /root/AAA/state/sys_health.json, or None if missing.
+
+    P0 review fix 2026-10-15: closes the P2b expected_digest plumbing gap.
+    When the file is missing, returns None so the existing verifier
+    contract (expected_digest=None → skip digest check) is preserved.
+    """
+    try:
+        with open("/root/AAA/state/sys_health.json", "rb") as f:
+            return hashlib.sha256(f.read()).hexdigest()[:32]
+    except (FileNotFoundError, PermissionError, OSError):
+        return None
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # M_WELL FIRST-CLASS TOOLS -- Machine Substrate Diagnostics (forged 2026-07-29)
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -12194,11 +12209,25 @@ def well_machine_diagnose(
     Returns: CPU, RAM, swap, disk, PSI pressure, services, Docker, zombies.
     Includes per-issue RECOMMENDATIONS suitable for A-FORGE routing.
 
+    P0 EVIDENCE HONESTY (well-evidence-honesty/v1):
+    - readiness is TASK-SCOPED. Pass task_id or task_class; without a task
+      scope the readiness state is UNKNOWN -- system metrics never imply task
+      readiness. For recovery-scoped checks use task_id="recovery:<target>".
+    - recovery_receipt: an independent observation receipt (never an executor
+      success payload). recovery_verified stays false unless the receipt is
+      valid, fresh, on-target and non-self-witnessed.
+
     This is the CANONICAL M_WELL diagnostic -- use this instead of
     well_assess_reliability for VPS optimization workflows.
     """
     import json as _json_md
     from pathlib import Path as _PathMd
+
+    from evidence_honesty import (
+        aggregate_values as _aggregate_values,
+        task_scoped_readiness as _task_scoped_readiness,
+        verify_recovery_receipt as _verify_recovery_receipt,
+    )
 
     state_path = _PathMd(
         _os.environ.get("WELL_MACHINE_STATE_PATH", "/var/lib/well/machine_state.json")
@@ -12405,6 +12434,65 @@ def well_machine_diagnose(
                     "route_to": "A-FORGE forge_shell",
                 }
             )
+
+    # ── P0: task-scoped readiness + recovery + coverage (well-evidence-honesty/v1) ──
+    # P0 review fix 2026-10-15: derive recovery_target strictly; if the
+    # caller did not supply a target, use the explicit sentinel "*" which
+    # cannot match any real observed_target value, instead of an empty
+    # string that an empty observed_target="" receipt would satisfy.
+    NO_RECOVERY_TARGET_SENTINEL = "*"
+    recovery_target = None
+    if task_id and str(task_id).startswith("recovery:"):
+        recovery_target = str(task_id).split(":", 1)[1] or None
+    if recovery_receipt is not None and not recovery_target:
+        recovery_block = {
+            "recovery_verified": False,
+            "recovery_receipt_ref": None,
+            "observed_state_digest": None,
+            "verified_by": None,
+            "verified_at": None,
+            "reason": "no_recovery_target_supplied",
+            "contract": "well-evidence-honesty/v1",
+        }
+    else:
+        recovery_block = _verify_recovery_receipt(
+            recovery_receipt,
+            target=recovery_target if recovery_target else NO_RECOVERY_TARGET_SENTINEL,
+            expected_digest=expected_state_digest_for_recovery(),
+        )
+    # P0 review fix 2026-10-15: recovery:<target> is a recovery-scope hint,
+    # not a task scope. _task_scoped_readiness gates readiness on a real
+    # task_class / task_id pair; passing the recovery hint would fabricate
+    # a readiness verdict from a recovery scope.
+    _task_scope_for_readiness = None if str(task_id or '').startswith('recovery:') else task_id
+    readiness_block = _task_scoped_readiness(
+        _task_scope_for_readiness,
+        task_class,
+        checks={
+            "checks_passed": [],
+            "checks_failed": [],
+            "checks_unknown": [
+                "workload_limits_not_supplied",
+                "task_completion_not_observed",
+            ],
+        },
+        evaluated_at=ms.get("timestamp"),
+    )
+    # Coverage: how much of this diagnostic is actually measured (None != 0).
+    metric_coverage = _aggregate_values(
+        {
+            "cpu.load_1m": (ms.get("cpu") or {}).get("load_1m"),
+            "cpu.idle_pct": (ms.get("cpu") or {}).get("idle_pct"),
+            "memory.available_kb": (ms.get("memory") or {}).get("available_kb"),
+            "memory.swap_used_kb": (ms.get("memory") or {}).get("swap_used_kb"),
+            "disk.root_used_pct": (ms.get("disk") or {}).get("root_used_pct"),
+            "pressure.cpu_some_avg10": (ms.get("pressure") or {}).get("cpu_some_avg10"),
+            "pressure.memory_some_avg10": (ms.get("pressure") or {}).get(
+                "memory_some_avg10"
+            ),
+            "pressure.io_some_avg10": (ms.get("pressure") or {}).get("io_some_avg10"),
+        }
+    )
 
     # ── Verdict ──
     if severity == "RED":
@@ -14360,20 +14448,11 @@ try:
             tag = "ESTIMATE"
         else:
             tag = _WELL_SIGNAL_TAG_MAP.get(signal, "UNKNOWN")
-        # Quality: inversely from uncertainty
-        uncertainty = float(result.get("uncertainty", 0.5))
-        quality = max(0.05, 1.0 - uncertainty)
-        # State freshness affects quality
-        state_age = result.get("state_age_hours")
-        if isinstance(state_age, (int, float)):
-            if state_age > 72:
-                quality = max(quality - 0.40, 0.10)
-            elif state_age > 24:
-                quality = max(quality - 0.20, 0.20)
-        # Error / constraint reduces quality
-        if result.get("error"):
-            quality = max(quality - 0.30, 0.05)
-        return (tag, round(quality, 4))
+        # P0 EVIDENCE HONESTY (2026-10-15, well-evidence-honesty/v1):
+        # the inverse-uncertainty quality scalar was an UNCALIBRATED heuristic
+        # serialized as a measurement. No calibrated evidence-quality model
+        # exists -> suppressed. An unmeasured metric is never a number.
+        return (tag, None)
 
     def _well_wrap_envelope(tool_name: str, result: Any) -> Any:
         """Wrap a WELL tool result in the canonical Evidence Contract envelope."""
@@ -14407,12 +14486,12 @@ try:
         uncertainty = float(domain.get("uncertainty", 0.5) or 0.5)
         low = round(max(0.03, uncertainty * 0.5), 4)
         high = round(max(0.05, uncertainty), 4)
-        # delta_S: heuristic
-        has_error = bool(domain.get("error"))
-        state_age = domain.get("state_age_hours", 0) or 0
-        delta_s = round(
-            0.05 * float(has_error) + 0.01 * (float(state_age) / 24.0) - 0.05, 4
-        )
+        # P0 EVIDENCE HONESTY (2026-10-15, well-evidence-honesty/v1):
+        # delta_S has NO operational measurement method. An unmeasured metric
+        # must never serialize as a number (UNMEASURED != 0).
+        from evidence_honesty import unmeasured_metric as _unmeasured_metric
+
+        delta_s = None
         # source_attribution
         source_attribution = [
             "WELL:server.py",
@@ -14476,15 +14555,27 @@ try:
         envelope = {
             "result": domain,
             "epistemic_tag": tag,
-            "evidence_quality": quality,
+            # P0 EVIDENCE HONESTY (2026-10-15): fake scalars suppressed.
+            # Keys preserved (null) for consumer compatibility; the contract
+            # object states WHY there is no number. conformance v1.1.
+            "evidence_quality": None,
+            "evidence_quality_metric": _unmeasured_metric(
+                "evidence_quality",
+                "No calibrated evidence-quality model is currently implemented.",
+            ),
             "source_attribution": source_attribution,
             "uncertainty_band": [low, high],
             "delta_S": delta_s,
+            "delta_S_metric": _unmeasured_metric(
+                "delta_S",
+                "No operational measurement method is currently implemented.",
+            ),
             "_well_conformance": {
                 "claim_state": claim_state,
                 "witness_type": witness_type,
                 "organ_type": organ_type,
-                "conformance_version": "v1.0",
+                "conformance_version": "v1.1",
+                "evidence_contract": "well-evidence-honesty/v1",
                 "conformant": True,
             },
         }
