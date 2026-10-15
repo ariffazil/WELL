@@ -219,3 +219,18 @@ This program is free software: you can redistribute it and/or modify it under th
 **DITEMPA BUKAN DIBERI** — Forged, Not Given.
 
 Built by Muhammad Arif bin Fazil.
+
+<!-- FEDERATION-STANDARD v2026-10-15 START :: 333-AGI audit :: source: organs.yaml + git + live probes :: regenerate: re-run audit -->
+## 🔗 Federation Identity (auto-audit 2026-10-15)
+| Field | Value |
+|---|---|
+| Organ | `well` · CORE · domain_evidence |
+| Ports | 18083 |
+| Unit | well.service |
+| Authority ceiling | REFLECT_ONLY |
+| Live (SOT probe @audit) | UP |
+| Repo HEAD @audit | `9ec95ab 2026-10-08` |
+| Public MCP | https://well.arif-fazil.com/mcp |
+| Rollback | — |
+| Flow graph | [FEDERATION-FLOW-GRAPH.md](../FEDERATION-FLOW-GRAPH.md) — peta semua organ + repo |
+<!-- FEDERATION-STANDARD v2026-10-15 END -->

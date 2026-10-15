@@ -156,6 +156,56 @@ def _compute_substrate_manifest_hash() -> str:
     return "sha256:missing"
 
 
+_KNOWN_RISK_LEVELS = {"GREEN", "AMBER", "RED", "UNKNOWN", "CRITICAL"}
+
+
+def _observation_risk_level(observation_data: dict[str, Any]) -> str:
+    """Risk painted on a reading. Never invent GREEN when a human score was withheld.
+
+    A machine payload has no human `score`. Its verdict is the risk. A readiness
+    payload with color/action and no score stays UNKNOWN.
+    """
+    explicit = observation_data.get("risk_level")
+    if isinstance(explicit, str) and explicit.upper() in _KNOWN_RISK_LEVELS:
+        return explicit.upper()
+
+    nested = observation_data.get("data")
+    if isinstance(nested, dict):
+        nested_risk = nested.get("risk_level")
+        if isinstance(nested_risk, str) and nested_risk.upper() in _KNOWN_RISK_LEVELS:
+            return nested_risk.upper()
+        verdict = str(nested.get("m_well_verdict") or nested.get("severity") or "").upper()
+        mapped = {
+            "HEALTHY": "GREEN",
+            "GREEN": "GREEN",
+            "STABLE": "GREEN",
+            "PROCEED": "GREEN",
+            "AMBER": "AMBER",
+            "DEGRADED": "AMBER",
+            "REDUCE_LOAD": "AMBER",
+            "WARNING": "AMBER",
+            "RED": "RED",
+            "CRITICAL": "RED",
+            "HOLD": "RED",
+        }.get(verdict)
+        if mapped:
+            return mapped
+
+    if "color" in observation_data or "action" in observation_data:
+        color = str(observation_data.get("color") or "").upper()
+        score = observation_data.get("score")
+        action = str(observation_data.get("action") or "").upper()
+        if color in ("STALE", "UNKNOWN") or action == "INJECT_NEEDED" or score is None:
+            return "UNKNOWN"
+        if color == "RED":
+            return "RED"
+        if color == "YELLOW":
+            return "AMBER"
+        if color == "GREEN" and isinstance(score, (int, float)):
+            return "GREEN"
+    return "UNKNOWN"
+
+
 def build_metabolic_output(
     tool_name: str,
     internal_result: dict[str, Any],
@@ -281,7 +331,7 @@ def build_metabolic_output(
 
     # Add MCP identifier for federation routing
     observation_data["mcp"] = "AFWELL"
-    observation_data["risk_level"] = "GREEN"
+    observation_data["risk_level"] = _observation_risk_level(observation_data)
     observation_data["authority"] = {"level": "advisory_only"}
 
     # Timestamp

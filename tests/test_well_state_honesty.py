@@ -566,3 +566,103 @@ def test_ready_presence_cannot_mint_self_report_numbers(tmp_path, monkeypatch):
     assert "peace2" in saved["_identity_defaults_injected"]
     assert saved["biometric"]["peace2__source_class"] == "INJECTED_DEFAULT"
     assert _server_mod._human_datum(saved)["observed"] == {}
+
+
+def test_readiness_withholds_mock_score_and_injected_defaults(tmp_path, monkeypatch):
+    """The live file shape: April TEST mock, well_score 100, confidence HIGH.
+    Identity seeding mints peace2=1.0. Neither may leave this function."""
+    import server as _server_mod
+
+    state_path = tmp_path / "state.json"
+    state_path.write_text(json.dumps({
+        "timestamp": "2026-04-30T00:00:00+00:00",
+        "last_successful_read": "2026-04-30T00:00:00+00:00",
+        "operator_id": "arif",
+        "metrics": {},
+        "well_score": 100,
+        "environment": "TEST",
+        "confidence": "HIGH",
+        "freshness": "FRESH",
+        "reason": "Mocked healthy state for test session",
+        "identity": "WELL",
+        "role": "Body / Human Intelligence",
+        "authority": "REFLECT_ONLY",
+        "w0": "OPERATOR_VETO_INTACT / HIERARCHY_INVARIANT",
+    }))
+    monkeypatch.setattr(_server_mod, "STATE_PATH", state_path)
+
+    out = _server_mod.well_readiness()
+
+    assert out["score"] is None
+    assert out["confidence"] == "INSUFFICIENT"
+    assert out["risk_level"] == "UNKNOWN"
+    assert out["color"] == "STALE"
+    assert out["action"] == "INJECT_NEEDED"
+    assert out["freshness"] == "EXPIRED"
+    bio = out["biometric"]
+    assert bio["peace2"] is None
+    assert bio["delta_s"] is None
+    assert bio["kappa_r"] is None
+    assert bio["rasa"] is None
+    assert bio["evidence_type"] == "absent"
+    assert "peace2" in bio["injected_defaults_withheld"]
+    assert out["readiness_envelope"]["score"] is None
+    assert out["_epistemic"]["evidence_layer"] == "ABSENT"
+    # the fixture on disk is evidence; the function must not rewrite it
+    saved = json.loads(state_path.read_text())
+    assert saved["well_score"] == 100
+    assert "biometric" not in saved
+
+
+def test_readiness_still_publishes_a_real_self_report(tmp_path, monkeypatch):
+    import server as _server_mod
+
+    state_path = tmp_path / "state.json"
+    state_path.write_text(json.dumps({
+        "timestamp": "2026-10-13T12:00:00+00:00",
+        "last_successful_read": "2026-10-13T12:00:00+00:00",
+        "operator_id": "arif",
+        "metrics": {"cognitive": {"clarity": 7}},
+        "well_score": 73,
+        "environment": "PROD",
+        "confidence": "MEDIUM",
+        "truth_status": "OPERATOR_REPORTED",
+        "reason": "Sovereign biometric injection",
+        "identity": "WELL",
+        "role": "Body / Human Intelligence",
+        "authority": "REFLECT_ONLY",
+        "biometric": {"peace2": 0.7, "delta_s": 0.3, "kappa_r": 0.6, "rasa": "ok", "amanah": 0.8},
+    }))
+    monkeypatch.setattr(_server_mod, "STATE_PATH", state_path)
+
+    out = _server_mod.well_readiness()
+
+    assert out["score"] == 73.0
+    assert out["biometric"]["peace2"] == 0.7
+    assert out["biometric"]["evidence_type"] == "self_report"
+    assert out["confidence"] == "MEDIUM"
+
+
+def test_cumulative_counter_is_not_recent_activity():
+    from server import _sample_counter_delta
+
+    samples = [
+        {"swap_out_pages": 102756279},
+        {"swap_out_pages": 102756384},
+        {"swap_out_pages": 102756456},
+    ]
+    assert _sample_counter_delta(samples, "swap_out_pages") == 177
+    assert _sample_counter_delta([{"swap_out_pages": 5}], "swap_out_pages") is None
+
+
+def test_enrichment_does_not_paint_green_on_a_withheld_reading():
+    from contracts.enrich_well import _observation_risk_level
+
+    assert _observation_risk_level(
+        {"color": "STALE", "score": None, "action": "INJECT_NEEDED"}
+    ) == "UNKNOWN"
+    assert _observation_risk_level({"risk_level": "AMBER"}) == "AMBER"
+    assert _observation_risk_level({"color": "GREEN", "score": 80}) == "GREEN"
+    assert _observation_risk_level({}) == "UNKNOWN"
+    assert _observation_risk_level({"data": {"m_well_verdict": "HEALTHY"}}) == "GREEN"
+    assert _observation_risk_level({"data": {"severity": "AMBER"}}) == "AMBER"

@@ -6412,7 +6412,26 @@ def well_readiness(
         "Removal scheduled 2026-09-01."
     )
     state = _load_state()
-    score = _state_score(state) or 0
+    insufficient, _insufficient_reasons = _state_is_insufficient(state)
+    datum = _human_datum(state)
+    human_reported = bool(datum.get("operator_datum_present"))
+    # A stored well_score is a reading only when the record is not a fixture and a
+    # person or a verified sensor supplied it. The April mock still says 100 / HIGH,
+    # and _ensure_well_identity mints peace2=1.0 as INJECTED_DEFAULT (D4). Neither
+    # may be published as the operator's body.
+    score_publishable = (not insufficient) and (
+        human_reported or _has_verified_telemetry(state)
+    )
+    raw_score = state.get("well_score")
+    score: float | None
+    if score_publishable and raw_score is not None:
+        try:
+            score = float(raw_score)
+        except (TypeError, ValueError):
+            score = None
+    else:
+        score = None
+    published_score = None if score is None else round(score, 1)
 
     # Compute TTL
     ts_str = state.get("last_successful_read") or state.get("signals_meta", {}).get(
@@ -6427,9 +6446,11 @@ def well_readiness(
         except (ValueError, TypeError):
             pass
 
-    # Classify
+    # Classify. No score is not a zero, and it is never GREEN.
     if ttl_hours > TTL_STALE:
         color, action = "STALE", "INJECT_NEEDED"
+    elif score is None:
+        color, action = "UNKNOWN", "INJECT_NEEDED"
     elif ttl_hours > TTL_WARN:
         color, action = "RED", "HOLD"
     elif ttl_hours > TTL_FRESH:
@@ -6445,6 +6466,8 @@ def well_readiness(
     reasons = []
     if color == "STALE":
         reasons.append(f"No data for {ttl_hours:.0f}h")
+    elif color == "UNKNOWN":
+        reasons.append("No operator reading")
     elif color == "RED":
         reasons.append(f"Data is {ttl_hours:.0f}h old")
     elif color == "YELLOW":
@@ -6452,7 +6475,9 @@ def well_readiness(
     else:
         reasons.append(f"Fresh ({ttl_hours:.1f}h)")
 
-    if score < 50:
+    if score is None:
+        reasons.append("score withheld")
+    elif score < 50:
         reasons.append(f"low score ({score:.0f})")
     elif score < 75:
         reasons.append(f"moderate score ({score:.0f})")
@@ -6511,7 +6536,7 @@ def well_readiness(
             conf = min(conf, 0.2)
         envelope = build_readiness_envelope(
             color=color,
-            score=round(score, 1),
+            score=published_score,
             confidence=conf,
             action=action,
             reason=" | ".join(reasons),
@@ -6537,13 +6562,63 @@ def well_readiness(
     except Exception as _env_err:  # pragma: no cover
         envelope = {"schema": "well_readiness_envelope.v1", "error": str(_env_err)}
 
+    if published_score is None or color in ("STALE", "UNKNOWN"):
+        readiness_risk = "UNKNOWN"
+    elif color == "RED":
+        readiness_risk = "RED"
+    elif color == "YELLOW":
+        readiness_risk = "AMBER"
+    elif color == "GREEN":
+        readiness_risk = "GREEN"
+    else:
+        readiness_risk = "UNKNOWN"
+
+    observed = datum.get("observed") if isinstance(datum.get("observed"), dict) else {}
+    truth_up = str(state.get("truth_status", "")).upper()
+    if not score_publishable:
+        published_bio = {
+            "peace2": None,
+            "delta_s": None,
+            "kappa_r": None,
+            "rasa": None,
+            "clarity": None,
+            "sleep_hours": None,
+            "evidence_type": "absent"
+            if datum.get("injected_defaults_stripped")
+            else "none",
+            "injected_defaults_withheld": list(
+                datum.get("injected_defaults_stripped") or []
+            ),
+        }
+        published_confidence = "INSUFFICIENT"
+    else:
+        metrics = state.get("metrics") if isinstance(state.get("metrics"), dict) else {}
+        cognitive = (
+            metrics.get("cognitive") if isinstance(metrics.get("cognitive"), dict) else {}
+        )
+        published_bio = {
+            "peace2": observed.get("peace2"),
+            "delta_s": observed.get("delta_s"),
+            "kappa_r": observed.get("kappa_r"),
+            "rasa": observed.get("rasa"),
+            "clarity": cognitive.get("clarity"),
+            "sleep_hours": sleep.get("hours") if isinstance(sleep, dict) else None,
+            "evidence_type": "self_report"
+            if truth_up in ("OPERATOR_REPORTED", "SELF_REPORT", "OPERATOR_VERBAL")
+            else "sensor"
+            if _has_verified_telemetry(state)
+            else "unknown",
+        }
+        published_confidence = state.get("confidence", "UNKNOWN")
+
     if detail == "summary":
         return {
             "ok": True,
             "color": color,
-            "score": round(score, 1),
+            "score": published_score,
             "ttl_hours": round(ttl_hours, 1),
             "action": action,
+            "risk_level": readiness_risk,
             "deprecated": True,
             "replacement": "well_validate_vitality",
             "replacement_args": {"mode": "readiness"},
@@ -6554,9 +6629,10 @@ def well_readiness(
     return {
         "ok": True,
         "color": color,
-        "score": round(score, 1),
+        "score": published_score,
         "ttl_hours": round(ttl_hours, 1),
         "action": action,
+        "risk_level": readiness_risk,
         "reason": " | ".join(reasons),
         "deprecated": True,
         "replacement": "well_validate_vitality",
@@ -6567,18 +6643,7 @@ def well_readiness(
         if isinstance(envelope, dict)
         else None,
         "schema": "well_readiness_envelope.v1",
-        "biometric": {
-            "peace2": bio.get("peace2"),
-            "delta_s": bio.get("delta_s"),
-            "kappa_r": bio.get("kappa_r"),
-            "rasa": bio.get("rasa"),
-            "clarity": state.get("metrics", {}).get("cognitive", {}).get("clarity"),
-            "sleep_hours": sleep.get("hours"),
-            "evidence_type": "self_report"
-            if str(state.get("truth_status", "")).upper()
-            in ("OPERATOR_REPORTED", "SELF_REPORT")
-            else "unknown",
-        },
+        "biometric": published_bio,
         "vitality_gate": {
             "verdict": gate.get("verdict"),
             "weakest_substrate": gate.get("weakest_substrate"),
@@ -6592,7 +6657,7 @@ def well_readiness(
         if gate
         else None,
         "freshness": _well_observation_band(state)["band"],  # derived from reading age, not the stored label
-        "confidence": state.get("confidence", "UNKNOWN"),
+        "confidence": published_confidence,
         "w0": "OPERATOR_VETO_INTACT / HIERARCHY_INVARIANT",
         # Discovery 8+9: Memory + Epistemic signals
         "_memory": {
@@ -6606,15 +6671,17 @@ def well_readiness(
             "source": "well_readiness",
         },
         "_epistemic": {
-            "evidence_layer": "OBS",
-            "confidence": 0.85
+            "evidence_layer": "ABSENT" if not score_publishable else "OBS",
+            "confidence": 0.2
+            if not score_publishable
+            else 0.85
             if color == "GREEN"
             else 0.60
             if color == "YELLOW"
             else 0.40,
             "source": "well_readiness",
             "reversible": True,
-            "authority_claim": "EVIDENCE" if color == "GREEN" else "ADVISORY",
+            "authority_claim": "ADVISORY" if not score_publishable or color != "GREEN" else "EVIDENCE",
         },
     }
 
@@ -10019,6 +10086,8 @@ _WELL_ADVISORY_SIGNAL_MAP: dict[str, str] = {
     "PAUSED": "readiness_low",
     "ADVISORY_READY": "stable_signal",
     "PROCEED": "stable_signal",
+    "REDUCE_LOAD": "recovery_needed",
+    "RECOVER": "recovery_needed",
     "DEFER": "recovery_needed",
     "ADVISORY_BLOCKED": "unsafe_to_interpret",
 }
@@ -11924,15 +11993,19 @@ def _well_assess_machine_telemetry() -> dict[str, Any]:
     if swap_used_pct > 50:
         issues.append(f"Swap DEGRADED: {swap_used_pct:.0f}% used")
 
-    swap_out_recent = sum(h.get("swap_out_pages", 0) for h in recent) if recent else 0
-    if swap_out_recent > 0:
+    # vmstat counters are cumulative. Summing the last samples reports a lifetime
+    # total (hundreds of millions) as if it happened in the last few minutes.
+    swap_out_recent = _sample_counter_delta(recent, "swap_out_pages")
+    if swap_out_recent:
         warnings.append(
-            f"Swap activity detected: {swap_out_recent} pages swapped out (last {samples} samples)"
+            f"Swap activity detected: {swap_out_recent} pages swapped out across the last {samples} samples"
         )
 
-    major_faults = mem.get("major_faults", 0)
-    if major_faults > 1000:
-        warnings.append(f"Major page faults elevated: {major_faults}")
+    major_faults = _sample_counter_delta(recent, "major_faults")
+    if major_faults is not None and major_faults > 1000:
+        warnings.append(
+            f"Major page faults elevated: {major_faults} across the last {samples} samples"
+        )
 
     disk_pct = disk.get("root_used_pct", 0)
     if disk_pct > 95:
@@ -11967,7 +12040,12 @@ def _well_assess_machine_telemetry() -> dict[str, Any]:
         else:
             issues.append(f"Service(s) DOWN: {dead_services}")
 
-    unhealthy_docker = [c["name"] for c in docker_list if not c.get("healthy")]
+    # "unknown" means no HEALTHCHECK. Only an explicit failing check is unhealthy.
+    unhealthy_docker = [
+        c.get("name", "?")
+        for c in docker_list
+        if c.get("health_status") == "unhealthy"
+    ]
     if unhealthy_docker:
         warnings.append(f"Docker container(s) not healthy: {unhealthy_docker}")
 
@@ -12000,6 +12078,13 @@ def _well_assess_machine_telemetry() -> dict[str, Any]:
         lane="AGI",
         mode="machine",
         verdict=verdict,
+        telemetry_status=(
+            "observed"
+            if _telemetry_age_seconds(ms) < 600
+            else "stale"
+            if _telemetry_age_seconds(ms) < 14400
+            else "absent"
+        ),
         data={
             "m_well_verdict": verdict,
             "m_well_score": score,
@@ -12021,6 +12106,7 @@ def _well_assess_machine_telemetry() -> dict[str, Any]:
             "docker_total": len(docker_list),
             "zombies": zombies,
             "major_page_faults": major_faults,
+            "major_page_faults_lifetime": mem.get("major_faults"),
             "swap_out_pages_recent": swap_out_recent,
             "issues": issues,
             "warnings": warnings,
@@ -12029,6 +12115,21 @@ def _well_assess_machine_telemetry() -> dict[str, Any]:
             else ("All clear" if not warnings else "; ".join(warnings)),
         },
     )
+
+
+def _sample_counter_delta(samples: list, key: str) -> int | None:
+    """Change in a cumulative counter across ordered samples.
+
+    /proc vmstat fields only grow. Subtracting neighbours is the activity.
+    A drop is a reboot reset, counted from zero. One sample is not a delta.
+    """
+    vals = [h.get(key) for h in samples if isinstance(h, dict) and isinstance(h.get(key), (int, float))]
+    if len(vals) < 2:
+        return None
+    total = 0.0
+    for prev, cur in zip(vals, vals[1:]):
+        total += (cur - prev) if cur >= prev else cur
+    return int(total)
 
 
 def _telemetry_age_seconds(ms: dict) -> float:
@@ -12315,6 +12416,9 @@ def well_machine_diagnose(
             "docker_unhealthy": unhealthy_containers,
             "docker_total": len(docker_status),
         },
+        telemetry_status=(
+            "observed" if age_s < 600 else "stale" if age_s < 14400 else "absent"
+        ),
     )
 
 
@@ -16092,6 +16196,12 @@ def well_assess_homeostasis(
     logger.info(
         "well_assess_homeostasis called mode=%s decision_class=%s", mode, decision_class
     )
+    # Canonical, executable C-class decision lattice -- single source of truth.
+    # WELL::SEVERITY_INVERSION_REPAIR::2026-10-14 (AUTHORITY: ARIF).
+    # Imported locally so the module stays loadable without import-order risk
+    # in a 21k-line server; sys.modules caches it after first call.
+    import decision_lattice as _dl
+
     mode = mode.lower() if isinstance(mode, str) else mode
     VALID_MODES = [
         "sleep",
@@ -16178,7 +16288,13 @@ def well_assess_homeostasis(
                         "status": "UNKNOWN",
                         "signal": "no_telemetry",
                         "decision_class": decision_class_upper,
-                        "route_signal": "HOLD",
+                        # P0 item 5: "HOLD" is an arifOS constitutional verdict,
+                        # not a member of the closed route-signal vocabulary.
+                        # No telemetry = no decision class can be cleared, so the
+                        # honest signal is the most restrictive one.
+                        "route_signal": "ADVISORY_BLOCKED",
+                        "decision_signal": "ADVISORY_BLOCKED",
+                        "advisory_signal": "unsafe_to_interpret",
                         "routing_note": "No verified body telemetry. Cannot assess sleep recovery. Provide biometric data or confirm readiness manually.",
                         "live_G": _live_g_value,
                     },
@@ -16217,76 +16333,58 @@ def well_assess_homeostasis(
         sleep_recovery_score = max(0.0, min(10.0, 10.0 - raw_sleep_strain))
 
         # Signal language -- NEVER verdict (advisory only).
-        # verdict is the internal "advisory verdict" string that
-        # _omega_well_output translates to a generic signal via
-        # _WELL_ADVISORY_SIGNAL_MAP. The sleep-specific signal is
-        # preserved in data.signal for downstream consumers.
-        if sleep_recovery_score >= 7.0:
-            sleep_signal = "sleep_recovery_optimal"
-            status = "OPTIMAL"
-            verdict = "SEAL"
-        elif sleep_recovery_score >= 5.0:
-            sleep_signal = "sleep_recovery_low"
-            status = "STABLE"
-            verdict = "SEAL"
-        elif sleep_recovery_score >= 3.0:
-            sleep_signal = "sleep_recovery_degraded"
-            status = "DEGRADED"
-            verdict = "HOLD"
-        else:
-            sleep_signal = "sleep_recovery_critical"
-            status = "CRITICAL"
-            verdict = "VOID"
-
-        # C-class routing -- recommend decision class downgrade
-        thresholds = {
-            "C1": (3.0, None),
-            "C2": (3.0, None),
-            "C3": (5.0, None),
-            "C4": (7.0, 3.0),
-            "C5": (7.0, 5.0),
+        # `verdict` is LEGACY WIRE COMPAT only (see decision_lattice.
+        # LEGACY_VERDICT_BY_BAND); the canonical decision field is
+        # `decision_signal`. The sleep-specific signal is preserved in
+        # data.signal for downstream consumers.
+        _SLEEP_SIGNAL_BY_BAND = {
+            "OPTIMAL": "sleep_recovery_optimal",
+            "STABLE": "sleep_recovery_low",
+            "DEGRADED": "sleep_recovery_degraded",
+            "CRITICAL": "sleep_recovery_critical",
         }
-        threshold_score, block_threshold = thresholds[decision_class_upper]
-        if status == "CRITICAL":
-            route_signal = "ADVISORY_BLOCKED"
-            routing_note = "CRITICAL sleep recovery -- all decision classes blocked."
-        elif status == "DEGRADED":
-            if decision_class_upper in ("C4", "C5"):
-                route_signal = (
-                    "ADVISORY_BLOCKED"
-                    if sleep_recovery_score < (block_threshold or 0)
-                    else "DEFER"
-                )
-            else:
-                route_signal = "PROCEED"
-                routing_note = (
-                    f"DEGRADED sleep but {decision_class_upper} is low-stakes."
-                )
-        elif status == "STABLE":
-            if decision_class_upper in ("C4", "C5"):
-                route_signal = "DEFER"
-                routing_note = f"STABLE sleep insufficient for {decision_class_upper}."
-            else:
-                route_signal = "PROCEED"
-                routing_note = f"STABLE sleep clears {decision_class_upper}."
-        else:  # OPTIMAL
-            route_signal = "PROCEED"
-            routing_note = f"OPTIMAL sleep clears {decision_class_upper}."
+        homeostasis_band = _dl.band_from_score(sleep_recovery_score)
+        status = homeostasis_band
+        sleep_signal = _SLEEP_SIGNAL_BY_BAND[homeostasis_band]
+        verdict = _dl.LEGACY_VERDICT_BY_BAND[homeostasis_band]
 
-        # ── G-fold override: downgrade C4/C5 PROCEED → DEFER when G < SABAR threshold ──
-        if (
-            isinstance(_live_g_value, (int, float))
-            and float(_live_g_value) < _G_FOLD_SABAR_THRESHOLD
-            and route_signal == "PROCEED"
-            and decision_class_upper in ("C4", "C5")
-        ):
-            route_signal = "DEFER"
-            g_float = float(_live_g_value)
-            routing_note = (
-                f"PROCEED downgraded to DEFER: live G={g_float:.3f} < "
-                f"SABAR threshold ({_G_FOLD_SABAR_THRESHOLD}). "
-                f"Insufficient governance capacity for {decision_class_upper} sleep-critical task."
-            )
+        # Canonical C-class matrix -- single source of truth (P0 item 1).
+        # Replaces the inline `thresholds` table duplicated in the fatigue
+        # branch. Sleep mode early-returns unless telemetry is verified, so
+        # the telemetry ceiling is PROCEED by construction.
+        _matrix, _matrix_reason = _dl.matrix_signal(
+            homeostasis_band,
+            decision_class_upper,
+            chronic_fatigue=chronic_fatigue,
+        )
+        _t_ceiling = _dl.telemetry_ceiling("verified")
+        _g_ceiling = _dl.g_fold_ceiling(
+            _live_g_value, _G_FOLD_SABAR_THRESHOLD, decision_class_upper
+        )
+        _g_float = (
+            float(_live_g_value)
+            if isinstance(_live_g_value, (int, float))
+            and not isinstance(_live_g_value, bool)
+            else None
+        )
+        # Monotonic composition (P0 items 2 + 3): strictest contributor wins.
+        _final = _dl.compose(_matrix, _t_ceiling, _g_ceiling)
+        route_signal = _dl.validate_route_signal(_final).name
+        # Note is rendered FROM the final structured verdict (P0 item 6), so it
+        # cannot contradict the signal it describes.
+        routing_note = _dl.render_routing_note(
+            _final,
+            band=homeostasis_band,
+            decision_class=decision_class_upper,
+            chronic_fatigue=chronic_fatigue,
+            telemetry_status="verified",
+            matrix=_matrix,
+            matrix_reason=_matrix_reason,
+            ceiling=_t_ceiling,
+            g_ceiling=_g_ceiling,
+            g_value=_g_float,
+            g_threshold=_G_FOLD_SABAR_THRESHOLD,
+        )
 
         # Optional SAF statistical rigor on sleep vector
         _saf_summary = None
@@ -16322,9 +16420,17 @@ def well_assess_homeostasis(
                 "reason": "saf_stats unavailable",
             }
 
+        # P0 item 5: validate the emitted signal against the closed vocabulary.
+        # P0 item 4: decision and advisory are distinct fields.
+        decision_signal = _dl.validate_route_signal(route_signal).name
+        advisory_signal = _verdict_to_signal(decision_signal)
+
         _data_payload = {
             "sleep_recovery_score": round(sleep_recovery_score, 2),
             "status": status,
+            "homeostasis_band": homeostasis_band,
+            "decision_signal": decision_signal,
+            "advisory_signal": advisory_signal,
             "sleep_hours": _sleep_hours,
             "sleep_quality": _sleep_quality,
             "sleep_debt_days": _sleep_debt,
@@ -16554,61 +16660,21 @@ def well_assess_homeostasis(
         raw_fatigue = max(0.0, min(10.0, raw_fatigue))
         homeostasis_score = max(0.0, min(10.0, 10.0 - raw_fatigue))
 
-        if homeostasis_score >= 7.0:
-            verdict = "SEAL"
-            status = "OPTIMAL"
-        elif homeostasis_score >= 5.0:
-            verdict = "SEAL"
-            status = "STABLE"
-        elif homeostasis_score >= 3.0:
-            verdict = "HOLD"
-            status = "DEGRADED"
-        else:
-            verdict = "VOID"
-            status = "CRITICAL"
+        # Canonical band + C-class routing (P0 item 1). Single source of truth:
+        # decision_lattice.py. The former inline `thresholds` table duplicated
+        # both the prose matrix in prompts/__init__.py and the sleep branch, and
+        # diverged from the spec: C5+STABLE emitted DEFER where the spec says
+        # BLOCK, and no branch mapped chronic_fatigue to a block at all.
+        homeostasis_band = _dl.band_from_score(homeostasis_score)
+        status = homeostasis_band
 
-        # C-class routing matrix
-        thresholds = {
-            "C1": (3.0, None),  # proceed unless CRITICAL
-            "C2": (3.0, None),  # proceed unless CRITICAL
-            "C3": (5.0, None),  # proceed if STABLE or better
-            "C4": (7.0, 3.0),  # proceed only if OPTIMAL; block if DEGRADED
-            "C5": (7.0, 5.0),  # proceed only if OPTIMAL; block if STABLE
-        }
-        threshold_score, block_threshold = thresholds[decision_class_upper]
+        _matrix, _matrix_reason = _dl.matrix_signal(
+            homeostasis_band,
+            decision_class_upper,
+            chronic_fatigue=chronic_fatigue,
+        )
 
-        if status == "CRITICAL":
-            route_signal = "ADVISORY_BLOCKED"
-            routing_note = "CRITICAL homeostasis blocks all decision classes."
-        elif status == "DEGRADED":
-            if decision_class_upper in ("C4", "C5"):
-                route_signal = (
-                    "ADVISORY_BLOCKED"
-                    if homeostasis_score < (block_threshold or 0)
-                    else "DEFER"
-                )
-                routing_note = f"{status} + {decision_class_upper} = {route_signal}."
-            else:
-                route_signal = "PROCEED"
-                routing_note = f"{status} but {decision_class_upper} is low-stakes. Proceed with reduced confidence."
-        elif status == "STABLE":
-            if decision_class_upper in ("C4", "C5"):
-                route_signal = "DEFER"
-                routing_note = f"STABLE is insufficient for {decision_class_upper}. Wait for OPTIMAL."
-            else:
-                route_signal = "PROCEED"
-                routing_note = f"{status} clears {decision_class_upper}."
-        else:  # OPTIMAL
-            if decision_class_upper == "C5" and chronic_fatigue:
-                route_signal = "DEFER"
-                routing_note = "OPTIMAL but chronic fatigue is active. C5 blocked during chronic fatigue."
-            else:
-                route_signal = "PROCEED"
-                routing_note = f"{status} clears {decision_class_upper}."
-
-        # P1 FIX (2026-06-28): Telemetry honesty cap.
-        # Only VERIFIED biometric telemetry supports OPTIMAL / PROCEED claims.
-        # BEHAVIORAL, OPERATOR_REPORTED, and UNKNOWN telemetry must cap at LIMITED/CAUTION.
+        # Evidence provenance -> telemetry status.
         truth_status = state.get("truth_status", "UNVERIFIED")
         if truth_status == "VERIFIED":
             telemetry_status = "verified"
@@ -16619,30 +16685,61 @@ def well_assess_homeostasis(
         else:
             telemetry_status = "unknown"
 
-        if telemetry_status != "verified" and status != "CRITICAL":
-            _original_route_signal = route_signal
-            status = "LIMITED"
-            route_signal = "CAUTION"
-            verdict = "UNKNOWN"
-            routing_note = (
-                f"Telemetry status is '{telemetry_status}'; readiness claim capped to CAUTION. "
-                f"Score-based signal without cap would have been {_original_route_signal}."
-            )
+        # P0 item 3: telemetry uncertainty is a CEILING, not an override. It may
+        # tighten the verdict but can never relax it. The former code assigned
+        # route_signal = "CAUTION", which relaxed DEFER / ADVISORY_BLOCKED -- an
+        # honesty cap that increased permissiveness. That is precisely the path
+        # the directive's KILL CRITERION declares VOID.
+        _t_ceiling = _dl.telemetry_ceiling(telemetry_status)
 
-        # ── G-fold override: downgrade C4/C5 PROCEED → DEFER when G < SABAR threshold ──
-        if (
-            isinstance(_live_g_value, (int, float))
-            and float(_live_g_value) < _G_FOLD_SABAR_THRESHOLD
-            and route_signal == "PROCEED"
-            and decision_class_upper in ("C4", "C5")
-        ):
-            route_signal = "DEFER"
-            g_float = float(_live_g_value)
-            routing_note = (
-                f"PROCEED downgraded to DEFER: live G={g_float:.3f} < "
-                f"SABAR threshold ({_G_FOLD_SABAR_THRESHOLD}). "
-                f"Insufficient governance capacity for {decision_class_upper} fatigue-sensitive task."
-            )
+        # Governance-capacity ceiling for C4/C5 (was: a PROCEED-only override,
+        # so it could not act once another contributor had already tightened).
+        _g_ceiling = _dl.g_fold_ceiling(
+            _live_g_value, _G_FOLD_SABAR_THRESHOLD, decision_class_upper
+        )
+        _g_float = (
+            float(_live_g_value)
+            if isinstance(_live_g_value, (int, float))
+            and not isinstance(_live_g_value, bool)
+            else None
+        )
+
+        # P0 item 2: monotonic composition -- the strictest contributor wins.
+        _final = _dl.compose(_matrix, _t_ceiling, _g_ceiling)
+        # P0 item 5: reject off-vocabulary final verdicts.
+        route_signal = _dl.validate_route_signal(_final).name
+
+        # P0 item 6: the note is rendered FROM the final structured verdict, so
+        # it can no longer contradict the signal it describes. The former
+        # hand-written string claimed "C5 blocked during chronic fatigue" while
+        # the emitted signal was DEFER.
+        routing_note = _dl.render_routing_note(
+            _final,
+            band=homeostasis_band,
+            decision_class=decision_class_upper,
+            chronic_fatigue=chronic_fatigue,
+            telemetry_status=telemetry_status,
+            matrix=_matrix,
+            matrix_reason=_matrix_reason,
+            ceiling=_t_ceiling,
+            g_ceiling=_g_ceiling,
+            g_value=_g_float,
+            g_threshold=_G_FOLD_SABAR_THRESHOLD,
+        )
+
+        # P0 item 4: `status` keeps its legacy wire meaning as an EVIDENCE
+        # qualifier; `homeostasis_band` carries the unqualified physiological
+        # read; `route_signal` carries the decision. Three concerns, three
+        # fields -- previously collapsed onto one another.
+        if telemetry_status != "verified" and homeostasis_band != "CRITICAL":
+            status = "LIMITED"
+            verdict = "UNKNOWN"
+        else:
+            # LEGACY WIRE COMPAT -- see decision_lattice.LEGACY_VERDICT_BY_BAND.
+            # A-FORGE branches on the literal 'HOLD' (chain-orchestrator.ts:286);
+            # renaming this unilaterally would make that gate fail OPEN.
+            # Residual risk R1: needs a coordinated WELL + A-FORGE change.
+            verdict = _dl.LEGACY_VERDICT_BY_BAND.get(homeostasis_band, "UNKNOWN")
 
         # EUREKA FORGE (2026-06-02): distill the SAF statistical-rigor pattern
         # into the existing WELL fatigue verdict. No new tool added (F13).
@@ -16908,9 +17005,31 @@ def well_assess_homeostasis(
                 "No telemetry and no overrides. Using defaults. Score is meaningless."
             )
 
+        # P0 items 2 + 5: a SAF statistical anomaly sets verdict="SABAR" above
+        # but previously left route_signal untouched -- a decorative downgrade
+        # that named a concern without tightening the decision. Fold it in as a
+        # ceiling so composition stays monotonic, then re-validate the final
+        # value against the closed vocabulary.
+        if str(verdict).upper() == "SABAR":
+            _final = _dl.compose(
+                _dl.validate_route_signal(route_signal), _dl.RouteSignal.DEFER
+            )
+            route_signal = _final.name
+            routing_note += (
+                f" | SAF anomaly tightened the decision to {route_signal}."
+            )
+        # P0 item 4: decision and advisory are distinct fields with distinct
+        # closed vocabularies. `route_signal`/`decision_signal` carry the
+        # decision; `advisory_signal` carries the soft readiness read.
+        decision_signal = _dl.validate_route_signal(route_signal).name
+        advisory_signal = _verdict_to_signal(decision_signal)
+
         _data_payload = {
             "homeostasis_score": round(homeostasis_score, 2),
             "status": status,
+            "homeostasis_band": homeostasis_band,
+            "decision_signal": decision_signal,
+            "advisory_signal": advisory_signal,
             "sleep_debt_days": _sleep_debt,
             "decision_fatigue": _decision_fatigue,
             "cognitive_clarity": _clarity,
