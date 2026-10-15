@@ -10,7 +10,7 @@ phase4 tool and writes BOTH surfaces:
   1. /state/triadic_snapshot.json            — canonical v1.0 (atomic, phase5 writer)
   2. /root/WELL/state/triadic_snapshot.json  — health digest (compat, same as v1 writer)
 
-Run under /opt/well/.venv/bin/python3 (organ deps). Scheduled 60s by
+Run under /root/WELL/.venv/bin/python3 (organ deps). Scheduled 60s by
 triadic-snapshot.timer. F1: rollback = restore .bak-20260904-FI008 and disable timer.
 """
 import json
