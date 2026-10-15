@@ -16178,6 +16178,9 @@ def well_assess_homeostasis(
     emotional_state: str = "neutral",
     chronic_fatigue: bool = False,
     accumulated_session_fatigue: float | None = None,
+    # READINESS_SCIENCE (2026-10-15, AUTHORITY: ARIF) — evidence-based
+    # composite readiness inputs. Additive; see readiness_science.py.
+    readiness_inputs: dict[str, Any] | None = None,
     # Decision class for routing -- C1 trivial through C5 critical
     decision_class: str = "C3",
     ctx: Context | None = None,
@@ -16210,6 +16213,7 @@ def well_assess_homeostasis(
         "vitality",
         "circadian",
         "fatigue",
+        "readiness",
         "empathize",
         "critique",
         "dignity",
@@ -16523,6 +16527,57 @@ def well_assess_homeostasis(
                     "F9_ANTIHANTU": "zero qualia declared -- I am a mirror, not a soul",
                     "W6_MEDICAL_BOUNDARY": "HOLD -- operator must see human doctor",
                 },
+            ),
+            tool_name="well_assess_homeostasis",
+        )
+
+    # ── READINESS_SCIENCE (2026-10-15, AUTHORITY: ARIF) ──────────────────────
+    # mode="readiness": evidence-based composite (two-process sleep model,
+    # circadian curve, caffeine PK, weekly sleep debt, KSS). Pure advisory —
+    # does NOT touch verdict routing, C-class matrix, or legacy wire fields.
+    # Empty inputs → UNKNOWN (never compute readiness from defaults).
+    if mode == "readiness":
+        ri = readiness_inputs or {}
+        try:
+            from readiness_science import composite_readiness as _cr
+
+            _readiness = _cr(
+                hours_awake=ri.get("hours_awake"),
+                prior_sleep_hours=ri.get("prior_sleep_hours"),
+                local_hour=ri.get("local_hour"),
+                chronotype_shift_h=ri.get("chronotype_shift_h", 0.0),
+                caffeine_events=ri.get("caffeine_events"),
+                sleep_hours_by_night=ri.get("sleep_hours_by_night"),
+                kss=ri.get("kss"),
+                hrv_status=hrv_status,
+                minutes_on_task=ri.get("minutes_on_task"),
+                nap_minutes=ri.get("nap_minutes"),
+            )
+        except Exception as _rs_err:  # pragma: no cover
+            _readiness = {
+                "readiness_score": None,
+                "status": "UNKNOWN",
+                "error": f"readiness_science unavailable: {_rs_err}"[:200],
+            }
+        return _to_federation_output(
+            _omega_well_output(
+                ok=True,
+                stage="222_READINESS",
+                lane="AGI",
+                mode="readiness",
+                verdict="ADVISORY",
+                telemetry_status="computed_from_caller_inputs",
+                data={
+                    "readiness": _readiness,
+                    "authority": "ADVISORY_ONLY",
+                    "evidence_note": (
+                        "Two-process sleep model (Borbély 1982/2016), circadian "
+                        "two-harmonic curve, caffeine PK (half-life 3-7h), KSS. "
+                        "STRONG vs POPULAR evidence tagged per component."
+                    ),
+                    "live_G": _live_g_value,
+                },
+                constitutional_compliance={"W2_READINESS": "REFLECT_ONLY"},
             ),
             tool_name="well_assess_homeostasis",
         )

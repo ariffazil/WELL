@@ -26,8 +26,8 @@ public_tools:  # discoverable via tools/list (somatic boundary enforced)
 - name: well_assess_homeostasis
   domain: H-WELL
   omega: Ω-WELL-06
-  valid_modes: [sleep, cognitive, stress, vitality, circadian, fatigue, empathize, critique, dignity, redteam, maruah, medical_query]
-  description: Assess regulation, stability, sleep, fatigue, and empathic balance
+  valid_modes: [sleep, cognitive, stress, vitality, circadian, fatigue, readiness, empathize, critique, dignity, redteam, maruah, medical_query]
+  description: Assess regulation, stability, sleep, fatigue, and empathic balance. mode=readiness = evidence-based composite (two-process sleep model, circadian curve, caffeine PK, KSS) via readiness_science.py
 
 - name: well_check_repair
   domain: M-WELL
