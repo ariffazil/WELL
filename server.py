@@ -12349,7 +12349,16 @@ def well_machine_diagnose(
         "memory_psi_avg10": mem_psi,
     }
 
-    if swap_pct > 30 and mem_psi < 5:
+    swap_used_bytes = swap_used_kb * 1024
+    avail_bytes = avail_kb * 1024
+    # Swap-recovery precondition requires BOTH low pressure AND headroom:
+    # PSI < 5 means no memory thrashing right now, but a swap_used > 80% of
+    # available RAM means reclaiming would page-fault every swapped-out byte
+    # back into RAM that may not fit. PSI is a current-state metric; it does
+    # not prove the swap pages will fit in available RAM after release.
+    swap_fits_in_ram = swap_used_bytes < (avail_bytes * 0.8)
+
+    if swap_pct > 30 and mem_psi < 5 and swap_fits_in_ram:
         severity = "AMBER"
         issues.append(
             f"Swap {swap_pct:.0f}% used ({swap_used_kb / 1024**2:.1f}GB) but PSI={mem_psi:.1f} -- safe to recover"
@@ -12357,11 +12366,16 @@ def well_machine_diagnose(
         recommendations.append(
             {
                 "issue": f"Stale swap ({swap_pct:.0f}%, {swap_used_kb / 1024**2:.1f}GB) with zero memory pressure",
-                "action": "swapoff -a && swapon -a  # PSI confirms safe -- no memory thrashing",
+                "action": "swapoff -a && swapon -a  # PSI confirms safe AND swap fits in available RAM",
                 "blast_radius": "LOW",
                 "reversible": True,
                 "route_to": "A-FORGE forge_shell",
-                "precondition": f"mem_psi_avg10={mem_psi:.1f} < 5 -- confirmed safe",
+                "precondition": (
+                    f"mem_psi_avg10={mem_psi:.1f} < 5 AND "
+                    f"swap_used {swap_used_kb / 1024**2:.1f}GB < "
+                    f"available {avail_kb / 1024**2:.1f}GB * 0.8 "
+                    f"({swap_used_bytes / max(avail_bytes, 1):.2f} < 0.80)"
+                ),
             }
         )
     elif swap_pct > 50:
