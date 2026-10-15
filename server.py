@@ -2325,42 +2325,49 @@ class WellSessionValidationMiddleware(_MiddlewareBase):
 # migration signal on calls to deprecated tools so callers (Hermes, OpenCode,
 # A2A agents) have a 27-day window to migrate before hard removal 2026-09-01.
 
+# Per F13 SOVEREIGN directive (Option c) ratified 2026-08-05T12:39Z: emit a
+# migration signal on calls to deprecated tools so callers (Hermes, OpenCode,
+# A2A agents) have a 30-day window before hard removal 2026-10-16.
+# Updated from 2026-09-01 to 2026-10-16 by 7a145bf (P0 Surface Integrity
+# Release 2026-10-03); the same window was anchored in
+# well_v2/surface._DEPRECATION. Both kept in sync on this branch.
+
 DEPRECATED_TOOLS_MAP: dict[str, dict[str, Any]] = {
     "well_readiness": {
         "replacement": "well_validate_vitality",
         "replacement_args": {"mode": "readiness"},
-        "deprecation_epoch": "2026-07-12",
-        "removal_date": "2026-09-01",
+        "deprecation_epoch": "2026-09-16",
+        "removal_date": "2026-10-16",
     },
     "well_get_health": {
         "replacement": "well_assess_reliability",
         "replacement_args": {"mode": "health"},
-        "deprecation_epoch": "2026-06-28",
-        "removal_date": "2026-09-01",
+        "deprecation_epoch": "2026-09-16",
+        "removal_date": "2026-10-16",
     },
     "well_state": {
         "replacement": "well_validate_vitality",
         "replacement_args": {"mode": "state"},
-        "deprecation_epoch": "2026-06-01",
-        "removal_date": "2026-09-01",
+        "deprecation_epoch": "2026-09-16",
+        "removal_date": "2026-10-16",
     },
     "well_init": {
         "replacement": "well_000_init",
         "replacement_args": {},
-        "deprecation_epoch": "2026-06-01",
-        "removal_date": "2026-09-01",
+        "deprecation_epoch": "2026-09-16",
+        "removal_date": "2026-10-16",
     },
     "well_machine_state": {
         "replacement": "well_assess_reliability",
         "replacement_args": {},
-        "deprecation_epoch": "2026-06-01",
-        "removal_date": "2026-09-01",
+        "deprecation_epoch": "2026-09-16",
+        "removal_date": "2026-10-16",
     },
     "well_assess_governance": {
         "replacement": "well_detect_boundary",
         "replacement_args": {},
-        "deprecation_epoch": "2026-07-01",
-        "removal_date": "2026-09-01",
+        "deprecation_epoch": "2026-09-16",
+        "removal_date": "2026-10-16",
     },
 }
 
@@ -6670,7 +6677,7 @@ def well_readiness(
         "replacement": "well_validate_vitality",
         "replacement_args": {"mode": "readiness"},
         "deprecation_epoch": "2026-07-12",
-        "removal_date": "2026-09-01",
+        "removal_date": "2026-10-16",
         "readiness_envelope": envelope.get("readiness")
         if isinstance(envelope, dict)
         else None,
@@ -19455,35 +19462,35 @@ def well_registry_status(
         "well_readiness": {
             "replacement": "well_validate_vitality",
             "replacement_args": {"mode": "readiness"},
-            "deprecation_epoch": "2026-07-12",
-            "removal_date": "2026-09-01",
+            "deprecation_epoch": "2026-09-16",
+            "removal_date": "2026-10-16",
         },
         "well_get_health": {
             "replacement": "well_assess_reliability",
             "replacement_args": {"mode": "health"},
-            "deprecation_epoch": "2026-06-28",
-            "removal_date": "2026-09-01",
+            "deprecation_epoch": "2026-09-16",
+            "removal_date": "2026-10-16",
         },
         "well_state": {
             "replacement": "well_validate_vitality",
             "replacement_args": {"mode": "state"},
-            "deprecation_epoch": "2026-06-01",
-            "removal_date": "2026-09-01",
+            "deprecation_epoch": "2026-09-16",
+            "removal_date": "2026-10-16",
         },
         "well_init": {
             "replacement": "well_000_init",
-            "deprecation_epoch": "2026-06-01",
-            "removal_date": "2026-09-01",
+            "deprecation_epoch": "2026-09-16",
+            "removal_date": "2026-10-16",
         },
         "well_machine_state": {
             "replacement": "well_assess_reliability",
-            "deprecation_epoch": "2026-06-01",
-            "removal_date": "2026-09-01",
+            "deprecation_epoch": "2026-09-16",
+            "removal_date": "2026-10-16",
         },
         "well_assess_governance": {
             "replacement": "well_detect_boundary",
-            "deprecation_epoch": "2026-07-01",
-            "removal_date": "2026-09-01",
+            "deprecation_epoch": "2026-09-16",
+            "removal_date": "2026-10-16",
         },
     }
     _today = datetime.datetime.now(datetime.timezone.utc).date()
