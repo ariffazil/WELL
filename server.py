@@ -3687,27 +3687,15 @@ def _compose_verdict(
 ) -> dict[str, Any]:
     """Canonical arifOS MCP verdict schema (Spec v1.0) with Failure Doctrine v1.0."""
 
-    # ABSENCE-LAUNDERING GUARD (2026-10-15, AUTHORITY: ARIF; class = P4 bug
-    # already fixed in well_777_forge precheck, now closed at the source).
-    # Default human/machine readiness MUST derive from domain_verdict — never
-    # fabricate OPTIMAL/HEALTHY when the domain verdict says unknown/degraded.
-    # Callers with real evidence pass explicit values and are unaffected.
+    # ABSENCE-LAUNDERING GUARD v2 (2026-10-15, AUTHORITY: ARIF): when a caller
+    # does not supply a structured status, the field stays UNKNOWN — the
+    # domain_verdict display string is NEVER parsed to derive readiness
+    # (cross-subject contamination bug: human UNKNOWN flipped machine status).
+    # All current callers pass explicit values; this is a fail-closed net.
     if human_readiness is None:
-        _dv = (domain_verdict or "").upper()
-        if "UNKNOWN" in _dv or "UNVERIFIED" in _dv:
-            human_readiness = "UNKNOWN"
-        elif "DEGRADED" in _dv or "VIOLATED" in _dv or "LOW" in _dv:
-            human_readiness = "DEGRADED"
-        else:
-            human_readiness = "UNMEASURED"
+        human_readiness = "UNKNOWN"
     if machine_readiness is None:
-        _dv = (domain_verdict or "").upper()
-        if "UNKNOWN" in _dv or "UNVERIFIED" in _dv:
-            machine_readiness = "UNKNOWN"
-        elif "DEGRADED" in _dv or "VIOLATED" in _dv or "LOW" in _dv:
-            machine_readiness = "DEGRADED"
-        else:
-            machine_readiness = "UNMEASURED"
+        machine_readiness = "UNKNOWN"
 
 
     # Failure Doctrine Overrides
@@ -4331,6 +4319,8 @@ def well_check_floors(
             task="floor_integrity_check",
             status="HOLD",
             domain_verdict="UNKNOWN_TELEMETRY",
+            human_readiness="UNKNOWN",
+            machine_readiness="UNMEASURED",
             confidence="LOW",
             risk_level="UNKNOWN",
             recommended_mode="draft_only",
@@ -4436,6 +4426,10 @@ def well_check_floors(
         domain_verdict=f"{len(violated)} floors violated"
         if violated
         else "All floors clear",
+        # W-floors are HUMAN floors only (audit fix 15/10): the machine
+        # status is explicitly UNMEASURED — never derived from human text.
+        human_readiness="DEGRADED" if violated else "FUNCTIONAL",
+        machine_readiness="UNMEASURED",
         confidence="HIGH",
         risk_level=risk,
         recommended_mode="full" if not violated else "draft_only",
@@ -5069,6 +5063,8 @@ def well_check_floor(
             task=f"floor_check: {fid}",
             status="HOLD",
             domain_verdict="UNKNOWN_TELEMETRY",
+            human_readiness="UNKNOWN",
+            machine_readiness="UNMEASURED",
             confidence="LOW",
             risk_level="UNKNOWN",
             recommended_mode="draft_only",
@@ -5141,6 +5137,9 @@ def well_check_floor(
         task=f"floor_check: {fid}",
         status="PASS" if passed else "HOLD",
         domain_verdict=status,
+        # Single human floor check — machine is out of scope here.
+        human_readiness="FUNCTIONAL" if passed else "DEGRADED",
+        machine_readiness="UNMEASURED",
         confidence="HIGH",
         risk_level="GREEN" if passed else "RED",
         recommended_mode="full" if passed else "draft_only",
@@ -7125,7 +7124,13 @@ def well_coupled_readiness(
         mcp="AFWELL",
         task="coupled_readiness_check",
         status=status,
+        # Structured statuses passed EXPLICITLY (audit fix 15/10): the
+        # domain_verdict string is a display artifact built from these two
+        # fields — it must never be parsed back to derive them. Cross-subject
+        # contamination (human UNKNOWN flipping machine status) is closed.
         domain_verdict=f"Human {h_verdict} | Machine {m_verdict}",
+        human_readiness=h_verdict,
+        machine_readiness=m_verdict,
         confidence=confidence,
         risk_level=coupled_risk,
         recommended_mode=recommended_mode,
@@ -7318,6 +7323,8 @@ def well_forge_precheck(
             task=f"forge_precheck: {task_description or 'unspecified'}",
             status="HOLD",
             domain_verdict="UNKNOWN_TELEMETRY",
+            human_readiness="UNKNOWN",
+            machine_readiness="UNMEASURED",
             confidence="LOW",
             risk_level="UNKNOWN",
             recommended_mode="draft_only",
@@ -7438,6 +7445,8 @@ def well_forge_precheck(
         task=f"forge_precheck: {task_description or 'unspecified'}",
         status=status,
         domain_verdict=f"Mode: {final_mode} | Risk: {coupled_risk}",
+        human_readiness=h_verdict,
+        machine_readiness=m_verdict,
         confidence="HIGH",
         risk_level=coupled_risk,
         recommended_mode=final_mode,
