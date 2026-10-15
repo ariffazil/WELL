@@ -27,6 +27,7 @@ def build_readiness_envelope(
     vitality_gate: dict[str, Any] | None = None,
     decision_class: str | None = None,
     evidence_quality: float | None = None,
+    evidence_quality_metric: dict[str, Any] | None = None,
     energy: dict[str, Any] | None = None,
     shadow: dict[str, Any] | None = None,
     intelligence: dict[str, Any] | None = None,
@@ -95,9 +96,23 @@ def build_readiness_envelope(
             "recommendation": rec,
             "reason": reason,
             "decision_class": decision_class,
-            "evidence_quality": evidence_quality
-            if evidence_quality is not None
-            else round(float(confidence), 3),
+            # P0 EVIDENCE HONESTY (2026-10-15, well-evidence-honesty/v1):
+            # evidence_quality was previously defaulted to the CONFIDENCE
+            # heuristic -- a mislabelled scalar. No calibrated evidence-quality
+            # model exists -> value is None (never 0), with an explicit contract.
+            "evidence_quality": None,
+            "evidence_quality_metric": evidence_quality_metric
+            or {
+                "metric": "evidence_quality",
+                "value": None,
+                "unit": None,
+                "method": "unmeasured",
+                "status": "UNKNOWN",
+                "measured_at": None,
+                "evidence_refs": [],
+                "reason": "No calibrated evidence-quality model is currently implemented.",
+                "contract": "well-evidence-honesty/v1",
+            },
             "boundaries": {
                 "diagnostic": False,
                 "authority": "advisory_only",

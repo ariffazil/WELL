@@ -1450,7 +1450,13 @@ SEEDER_PRODUCER = "kernel:ensure_well_identity"
 
 # D4 (trace_id HRFID-20260929): every human-plane field carries who wrote it
 # (`producer`) and what kind of evidence it is (`source_class`).
-WELL_SOURCE_CLASSES = ("SELF_REPORT", "SENSOR", "AGENT_INFERRED", "EXTERNAL", "INJECTED_DEFAULT")
+WELL_SOURCE_CLASSES = (
+    "SELF_REPORT",
+    "SENSOR",
+    "AGENT_INFERRED",
+    "EXTERNAL",
+    "INJECTED_DEFAULT",
+)
 # Classes that describe a computation, not a person speaking. These may never be
 # written into a field whose name claims the operator reported it themselves.
 NON_REPORT_CLASSES = ("AGENT_INFERRED", "INJECTED_DEFAULT")
@@ -1478,9 +1484,14 @@ def _inherited_source_class(state: dict[str, Any]) -> str:
     """
     truth = str(state.get("truth_status") or "").upper()
     evidence = str(state.get("evidence_class") or "").upper()
-    if "SELF_REPORT" in truth or "SELF_REPORT" in evidence or truth in (
-        "OPERATOR_REPORTED",
-        "OPERATOR_VERBAL",
+    if (
+        "SELF_REPORT" in truth
+        or "SELF_REPORT" in evidence
+        or truth
+        in (
+            "OPERATOR_REPORTED",
+            "OPERATOR_VERBAL",
+        )
     ):
         return "SELF_REPORT"
     if truth in ("VERIFIED", "VOICE_TELEMETRY") and "SELF_REPORT" not in evidence:
@@ -2202,7 +2213,9 @@ class WellSessionValidationMiddleware(_MiddlewareBase):
             # resolution above found no session, the receipt reads null.
             try:
                 _WELL_TELEMETRY_SESSION.set(
-                    session_id.strip() if isinstance(session_id, str) and session_id.strip() else None
+                    session_id.strip()
+                    if isinstance(session_id, str) and session_id.strip()
+                    else None
                 )
             except Exception:
                 pass
@@ -2375,9 +2388,7 @@ def _well_overdue_days(removal_date: str) -> int:
         removal = datetime.date.fromisoformat(str(removal_date))
     except (TypeError, ValueError):
         return 0
-    return max(
-        0, (datetime.datetime.now(datetime.timezone.utc).date() - removal).days
-    )
+    return max(0, (datetime.datetime.now(datetime.timezone.utc).date() - removal).days)
 
 
 def _well_deprecation_payload(name: str) -> dict[str, Any]:
@@ -3003,9 +3014,7 @@ def _ensure_well_identity(state: dict[str, Any]) -> dict[str, Any]:
                     or state.get("producer")
                     or "operator:biometric_inject"
                 ),
-                str(
-                    bio.get(f"{key}__source_class") or _inherited_source_class(state)
-                ),
+                str(bio.get(f"{key}__source_class") or _inherited_source_class(state)),
             )
         elif state.get(key) is not None:
             # Only the legacy home holds a value: leave it there, the field appears once.
@@ -3697,7 +3706,6 @@ def _compose_verdict(
     if machine_readiness is None:
         machine_readiness = "UNKNOWN"
 
-
     # Failure Doctrine Overrides
     if failure_class:
         status = "HOLD" if status != "VOID" else "VOID"
@@ -3995,8 +4003,8 @@ def well_log(
     if note:
         _claim_text = note
     elif _supplied:
-        _claim_text = (
-            "telemetry record, source OPERATOR_REPORTED: " + ", ".join(_supplied)
+        _claim_text = "telemetry record, source OPERATOR_REPORTED: " + ", ".join(
+            _supplied
         )
     else:
         _claim_text = "telemetry record: no dimensions supplied"
@@ -6616,7 +6624,9 @@ def well_readiness(
     else:
         metrics = state.get("metrics") if isinstance(state.get("metrics"), dict) else {}
         cognitive = (
-            metrics.get("cognitive") if isinstance(metrics.get("cognitive"), dict) else {}
+            metrics.get("cognitive")
+            if isinstance(metrics.get("cognitive"), dict)
+            else {}
         )
         published_bio = {
             "peace2": observed.get("peace2"),
@@ -6678,7 +6688,9 @@ def well_readiness(
         }
         if gate
         else None,
-        "freshness": _well_observation_band(state)["band"],  # derived from reading age, not the stored label
+        "freshness": _well_observation_band(state)[
+            "band"
+        ],  # derived from reading age, not the stored label
         "confidence": published_confidence,
         "w0": "OPERATOR_VETO_INTACT / HIERARCHY_INVARIANT",
         # Discovery 8+9: Memory + Epistemic signals
@@ -6703,7 +6715,9 @@ def well_readiness(
             else 0.40,
             "source": "well_readiness",
             "reversible": True,
-            "authority_claim": "ADVISORY" if not score_publishable or color != "GREEN" else "EVIDENCE",
+            "authority_claim": "ADVISORY"
+            if not score_publishable or color != "GREEN"
+            else "EVIDENCE",
         },
     }
 
@@ -7763,8 +7777,13 @@ def _check_data_freshness(state: dict[str, Any]) -> dict[str, Any]:
     """
     band = _well_observation_band(state)
     state_age_hours = band["age_hours"]
-    _LABEL = {"FRESH": "fresh", "AGING": "stale", "STALE": "stale",
-              "EXPIRED": "expired", "UNKNOWN": "unknown"}
+    _LABEL = {
+        "FRESH": "fresh",
+        "AGING": "stale",
+        "STALE": "stale",
+        "EXPIRED": "expired",
+        "UNKNOWN": "unknown",
+    }
     freshness = _LABEL[str(band["band"])]
 
     has_telemetry = _has_verified_telemetry(state)
@@ -12074,9 +12093,7 @@ def _well_assess_machine_telemetry() -> dict[str, Any]:
 
     # "unknown" means no HEALTHCHECK. Only an explicit failing check is unhealthy.
     unhealthy_docker = [
-        c.get("name", "?")
-        for c in docker_list
-        if c.get("health_status") == "unhealthy"
+        c.get("name", "?") for c in docker_list if c.get("health_status") == "unhealthy"
     ]
     if unhealthy_docker:
         warnings.append(f"Docker container(s) not healthy: {unhealthy_docker}")
@@ -12155,7 +12172,11 @@ def _sample_counter_delta(samples: list, key: str) -> int | None:
     /proc vmstat fields only grow. Subtracting neighbours is the activity.
     A drop is a reboot reset, counted from zero. One sample is not a delta.
     """
-    vals = [h.get(key) for h in samples if isinstance(h, dict) and isinstance(h.get(key), (int, float))]
+    vals = [
+        h.get(key)
+        for h in samples
+        if isinstance(h, dict) and isinstance(h.get(key), (int, float))
+    ]
     if len(vals) < 2:
         return None
     total = 0.0
@@ -12200,6 +12221,9 @@ def expected_state_digest_for_recovery() -> str | None:
 
 @mcp.tool()
 def well_machine_diagnose(
+    task_id: str | None = None,
+    task_class: str | None = None,
+    recovery_receipt: dict[str, Any] | None = None,
     ctx: Context | None = None,
     actor_id: str | None = None,
 ) -> dict[str, Any]:
@@ -12515,6 +12539,9 @@ def well_machine_diagnose(
             "overall": overall,
             "severity": severity,
             "verdict": verdict,
+            "readiness": readiness_block,
+            "recovery": recovery_block,
+            "metric_coverage": metric_coverage,
             "telemetry_age_seconds": round(age_s, 1),
             "telemetry_freshness": "FRESH"
             if age_s < 600
@@ -15008,7 +15035,9 @@ def well_attest_to_kernel(
         "final_authority": "ARIF",
         "verdict_local": _state.get("verdict", "WELL_HOLD"),
         "well_score": _state.get("well_score"),
-        "freshness": _well_observation_band(_state)["band"],  # derived from reading age, not the stored label
+        "freshness": _well_observation_band(_state)[
+            "band"
+        ],  # derived from reading age, not the stored label
         "actor_id": _actor,
         "ts": datetime.datetime.now(datetime.timezone.utc).isoformat() + "Z",
     }
@@ -16698,7 +16727,9 @@ def well_assess_homeostasis(
                     **observations_summary(_obs_batch),
                 }
             except Exception as _oc_err:  # pragma: no cover
-                _obs_summary = {"error": f"observation_contract unavailable: {_oc_err}"[:200]}
+                _obs_summary = {
+                    "error": f"observation_contract unavailable: {_oc_err}"[:200]
+                }
         return _to_federation_output(
             _omega_well_output(
                 ok=True,
@@ -17211,9 +17242,7 @@ def well_assess_homeostasis(
                 _dl.validate_route_signal(route_signal), _dl.RouteSignal.DEFER
             )
             route_signal = _final.name
-            routing_note += (
-                f" | SAF anomaly tightened the decision to {route_signal}."
-            )
+            routing_note += f" | SAF anomaly tightened the decision to {route_signal}."
         # P0 item 4: decision and advisory are distinct fields with distinct
         # closed vocabularies. `route_signal`/`decision_signal` carry the
         # decision; `advisory_signal` carries the soft readiness read.
@@ -17555,7 +17584,11 @@ def well_validate_vitality(
         result["readiness"] = _readiness_state
         result["authority"] = "ADVISORY_ONLY"
         if result.get("action") in ("HOLD", "BLOCKED"):
-            result["action"] = "ADVISORY_REDUCE_LOAD" if _readiness_state == "DEGRADED" else "ADVISORY_PAUSE"
+            result["action"] = (
+                "ADVISORY_REDUCE_LOAD"
+                if _readiness_state == "DEGRADED"
+                else "ADVISORY_PAUSE"
+            )
         if result.get("verdict") in ("HOLD", "SEAL", "VOID"):
             result["verdict"] = _readiness_state
 
@@ -18630,11 +18663,11 @@ def well_guard_dignity(
             "dignity_preservation_input": (
                 dignity_preservation if dignity_measured else "UNMEASURED"
             ),
-            "coercion_detected": coercion_risk if coercion_signals is not None else None,
+            "coercion_detected": coercion_risk
+            if coercion_signals is not None
+            else None,
             "reductionism_safe": (
-                (not reductionism_high)
-                if reductionism_risk is not None
-                else None
+                (not reductionism_high) if reductionism_risk is not None else None
             ),
             "flags": flags,
             "w0": "OPERATOR_VETO_INTACT / HIERARCHY_INVARIANT",
@@ -18659,7 +18692,8 @@ def well_guard_dignity(
             #      not an assessment, and is retained verbatim.
             _observation["assessment_withheld"] = True
             _observation["assessment_withheld_reason"] = (
-                "class=" + str(_gate.get("declared"))
+                "class="
+                + str(_gate.get("declared"))
                 + " is not action-eligible; the sentence is logged, not assessed."
             )
             if consent_ok:
@@ -18788,7 +18822,8 @@ def well_guard_dignity(
             # assessment that clears or condemns anyone.
             _observation["assessment_withheld"] = True
             _observation["assessment_withheld_reason"] = (
-                "class=" + str(_gate.get("declared"))
+                "class="
+                + str(_gate.get("declared"))
                 + " is not action-eligible; the sentence is logged, not assessed."
             )
             _signal = "assessment_withheld"
@@ -19488,16 +19523,22 @@ def well_registry_status(
     if _provider:
         try:
             _provider_tools = {
-                c.name for c in getattr(_provider, "_components", {}).values()
-                if getattr(c, "type", None) == "tool" or (hasattr(c, "name") and hasattr(c, "fn"))
+                c.name
+                for c in getattr(_provider, "_components", {}).values()
+                if getattr(c, "type", None) == "tool"
+                or (hasattr(c, "name") and hasattr(c, "fn"))
             }
         except Exception:
             pass
     if not _provider_tools:
-        _provider_tools = {n for n in registered_in_somatic if callable(globals().get(n))}
+        _provider_tools = {
+            n for n in registered_in_somatic if callable(globals().get(n))
+        }
 
     # Phantom = tool in somatic or canonical surface that is NOT registered on live provider
-    phantom_tools = sorted((registered_in_somatic | set(somatic_tools)) - _provider_tools)
+    phantom_tools = sorted(
+        (registered_in_somatic | set(somatic_tools)) - _provider_tools
+    )
     # Canonical = public set that is registered/known (never dual-list with deprecated)
     # Do not require safe_args membership -- safe_args is only for dry-call harness.
     known_names = registered_in_somatic | all_known | set(safe_args.keys())
@@ -21907,15 +21948,13 @@ if __name__ == "__main__":
                 # When client declares MCP-Protocol-Version=2026-07-28, Mcp-Method header
                 # is REQUIRED and the legacy Mcp-Session-Id check is bypassed. Legacy
                 # 2025-11-25 sessions still work during the 12-month deprecation window.
-                proto_version = (
-                    request.headers.get("MCP-Protocol-Version")
-                    or request.headers.get("mcp-protocol-version")
-                )
+                proto_version = request.headers.get(
+                    "MCP-Protocol-Version"
+                ) or request.headers.get("mcp-protocol-version")
                 if proto_version == "2026-07-28":
-                    mcp_method = (
-                        request.headers.get("Mcp-Method")
-                        or request.headers.get("mcp-method")
-                    )
+                    mcp_method = request.headers.get(
+                        "Mcp-Method"
+                    ) or request.headers.get("mcp-method")
                     if not mcp_method:
                         return _MWResponse(
                             content=json.dumps(
@@ -21924,7 +21963,7 @@ if __name__ == "__main__":
                                     "error": {
                                         "code": -32020,
                                         "message": "HeaderMismatch: Mcp-Method header is required on MCP 2026-07-28 requests (G0.7 ratchet, fail-closed)",
-                                    }
+                                    },
                                 }
                             ),
                             status_code=400,
@@ -22031,7 +22070,11 @@ if __name__ == "__main__":
             try:
                 data = json.loads(full_body)
                 result = data.get("result")
-                if isinstance(result, dict) and "tools" in result and "cacheScope" not in result:
+                if (
+                    isinstance(result, dict)
+                    and "tools" in result
+                    and "cacheScope" not in result
+                ):
                     result["cacheScope"] = "private"
                     result["ttlMs"] = 300000
                     result["resultType"] = "complete"
@@ -22088,7 +22131,9 @@ if __name__ == "__main__":
     # WellMcpSessionEnforcement must be OUTERMOST so it sees the ORIGINAL 2026-07-28
     # header BEFORE the translation middleware rewrites to 2025-11-25. The G0.7
     # ratchet + 2026-07-28 bypass in WellMcpSessionEnforcement must run first.
-    app.add_middleware(_ProtocolVersionTranslationMiddleware)  # 2026-07-28 → 2025-11-25 (FastMCP 3.x compat) — INNERMOST
+    app.add_middleware(
+        _ProtocolVersionTranslationMiddleware
+    )  # 2026-07-28 → 2025-11-25 (FastMCP 3.x compat) — INNERMOST
     app.add_middleware(OriginValidationMiddleware)
     # F13 SAH 2026-10-05: 2026-07-28 cacheable list (SEP-2549) — DEFERRED.
     # The cacheable list middleware is defined above but NOT registered because
@@ -22096,7 +22141,9 @@ if __name__ == "__main__":
     # the body-rewrap approach produces an h11 Content-Length mismatch on the
     # response. Fix pending FastMCP 4.x upgrade in the WELL venv.
     # app.add_middleware(_CacheableListResponseMiddleware)  # DEFERRED
-    app.add_middleware(WellMcpSessionEnforcement)  # G0.7 ratchet + 2026-07-28 bypass — OUTERMOST
+    app.add_middleware(
+        WellMcpSessionEnforcement
+    )  # G0.7 ratchet + 2026-07-28 bypass — OUTERMOST
     logger.info("WELL MCP server starting on %s:%d", host, port)
     uvicorn.run(
         app, host=host, port=port, log_level=_os.environ.get("LOG_LEVEL", "info")
