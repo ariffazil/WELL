@@ -79,8 +79,8 @@
     <g>
       <rect x="892" y="398" width="62" height="28" rx="14" fill="#14342b" stroke="#3fbf7f" stroke-width="1.5"/>
       <text x="923" y="417" fill="#3fbf7f" font-size="12" font-weight="700" text-anchor="middle">READY</text>
-      <rect x="962" y="398" width="72" height="28" rx="14" fill="#14342b" stroke="#3fbf7f" stroke-width="1.5"/>
-      <text x="998" y="417" fill="#3fbf7f" font-size="12" font-weight="700" text-anchor="middle">CAUTION</text>
+      <rect x="962" y="398" width="72" height="28" rx="14" fill="#2a2416" stroke="#d4a853" stroke-width="1.5"/>
+      <text x="998" y="417" fill="#d4a853" font-size="12" font-weight="700" text-anchor="middle">CAUTION</text>
       <rect x="1042" y="398" width="82" height="28" rx="14" fill="#2a2416" stroke="#c9a227" stroke-width="1.5"/>
       <text x="1083" y="417" fill="#c9a227" font-size="12" font-weight="700" text-anchor="middle">DEGRADED</text>
       <rect x="1132" y="398" width="70" height="28" rx="14" fill="#2a1616" stroke="#d9534f" stroke-width="1.5"/>
