@@ -30,6 +30,15 @@ def test_well_registry_echoes_federation_context() -> None:
 
 
 def test_canonical_state_schema_satisfies_dependency_probe() -> None:
+    import server as _server
+
+    # The autouse isolation fixture points STATE_PATH at a tmp file that is
+    # only seeded when a production state.json exists (it does not on a clean
+    # checkout). An absent state file is a data condition, not a broken
+    # dependency, so seed the isolated path before probing.
+    if not _server.STATE_PATH.exists():
+        _server.STATE_PATH.write_text("{}", encoding="utf-8")
+
     dependencies = _check_dependencies()
     assert dependencies["schema_readable"] is True
     assert dependencies["all_ok"] is True

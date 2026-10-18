@@ -7731,6 +7731,11 @@ def _check_dependencies() -> dict[str, Any]:
             for path in (
                 Path(__file__).parent / "schema.json",
                 Path(__file__).parent / "WELL_STATE_SCHEMA.json",
+                # Canonical tracked locations. The repo-root schema.json is a
+                # deploy-time symlink and is absent on a fresh clone, so a
+                # clean checkout must resolve the real files instead.
+                Path(__file__).parent / "contracts" / "schema.json",
+                Path(__file__).parent / "docs" / "WELL_STATE_SCHEMA.json",
             )
         ),
     }

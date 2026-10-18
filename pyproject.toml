@@ -15,6 +15,27 @@ dev = [
     "pytest-asyncio>=1.4.0",
 ]
 
+[build-system]
+requires = ["setuptools>=75.0"]
+build-backend = "setuptools.build_meta"
+
+# This repo is a flat layout with many top-level directories, so setuptools'
+# automatic discovery aborts with "Multiple top-level packages discovered".
+# Declare the distributions explicitly; top-level modules (server.py, etc.)
+# are imported from the repo root by the test suite and are not packaged.
+[tool.setuptools]
+packages = [
+    "well_mcp",
+    "well_v2",
+    "well_triad",
+    "well_witness",
+    "sensors",
+    "engines",
+    "contracts",
+    "loop",
+    "prompts",
+]
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
