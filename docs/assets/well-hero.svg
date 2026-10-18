@@ -31,8 +31,8 @@
     <text x="640" y="60" fill="#9aa4b2" font-size="15">HUMAN ATTENTION — finite · spent, never refunded</text>
     <rect x="838" y="182" width="380" height="54" rx="12" fill="none" stroke="#3fbf7f" stroke-width="2.5"/>
     <text x="1028" y="215" fill="#3fbf7f" font-size="17" font-weight="700" text-anchor="middle">OPERATOR SOVEREIGNTY · final judge</text>
-    <line x1="1028" y1="236" x2="1028" y2="330" stroke="#3fbf7f" stroke-width="2.5" stroke-dasharray="6 5"/>
-    <text x="1028" y="352" fill="#9aa4b2" font-size="14" text-anchor="middle">the mirror never commands</text>
+    <line x1="1028" y1="236" x2="1028" y2="322" stroke="#3fbf7f" stroke-width="2.5" stroke-dasharray="6 5"/>
+    <text x="1028" y="314" fill="#9aa4b2" font-size="14" text-anchor="middle">the mirror never commands</text>
   </g>
 
   <!-- Signal cards (left) -->
@@ -79,8 +79,8 @@
     <g>
       <rect x="892" y="398" width="62" height="28" rx="14" fill="#14342b" stroke="#3fbf7f" stroke-width="1.5"/>
       <text x="923" y="417" fill="#3fbf7f" font-size="12" font-weight="700" text-anchor="middle">READY</text>
-      <rect x="962" y="398" width="72" height="28" rx="14" fill="#14342b" stroke="#3fbf7f" stroke-width="1.5"/>
-      <text x="998" y="417" fill="#3fbf7f" font-size="12" font-weight="700" text-anchor="middle">CAUTION</text>
+      <rect x="962" y="398" width="72" height="28" rx="14" fill="#2a2416" stroke="#d4a853" stroke-width="1.5"/>
+      <text x="998" y="417" fill="#d4a853" font-size="12" font-weight="700" text-anchor="middle">CAUTION</text>
       <rect x="1042" y="398" width="82" height="28" rx="14" fill="#2a2416" stroke="#c9a227" stroke-width="1.5"/>
       <text x="1083" y="417" fill="#c9a227" font-size="12" font-weight="700" text-anchor="middle">DEGRADED</text>
       <rect x="1132" y="398" width="70" height="28" rx="14" fill="#2a1616" stroke="#d9534f" stroke-width="1.5"/>

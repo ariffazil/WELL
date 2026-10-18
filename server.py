@@ -1978,6 +1978,14 @@ def _apply_public_host_allowlist(app: Any) -> Any:
     return app
 
 
+# Register TasksExtension for task-enabled tools (fastmcp[tasks] 4.x requirement)
+try:
+    from fastmcp_tasks import TasksExtension
+
+    _tasks_ext = TasksExtension()
+except Exception:
+    _tasks_ext = None
+
 mcp = FastMCP(
     name="WELL",
     version="v2026.07.24",
@@ -2003,6 +2011,10 @@ mcp = FastMCP(
         "DITEMPA BUKAN DIBERI -- Forged, Not Given."
     ),
 )
+
+# Register TasksExtension if available (fastmcp[tasks] 4.x requirement)
+if _tasks_ext is not None:
+    mcp.add_extension(_tasks_ext)
 
 # ── Session Validation Middleware (FORGED 2026-07-18) ─────────────────────────
 # WELL tools accept session_id as optional. This middleware enforces that
@@ -12509,7 +12521,9 @@ def well_machine_diagnose(
     # not a task scope. _task_scoped_readiness gates readiness on a real
     # task_class / task_id pair; passing the recovery hint would fabricate
     # a readiness verdict from a recovery scope.
-    _task_scope_for_readiness = None if str(task_id or '').startswith('recovery:') else task_id
+    _task_scope_for_readiness = (
+        None if str(task_id or "").startswith("recovery:") else task_id
+    )
     readiness_block = _task_scoped_readiness(
         _task_scope_for_readiness,
         task_class,
