@@ -21998,8 +21998,43 @@ if __name__ == "__main__":
                             status_code=400,
                             media_type="application/json",
                         )
-                    # 2026-07-28 stateless: pass through without session check
+                    # MCP 2026-07-28 mandatory RPC: server/discover. The legacy
+                    # 2025-11-25 handler below does not implement it, so answer it
+                    # here (additive — no other request path changes).
                     body = await request.body()
+                    try:
+                        _disc = json.loads(body) if body else {}
+                    except (json.JSONDecodeError, UnicodeDecodeError):
+                        _disc = {}
+                    if _disc.get("method") == "server/discover":
+                        return _MWResponse(
+                            content=json.dumps(
+                                {
+                                    "jsonrpc": "2.0",
+                                    "id": _disc.get("id"),
+                                    "result": {
+                                        "resultType": "complete",
+                                        # Honest claim: only the eras this server
+                                        # actually serves (2026-07-28 modern path,
+                                        # 2025-11-25 native/translated path).
+                                        "supportedVersions": [
+                                            "2026-07-28",
+                                            "2025-11-25",
+                                        ],
+                                        "capabilities": {
+                                            "experimental": {},
+                                            "logging": {},
+                                            "prompts": {},
+                                            "resources": {},
+                                            "tools": {},
+                                        },
+                                    },
+                                }
+                            ),
+                            status_code=200,
+                            media_type="application/json",
+                        )
+                    # 2026-07-28 stateless: pass through without session check
                     request._body = body
                     return await call_next(request)
 
