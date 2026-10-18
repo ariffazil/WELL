@@ -20,6 +20,7 @@ Module: WELL/gate/rasa_witness.py
 from __future__ import annotations
 
 import json
+import os
 import re
 import sys
 import time
@@ -30,6 +31,11 @@ from typing import Any, Optional
 
 
 # ── Constants ──────────────────────────────────────────────────────────────────
+
+# Canonical live state path (aligned with server.STATE_PATH). The old default
+# /root/WELL/state.json is a 2026-08-01 fixture decoy and is not readable on a
+# clean CI runner. Env-overridable for tests and alternate deployments.
+DEFAULT_STATE_PATH = os.environ.get("WELL_STATE_PATH", "/var/lib/well/state.json")
 
 # Observation TTL: stale observations must not influence posture
 DEFAULT_TTL_MINUTES = 120
@@ -330,7 +336,7 @@ def detect_mismatch(
 # ── Well Gate Integration ──────────────────────────────────────────────────────
 
 def rasa_witness_gate(
-    state_path: str = "/root/WELL/state.json",
+    state_path: str = DEFAULT_STATE_PATH,
     self_report_rasa: Optional[str] = None,
     text_context: Optional[str] = None,
 ) -> MismatchResult:
@@ -436,7 +442,7 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser(description="Rasa Witness Contract — WELL Gate")
-    parser.add_argument("--state", default="/root/WELL/state.json", help="Path to state.json")
+    parser.add_argument("--state", default=DEFAULT_STATE_PATH, help="Path to state.json")
     parser.add_argument("--rasa", default=None, help="Self-reported rasa (e.g., 'ok', 'fine')")
     parser.add_argument("--text", default=None, help="Text context to scan for prohibited conclusions")
     parser.add_argument("--scan-text", default=None, help="Scan arbitrary text for prohibited conclusions")

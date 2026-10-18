@@ -10165,6 +10165,9 @@ def _omega_well_output(
     constitutional_compliance: dict[str, Any] | None = None,
     error: str | None = None,
     telemetry_status: str = "unknown",
+    has_telemetry: bool | None = None,
+    diagnosis: str | None = None,
+    recommendation: str | None = None,
 ) -> dict[str, Any]:
     """Canonical Ω-WELL output format -- compatible with arifOS + AAA.
 
@@ -10246,6 +10249,12 @@ def _omega_well_output(
         out["data"] = data
     if error:
         out["error"] = error
+    if has_telemetry is not None:
+        out["has_telemetry"] = bool(has_telemetry)
+    if diagnosis:
+        out["diagnosis"] = diagnosis
+    if recommendation:
+        out["recommendation"] = recommendation
     return out
 
 
@@ -14309,6 +14318,9 @@ _WELL_INVOCATION_ORGAN = "WELL"
 _WELL_INVOCATION_LOG = None
 # Test-only sink override so a test never writes into live production telemetry.
 WELL_INVOCATION_SINK_ENV = "WELL_TOOL_INVOCATIONS_LOG"
+# Shared contract lives in the AAA repo. Overridable so CI can provision it
+# from a pinned SHA instead of assuming the VPS layout.
+_WELL_INVOCATION_LIB = _os.environ.get("AAA_LIB", "/root/AAA/lib")
 
 
 def _well_invocation_logger():
@@ -14317,8 +14329,8 @@ def _well_invocation_logger():
     if _WELL_INVOCATION_LOG is None:
         import sys as _sys_tel
 
-        if "/root/AAA/lib" not in _sys_tel.path:
-            _sys_tel.path.insert(0, "/root/AAA/lib")
+        if _WELL_INVOCATION_LIB not in _sys_tel.path:
+            _sys_tel.path.insert(0, _WELL_INVOCATION_LIB)
         import invocation_log as _inv_tel
 
         _WELL_INVOCATION_LOG = _inv_tel

@@ -5,13 +5,15 @@
 
 import json
 import datetime
+import os
 from pathlib import Path
 import sys
 import urllib.request
 import urllib.error
 
-# Topology: Sovereign WELL Root
-WELL_STATE_PATH = Path("/root/WELL/state.json")
+# Topology: Sovereign WELL Root. Canonical live path aligned with
+# server.STATE_PATH; /root/WELL/state.json is a retired fixture decoy.
+WELL_STATE_PATH = Path(os.environ.get("WELL_STATE_PATH", "/var/lib/well/state.json"))
 
 # arifOS kernel endpoint — adopted from WEALTH wealth_arifos_bridge pattern.
 # Per sovereign (888) C3 REDTEAM ratification 2026-07-18: every organ must

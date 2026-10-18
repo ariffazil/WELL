@@ -31,7 +31,11 @@ from typing import Any
 
 # WELL organ location — overridable for tests.
 WELL_ROOT = Path(os.environ.get("WELL_ROOT", "/root/WELL"))
-STATE_PATH = WELL_ROOT / "state.json"
+# Canonical live state path. WELL_ROOT/state.json is the retired fixture decoy
+# and is not readable on a clean CI runner.
+STATE_PATH = Path(
+    os.environ.get("WELL_STATE_PATH", "/var/lib/well/state.json")
+)
 
 
 def check_state_honesty(
@@ -50,7 +54,13 @@ def check_state_honesty(
     """
     if state is None:
         path = state_path or STATE_PATH
-        if not path.exists():
+        try:
+            present = path.exists()
+        except OSError:
+            # An unreadable parent (e.g. /root on a CI runner) is an ABSENCE to
+            # this process, not a finding. The docstring promises never to raise.
+            present = False
+        if not present:
             return {
                 "verdict": "OK",
                 "check": "state_honesty",
@@ -59,7 +69,7 @@ def check_state_honesty(
             }
         try:
             state = json.loads(path.read_text())
-        except json.JSONDecodeError as e:
+        except (OSError, json.JSONDecodeError) as e:
             return {
                 "verdict": "DIVERGENCE",
                 "check": "state_honesty",

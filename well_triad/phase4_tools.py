@@ -96,7 +96,7 @@ def _fetch_human_plane(actor_id: str) -> dict[str, Any]:
     Returns {score, state, weakest} where score is 0-1 (well_score/100),
     state is OPTIMAL/WATCH/DEGRADED/CRITICAL.
     """
-    state_path = os.environ.get("WELL_STATE_PATH", "/root/WELL/state.json")
+    state_path = os.environ.get("WELL_STATE_PATH", "/var/lib/well/state.json")
     try:
         with open(state_path) as f:
             state = json.load(f)
@@ -293,7 +293,7 @@ def _fetch_governance_plane(lookback_hours: int) -> dict[str, Any]:
 
     Returns {score, consent_intact, active_recommendations, open_attestations}.
     """
-    state_path = os.environ.get("WELL_STATE_PATH", "/root/WELL/state.json")
+    state_path = os.environ.get("WELL_STATE_PATH", "/var/lib/well/state.json")
     try:
         with open(state_path) as f:
             state = json.load(f)
