@@ -34,6 +34,25 @@ if str(WELL_ROOT) not in sys.path:
 
 import server  # noqa: E402  -- the live dispatch module under test
 
+
+def _shared_contract_available() -> bool:
+    """The telemetry contract lives in the private AAA repo (/root/AAA/lib).
+
+    A clean CI runner has neither the sibling checkout nor a cross-repo token,
+    so this integration test cannot run there. It runs wherever AAA_LIB (or the
+    VPS layout) provides the module; skip with an explicit reason otherwise.
+    """
+    try:
+        return server._well_invocation_logger() is not None
+    except Exception:
+        return False
+
+
+pytestmark = pytest.mark.skipif(
+    not _shared_contract_available(),
+    reason="requires shared AAA/lib invocation_log (private cross-repo contract not provisioned on this runner)",
+)
+
 TEST_TOOL = "well_test_telemetry_ping"
 # WELL's session-validation middleware requires a non-empty session_id on every
 # non-exempt tool call; it is transport metadata, never written to telemetry.

@@ -20,6 +20,8 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+import pytest
+
 WELL_ROOT = Path(__file__).resolve().parents[1]
 if str(WELL_ROOT) not in sys.path:
     sys.path.insert(0, str(WELL_ROOT))
@@ -29,10 +31,21 @@ from claim_class_gate import (  # noqa: E402
     ACTION_ELIGIBLE_CLASSES,
     CLAIM_CLASSES,
     NON_ASSESSMENT_CLASSES,
+    _claim_kernel,
     evaluate_claim_class,
     gate_human_claim,
     must_not_return_as_assessment,
 )
+
+
+def _claim_kernel_available() -> bool:
+    """claim_kernel lives in the private AAA repo; the gate degrades to a local
+    membership rule without it (mismatch lint skipped). Tests that assert the
+    full-fidelity kernel behaviour only run where the kernel is reachable."""
+    try:
+        return _claim_kernel() is not None
+    except Exception:
+        return False
 
 # A plain sentence about a person's state that carries no mechanism and no
 # measure: the class of claim this gate exists for.
@@ -194,6 +207,10 @@ def test_undeclared_dignity_report_fails_closed():
     assert _federation_gate(result)["declared"] == "UNCLASSIFIED"
 
 
+@pytest.mark.skipif(
+    not _claim_kernel_available(),
+    reason="asserts claim_kernel mismatch lint; kernel unavailable (private AAA/lib not provisioned on this runner)",
+)
 def test_every_narrative_class_fails_closed_and_undeclared_never_opens():
     for cls in NON_ASSESSMENT_CLASSES:
         assert gate_human_claim(MEASURED_SENTENCE, cls)["returned_as_assessment"] is False
