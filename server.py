@@ -2004,6 +2004,18 @@ mcp = FastMCP(
     ),
 )
 
+# ── Register TasksExtension for task-enabled tools (fastmcp[tasks] 4.x) ───
+# RESTORED 2026-10-18 (333-AGI): a rebase on this branch dropped this block, so the
+# @mcp.tool(task=True) tools (well_seal_vault/well_999_vault/well_assess_sovereign_entropy)
+# crashed startup: no extension with identifier io.modelcontextprotocol/tasks registered.
+# Isolated preflight verified: without extension -> RuntimeError; with -> gate clears.
+try:
+    from fastmcp_tasks import TasksExtension
+    _tasks_ext = TasksExtension()
+    mcp.add_extension(_tasks_ext)
+except Exception:
+    _tasks_ext = None
+
 # ── Session Validation Middleware (FORGED 2026-07-18) ─────────────────────────
 # WELL tools accept session_id as optional. This middleware enforces that
 # ALL tool calls provide a non-empty session_id. Anonymous reads are blocked.
