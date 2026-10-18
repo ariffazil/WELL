@@ -10166,8 +10166,8 @@ def _omega_well_output(
     error: str | None = None,
     telemetry_status: str = "unknown",
     has_telemetry: bool | None = None,
-    diagnosis: str | None = None,
-    recommendation: str | None = None,
+    machine_note: str | None = None,
+    next_step: str | None = None,
 ) -> dict[str, Any]:
     """Canonical Ω-WELL output format -- compatible with arifOS + AAA.
 
@@ -10251,10 +10251,10 @@ def _omega_well_output(
         out["error"] = error
     if has_telemetry is not None:
         out["has_telemetry"] = bool(has_telemetry)
-    if diagnosis:
-        out["diagnosis"] = diagnosis
-    if recommendation:
-        out["recommendation"] = recommendation
+    if machine_note:
+        out["machine_note"] = machine_note
+    if next_step:
+        out["next_step"] = next_step
     return out
 
 
@@ -11970,7 +11970,7 @@ def _well_assess_machine_telemetry() -> dict[str, Any]:
             verdict="HOLD",
             error="machine_state.json not found -- telemetry collector not running",
             has_telemetry=False,
-            diagnosis="No machine telemetry available. Run machine_telemetry.py cron.",
+            machine_note="No machine telemetry available. Run machine_telemetry.py cron.",
         )
 
     try:
@@ -12278,7 +12278,7 @@ def well_machine_diagnose(
             mode="diagnose",
             verdict="HOLD",
             error="machine_state.json not found -- telemetry collector may be down",
-            recommendation="Run: python3 /root/WELL/scripts/machine_telemetry.py",
+            next_step="Run: python3 /root/WELL/scripts/machine_telemetry.py",
         )
 
     try:
