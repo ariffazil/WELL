@@ -17,7 +17,7 @@ from typing import Any
 _DEPRECATION = {
     "epoch": "2026-09-16",
     "removal": "2026-10-16",
-    "note": "v2 mode-surface; legacy tools remain registered during epoch",
+    "note": "v2 mode-surface; legacy tools retired (epoch closed 2026-10-16)",
 }
 
 
