@@ -207,3 +207,17 @@ Built by Muhammad Arif bin Fazil.
 | Rollback | — |
 | Flow graph | [FEDERATION.md](https://github.com/ariffazil/AAA/blob/main/FEDERATION.md) — peta semua organ + repo |
 <!-- FEDERATION-STANDARD v2026-10-15 END -->
+
+---
+
+## External Footprint & Discovery
+
+WELL is the human readiness and vitality mirror organ of the arifOS federation.
+
+- **Discoverable:** YES (GitHub repository, public MCP door at `well.arif-fazil.com/mcp`)
+- **Authority Ceiling:** REFLECT_ONLY (readiness reflection — never autonomy escalation)
+- **Inspectable & Forkable:** YES
+- **Independent Validation:** NOT YET ESTABLISHED
+
+Canonical Witness Ledger: [EXTERNAL_WITNESS_LEDGER.md](https://github.com/ariffazil/arifOS/blob/main/docs/EXTERNAL_WITNESS_LEDGER.md)
+
