@@ -55,6 +55,10 @@ state.test.json.*
 scripts/*.bak-*
 
 machine_state.json
+# 2026-10-25 classification (repair-to-release): machine_state.json.quarantine-* is a
+# runtime symlink to LIVE /var/lib/well/machine_state.json — not a quarantine snapshot,
+# not evidence. Ignore the variant name too; live-state pointers never get committed.
+machine_state.json.quarantine-*
 schema.json
 agent_telemetry.json
 CONTRIBUTING.md
