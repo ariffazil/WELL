@@ -463,11 +463,23 @@ def compute_vps(
         causes.append("Coupling risk elevated")
     primary_cause = "; ".join(causes) if causes else "No critical dimension"
 
+    signal = (
+        "nominal"
+        if verdict == "PROCEED"
+        else (
+            "recovery_needed"
+            if verdict in ("REDUCE_LOAD", "RECOVER", "HOLD")
+            else "insufficient_data"
+        )
+    )
+
     return {
         "score": vps,
         "band": band,
         "band_meaning": band_meaning,
-        "verdict": verdict,
+        "signal": signal,
+        "authority": "REFLECT_ONLY",
+        "verdict": verdict,  # ADVISORY: WELL is REFLECT_ONLY, arifOS 888 adjudicates verdicts
         "verdict_meaning": verdict_meaning,
         "weakest_dimensions": weakest,
         "dimensions": {
