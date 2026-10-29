@@ -4,7 +4,7 @@ federation_release: v2026.09.13
 last_verified: 2026-09-13T06:32:00Z
 live_commit: 4e4e04c
 live_health: degraded (OBS 2026-09-13) — REFLECT_ONLY, no autonomy escalation
-tools_live: 31 (canonical, live-witnessed via :18083/health)
+tools_live: 10 (canonical, live-witnessed via :18083 tools/list, session-verified OBS 2026-10-30: assess_homeostasis, assess_reliability, check_repair, classify_substrate, guard_dignity, machine_diagnose, machine_recommend, registry_status, trace_lineage, validate_vitality)
 authority_ceiling: REFLECT_ONLY
 apex_zen: A2A delegates ⊥ MCP equips ⊥ ACT mutates ⊥ arifOS governs ⊥ F13 decides
 honesty: H-WELL is SELF_REPORT/AGED until biometric inject; M-WELL machine_state.json is separate
@@ -97,7 +97,7 @@ Full tool inventory: [`docs/WELL_TOOL_SURFACE.md`](./docs/WELL_TOOL_SURFACE.md) 
 
 ## Current verified state
 
-**Observed at: 2026-10-16T09:06:37Z** — method: `curl http://127.0.0.1:18083/health` and `curl http://127.0.0.1:18083/tools` on the production host.
+**Observed at: 2026-10-30T17:40Z** — method: `curl http://127.0.0.1:18083/health` + MCP `tools/list` (session-verified, 10 tools) on the production host.
 
 - Organ status: `degraded` · authority ceiling `REFLECT_ONLY` · floors violated: none
 - Tool surface: **10 tools exposed** (`well_machine_diagnose`, `well_machine_recommend`, `well_classify_substrate`, `well_trace_lineage`, `well_assess_homeostasis`, `well_check_repair`, `well_validate_vitality`, `well_assess_reliability`, `well_guard_dignity`, `well_registry_status`)
@@ -143,7 +143,7 @@ Each row names its own gap; repairing a claim by substituting a stronger one is 
 | Domain data readiness | Readiness claims lack a multi-sample dataset behind them | **INSUFFICIENT_DATA** (observed 2026-10-16) |
 | Independent audit | Self-measurement is the only witness so far | **Open** — no external reviewer has published findings |
 | Stranger reproducibility | Run path documented here is maintainer-verified only | **Open** |
-| Tool-surface documentation drift | `.well-known/mcp/server.json` and the SOT-MANIFEST header carry older tool counts (`22`, `31`) than the live surface | **Open** — live `:18083/tools` wins (truth rule); docs to be re-stamped by probe |
+| Tool-surface documentation drift | `.well-known/mcp/server.json` and older docs carried counts `22`/`31`; README frontmatter re-stamped to **10** (OBS 2026-10-30, tools/list session-verified) | **Closed in README** — other surfaces (server.json, manifest) still to be re-stamped by probe |
 
 Closed historical rows: [`docs/archive/`](./docs/archive/) (pre-doctrine README preserved at [`docs/archive/README-2026-10-16-pre-doctrine.md`](./docs/archive/README-2026-10-16-pre-doctrine.md)).
 
