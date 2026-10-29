@@ -12375,31 +12375,25 @@ def well_machine_diagnose(
         "memory_psi_avg10": mem_psi,
     }
 
-    if swap_pct > 30 and mem_psi < 5:
-        severity = "AMBER"
-        issues.append(
-            f"Swap {swap_pct:.0f}% used ({swap_used_kb / 1024**2:.1f}GB) but PSI={mem_psi:.1f} -- safe to recover"
-        )
+    if swap_pct > 30:
+        if swap_pct > 50:
+            severity = "RED"
+            issues.append(f"Swap HIGH: {swap_pct:.0f}% used ({swap_used_kb / 1024**2:.1f}GB), PSI={mem_psi:.1f}")
+        else:
+            severity = "AMBER"
+            issues.append(
+                f"Swap {swap_pct:.0f}% used ({swap_used_kb / 1024**2:.1f}GB), PSI={mem_psi:.1f}"
+            )
         recommendations.append(
             {
-                "issue": f"Stale swap ({swap_pct:.0f}%, {swap_used_kb / 1024**2:.1f}GB) with zero memory pressure",
-                "action": "swapoff -a && swapon -a  # PSI confirms safe -- no memory thrashing",
-                "blast_radius": "LOW",
-                "reversible": True,
-                "route_to": "A-FORGE forge_shell",
-                "precondition": f"mem_psi_avg10={mem_psi:.1f} < 5 -- confirmed safe",
-            }
-        )
-    elif swap_pct > 50:
-        severity = "RED"
-        issues.append(f"Swap CRITICAL: {swap_pct:.0f}% used, PSI={mem_psi:.1f}")
-        recommendations.append(
-            {
-                "issue": f"Critical swap ({swap_pct:.0f}%) with memory pressure",
-                "action": "Kill top memory consumers first: ps aux --sort=-%mem | head -5. Then swapoff -a && swapon -a.",
-                "blast_radius": "MEDIUM",
-                "reversible": True,
-                "route_to": "888_HOLD -- requires arif_judge before killing processes",
+                "issue": f"High swap occupancy ({swap_pct:.0f}%, {swap_used_kb / 1024**2:.1f}GB)",
+                "action": "DO NOT FLUSH SWAP -- swapoff could create severe memory pressure and OOM risk",
+                "hazard": "SWAP_FLUSH_HAZARD",
+                "command": None,
+                "blast_radius": "HIGH",
+                "reversible": False,
+                "route_to": "A-FORGE forge_shell (investigation only; no swap flush)",
+                "precondition": "swap flush voided from WELL advice to protect system stability",
             }
         )
 
@@ -12543,15 +12537,20 @@ def well_machine_diagnose(
             "pressure.io_some_avg10": (ms.get("pressure") or {}).get("io_some_avg10"),
         }
     )
+    # Strip meaningless composite sum float while preserving dimension coverage
+    metric_coverage.pop("aggregate", None)
 
-    # ── Verdict ──
+    # ── Signal (REFLECT_ONLY: no constitutional verdict) ──
     if severity == "RED":
+        signal_state = "recovery_needed"
         verdict = "HOLD"
         overall = "Machine requires immediate attention"
     elif severity == "AMBER":
+        signal_state = "recovery_needed"
         verdict = "REDUCE_LOAD"
         overall = f"Machine operational but has {len(issues)} issues to address"
     else:
+        signal_state = "nominal"
         verdict = "PROCEED"
         overall = "Machine is healthy -- no issues detected"
 
@@ -12564,7 +12563,9 @@ def well_machine_diagnose(
         data={
             "overall": overall,
             "severity": severity,
-            "verdict": verdict,
+            "signal": signal_state,
+            "condition": "ADVISORY",
+            "verdict": verdict,  # DEPRECATED: backward-compat only, arifOS 888 adjudicates verdicts
             "readiness": readiness_block,
             "recovery": recovery_block,
             "metric_coverage": metric_coverage,
@@ -12639,20 +12640,20 @@ def well_machine_recommend(
     RECOMMENDATIONS = {
         "swap": {
             "condition": f"swap at {swap_pct:.0f}%, PSI={mem_psi:.1f}",
-            "safe": mem_psi
-            < 5,  # Safe when pressure low; swap_pct gates applicability, not safety
+            "safe": False,  # Swap flush is hazard-prone; executable command voided
             "commands": [
                 {
-                    "command": "swapoff -a && swapon -a",
-                    "description": "Cycle swap -- drains all stale swap pages back to RAM. Safe only when PSI < 5.",
-                    "risk": "LOW" if mem_psi < 5 else "HIGH",
-                    "precondition": f"mem_psi_avg10={mem_psi:.1f} must be < 5",
-                    "blast_radius": "LOW",
-                    "reversible": True,
+                    "command": None,
+                    "description": "DO NOT FLUSH SWAP -- swapoff could create severe memory pressure and OOM risk.",
+                    "hazard": "SWAP_FLUSH_HAZARD",
+                    "risk": "HIGH",
+                    "precondition": "swap flush voided to protect system stability",
+                    "blast_radius": "HIGH",
+                    "reversible": False,
                 },
                 {
                     "command": "sync && echo 3 > /proc/sys/vm/drop_caches",
-                    "description": "Drop page cache, dentries, and inodes -- frees RAM for swap recovery.",
+                    "description": "Drop page cache, dentries, and inodes -- frees RAM safely.",
                     "risk": "LOW",
                     "blast_radius": "LOW",
                     "reversible": True,

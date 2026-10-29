@@ -55,6 +55,10 @@ state.test.json.*
 scripts/*.bak-*
 
 machine_state.json
+# 2026-10-25 classification (repair-to-release): machine_state.json.quarantine-* is a
+# runtime symlink to LIVE /var/lib/well/machine_state.json — not a quarantine snapshot,
+# not evidence. Ignore the variant name too; live-state pointers never get committed.
+machine_state.json.quarantine-*
 schema.json
 agent_telemetry.json
 CONTRIBUTING.md
@@ -82,6 +86,14 @@ sessions/
 # write time, or move intake records out of the repo tree entirely.
 intake/_quarantine*/
 intake/processed/*.json
+# 2026-10-25 (333-AGI): the verbal intake channel writes the same class of
+# record — signals.quote (VERBATIM sovereign utterance) +
+# evidence_class=SOVEREIGN_VERBAL_SELF_REPORT. It was simply not under the
+# 2026-09-30 rule, so `git add -A` would have published a personal quote.
+# Visibility re-measured 2026-10-25: PRIVATE (the 2026-09-30 note said
+# PUBLIC — stale). Rule kept regardless: private access can widen, forks and
+# CI logs keep copies, and a visibility flip publishes history retroactively.
+intake/verbal/*.json
 # gitignore is inert on already-tracked paths — the four human-data records below
 # were tracked before this rule existed and are now `git rm --cached` (2026-09-30).
 state.json.*
