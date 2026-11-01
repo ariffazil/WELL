@@ -19718,6 +19718,7 @@ def well_registry_status(
             "alias_conflicts_count": len(payload["alias_conflicts"]),
             "verdict": payload["verdict"],
             "migration": payload["migration"],
+            "well_version": payload.get("well_version"),
             "authority": "ADVISORY_ONLY",
             "final_authority": "ARIF",
             "w0": payload["w0"],
