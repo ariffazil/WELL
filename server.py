@@ -1982,6 +1982,7 @@ def _apply_public_host_allowlist(app: Any) -> Any:
 # Stamped by scripts/refresh_deploy_stamp.sh (ExecStartPre) from HEAD commit date; falls
 # back to the last released literal when the stamp is absent (fresh clones, tests).
 from pathlib import Path as _WellPath
+
 try:
     _well_v = (_WellPath(__file__).parent / ".well_version").read_text().strip()
     WELL_VERSION = _well_v if _well_v else "v2026.07.24"
@@ -2021,6 +2022,7 @@ mcp = FastMCP(
 # Isolated preflight verified: without extension -> RuntimeError; with -> gate clears.
 try:
     from fastmcp_tasks import TasksExtension
+
     _tasks_ext = TasksExtension()
     mcp.add_extension(_tasks_ext)
 except Exception:
@@ -12388,7 +12390,9 @@ def well_machine_diagnose(
     if swap_pct > 30:
         if swap_pct > 50:
             severity = "RED"
-            issues.append(f"Swap HIGH: {swap_pct:.0f}% used ({swap_used_kb / 1024**2:.1f}GB), PSI={mem_psi:.1f}")
+            issues.append(
+                f"Swap HIGH: {swap_pct:.0f}% used ({swap_used_kb / 1024**2:.1f}GB), PSI={mem_psi:.1f}"
+            )
         else:
             severity = "AMBER"
             issues.append(
@@ -12518,7 +12522,9 @@ def well_machine_diagnose(
     # not a task scope. _task_scoped_readiness gates readiness on a real
     # task_class / task_id pair; passing the recovery hint would fabricate
     # a readiness verdict from a recovery scope.
-    _task_scope_for_readiness = None if str(task_id or '').startswith('recovery:') else task_id
+    _task_scope_for_readiness = (
+        None if str(task_id or "").startswith("recovery:") else task_id
+    )
     readiness_block = _task_scoped_readiness(
         _task_scope_for_readiness,
         task_class,
@@ -19680,6 +19686,7 @@ def well_registry_status(
         "alias_conflicts": alias_conflicts,
         "verdict": verdict,
         "migration": migration,
+        "well_version": WELL_VERSION,
         "measurement_boundary": "/root/AAA/docs/MEASUREMENT_BOUNDARY_CONTRACT.md",
         "well_system_registry_status": "DEPRECATED -- use well_registry_status",
         "registry_note": (
