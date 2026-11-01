@@ -1,8 +1,16 @@
 organ: WELL
-version: 2026.07.25
+version: 2026.11.01
 sot_source: SOMATIC_TOOLS (canonical public surface) + AUTONOMIC_TOOLS (internal)
 live_port: 18083
 registry_note: Single source of truth. Both manifests and live server derive from this.
+audit_2026_11_01:  # 333-AGI hardening sweep — all numbers from live probes + registry_status mode=full
+  tested: 10 public tools via tools/list (all respond; machine_diagnose + consent_audit call-verified OK)
+  live_counts: {intended: 10, registered: 10, exported: 10, callable: 10, phantom: 0, missing_public: 0, unexpected_public: 0, alias_conflicts: 0}
+  verdict: REGISTRY_PASS
+  tests: "491 passed, 23 skipped (pytest, 2026-11-01)"
+  version_identity: "WELL_VERSION single-source from .well_version stamp (S38) — serverInfo tracks HEAD"
+  internal_lane: "consent/triadic/frame aliases registered, hidden from tools/list (somatic boundary) — callable via tools/call"
+
 audit_2026_07_25:
   tested: 15 tools (8 public + 7 internal)
   all_respond: true
@@ -53,6 +61,18 @@ public_tools:  # discoverable via tools/list (somatic boundary enforced)
   valid_modes: [consent, boundary, shadow]
   description: Guard soul, personhood, meaning, and symbolic boundaries
 
+- name: well_machine_diagnose
+  domain: M-WELL
+  omega: Ω-WELL-09
+  valid_modes: []  # no mode param — direct call
+  description: Full VPS health from machine_state.json cron telemetry (CPU/RAM/swap/disk/PSI/services)
+
+- name: well_machine_recommend
+  domain: M-WELL
+  omega: Ω-WELL-09
+  valid_modes: []  # no mode param — direct call
+  description: Map machine issue → concrete fix commands, ADVISORY_ONLY (A-FORGE executes)
+
 - name: well_registry_status
   domain: Federation
   valid_modes: [status, full]
@@ -94,7 +114,7 @@ internal_tools:  # callable via tools/call, hidden from tools/list
 resources:
   exposed: 10
   canonical: 29
-  gap_note: "19 resources defined in refactored server_fastmcp.py but not exposed in production server.py"
+  gap_note: "server_fastmcp.py removed from repo (pre-2026-10); production server.py exposes 10 resources — gap note is historical"
 
 prompts:
   exposed: 9
@@ -112,7 +132,7 @@ telemetry:
 v2_deprecation:
   epoch: 2026-09-16
   removal: 2026-10-16
-  note: "v2 = 10 mode-tools (thin delegation, zero logic duplication). Legacy 31 stay registered during epoch."
+  note: "RESOLVED 2026-11-01: removal date passed; v2 consolidated names (well_human/well_machine/well_triad) never shipped. Canonical surface = the 10 names above. Legacy v1 aliases already unregistered (registry_status: legacy_still_registered=false)."
 
 v2_public_tools:
 - {name: well_human,        plane: H, modes: "homeostasis|readiness|dignity"}

@@ -22,4 +22,8 @@ d["note"] = "stamp refreshed: aligned to HEAD (refresh_deploy_stamp.sh)"
 json.dump(d, open(path, "w"), indent=2)
 PY
 done
+
+# WELL_VERSION stamp (S38) — running identity tracks source revision (HEAD commit date).
+D="$(git -C /root/WELL show -s --format=%cs HEAD 2>/dev/null)"
+[ -n "$D" ] && printf 'v%s\n' "$D" > /root/WELL/.well_version 2>/dev/null || true
 exit 0

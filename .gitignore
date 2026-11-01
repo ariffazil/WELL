@@ -102,3 +102,4 @@ state.json.*
 # boot (well.service.d/p0-stamp-refresh.conf ExecStartPre). Never committable.
 .git_commit
 release-manifest.json
+.well_version

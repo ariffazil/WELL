@@ -1978,9 +1978,19 @@ def _apply_public_host_allowlist(app: Any) -> Any:
     return app
 
 
+# WELL_VERSION — single source of identity (S38 provenance: running version ↔ source revision).
+# Stamped by scripts/refresh_deploy_stamp.sh (ExecStartPre) from HEAD commit date; falls
+# back to the last released literal when the stamp is absent (fresh clones, tests).
+from pathlib import Path as _WellPath
+try:
+    _well_v = (_WellPath(__file__).parent / ".well_version").read_text().strip()
+    WELL_VERSION = _well_v if _well_v else "v2026.07.24"
+except Exception:
+    WELL_VERSION = "v2026.07.24"
+
 mcp = FastMCP(
     name="WELL",
-    version="v2026.07.24",
+    version=WELL_VERSION,
     website_url="https://well.arif-fazil.com",
     # MCP spec 2026-07-28 compliance: declare listChanged capabilities
     experimental_capabilities={
@@ -2609,7 +2619,7 @@ def _mcp_health_check_impl() -> dict:
         "status": status,
         "transport": "SSE_VALID",
         "auth": "OK",
-        "schema_version": "v2026.07.24",
+        "schema_version": WELL_VERSION,
         # FEDERATION HANDSHAKE (canonical: arifOS/arifosmcp/schemas/federation_enums.py)
         # See: /root/AAA/governance/FEDERATION_HANDSHAKE.md
         "federation_schema_version": "2.0.0",
@@ -15238,7 +15248,7 @@ if __name__ == "__main__":
                 "role": "Body / Human Intelligence -- Operator Cognitive Pressure Monitor",
                 "authority": "REFLECT_ONLY -- WELL informs. arifOS judges. Arif decides.",
                 "schema": "well-federation-v2026.05.08",
-                "version": "v2026.07.24",
+                "version": WELL_VERSION,
                 "count": len(tools),
                 "w0_invariant": "WELL holds a mirror, not a veto. Operator sovereignty is invariant.",
                 "danger_taxonomy": {
@@ -15304,7 +15314,7 @@ if __name__ == "__main__":
                 "identity_valid": classification["well_ok"],
                 "has_telemetry": classification["has_telemetry"],
                 "service": "well-mcp",
-                "version": "v2026.07.24",
+                "version": WELL_VERSION,
                 "identity_hash": identity_hash,
                 # P6 -- WELL identity anchor (SUBSTRATE_LAW, not constitutional)
                 "domain_law": domain_law,
@@ -19314,7 +19324,7 @@ def well_system_registry_status(actor_id: str | None = None) -> dict[str, Any]:
         telemetry_status="registry_probe",
         data={
             "service": "well-mcp",
-            "version": "v2026.07.24",
+            "version": WELL_VERSION,
             "registry_status": registry_truth,
             "overall_signal": overall_signal,
             # P1: Explicit two-layer split
@@ -21603,7 +21613,7 @@ if __name__ == "__main__":
             if _compute_well_commits()["drift"]:
                 _pub_status = "degraded"
             return JSONResponse(
-                {"status": _pub_status, "organ": "WELL", "version": "v2026.07.24"}
+                {"status": _pub_status, "organ": "WELL", "version": WELL_VERSION}
             )
         try:
             with open(".identity_hash", "r") as f:
@@ -21682,7 +21692,7 @@ if __name__ == "__main__":
                     "well_signal"
                 ],  # REFLECT_ONLY -- never "verdict"
                 "service": "well-mcp",
-                "version": "v2026.07.24",
+                "version": WELL_VERSION,
                 # FEDERATION HANDSHAKE (canonical: arifOS/arifosmcp/schemas/federation_enums.py)
                 # See: /root/AAA/governance/FEDERATION_HANDSHAKE.md
                 "federation_schema_version": "2.0.0",
@@ -21832,7 +21842,7 @@ if __name__ == "__main__":
                 "role": "Body / Human Intelligence -- Operator Cognitive Pressure Monitor",
                 "authority": "REFLECT_ONLY -- WELL informs. arifOS judges. Arif decides.",
                 "schema": "well-federation-v2026.05.08",
-                "version": "v2026.07.24",
+                "version": WELL_VERSION,
                 "count": len(tools),
                 "w0_invariant": "WELL holds a mirror, not a veto. Operator sovereignty is invariant.",
                 "danger_taxonomy": {

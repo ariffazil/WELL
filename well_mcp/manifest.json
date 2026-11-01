@@ -305,5 +305,6 @@
     "apex_formula": "G = A\u00b7P\u00b7E\u00b7X\u00b7\u03a6",
     "constitutional_floors": "F1-F13",
     "mcp_spec": "v2026-07-28"
-  }
+  },
+  "deployment_status": "STAGING_ONLY \u2014 manifest describes the modular well_mcp package (v1.0.0 identity), not the running server. Production identity: FastMCP name=WELL, version from .well_version stamp (S38)."
 }
