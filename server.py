@@ -7325,6 +7325,227 @@ def well_decision_bandwidth(
 
 
 # internal -- not MCP-facing (collapsed 2026-05-26)
+import math
+
+# Provisional policy defaults (empirical bounds for Linux PSI stalls;
+# configurable via WELL_PRESSURE_POLICY_JSON env var; uncalibrated).
+PROVISIONAL_POLICY_DEFAULTS = {
+    "DIAGNOSTIC_READ": {"max_mem_psi_full_avg10": 50.0, "max_iowait_pct": 50.0, "human_always": False},
+    "SCAN_AUDIT": {"max_mem_psi_full_avg10": 20.0, "max_iowait_pct": 25.0, "human_always": False},
+    "BUILD_COMPUTE": {"max_mem_psi_full_avg10": 10.0, "max_iowait_pct": 20.0, "human_always": False},
+    "DATABASE_MAINTENANCE": {"max_mem_psi_full_avg10": 10.0, "max_iowait_pct": 10.0, "human_always": True},
+    "CONSEQUENTIAL_MUTATION": {"max_mem_psi_full_avg10": 10.0, "max_iowait_pct": 10.0, "human_always": True},
+    "UNKNOWN_OPERATION": {"max_mem_psi_full_avg10": 10.0, "max_iowait_pct": 10.0, "human_always": True},
+}
+
+
+def _get_pressure_policy() -> dict[str, dict[str, Any]]:
+    override_json = _os.environ.get("WELL_PRESSURE_POLICY_JSON")
+    if override_json:
+        try:
+            custom = json.loads(override_json)
+            if isinstance(custom, dict):
+                merged = {**PROVISIONAL_POLICY_DEFAULTS}
+                for k, v in custom.items():
+                    if isinstance(v, dict):
+                        merged[k] = {**merged.get(k, {}), **v}
+                return merged
+        except Exception:
+            pass
+    return PROVISIONAL_POLICY_DEFAULTS
+
+
+def _validate_machine_telemetry(telemetry: Any) -> tuple[bool, str, dict[str, Any]]:
+    """Strict validation of machine evidence emitted by _build_machine_enrichment().
+    Removes optimistic defaults. Rejects non-finite, missing, out-of-range, or stale fields.
+    """
+    if not isinstance(telemetry, dict):
+        return False, "Telemetry payload must be a dictionary", {}
+
+    if not telemetry.get("has_telemetry", False):
+        return False, "Machine telemetry flag has_telemetry is False", {}
+
+    tel_status = telemetry.get("telemetry_status")
+    if tel_status != "FULL":
+        return False, f"Machine telemetry status is not FULL (received: {tel_status})", {}
+
+    verdict = telemetry.get("m_well_verdict")
+    allowed_verdicts = {"STABLE", "STRAINED", "DEGRADED", "CRITICAL", "HEALTHY"}
+    if verdict not in allowed_verdicts:
+        return False, f"Invalid or missing m_well_verdict: {verdict}", {}
+
+    risk_level = telemetry.get("risk_level")
+    allowed_risks = {"GREEN", "AMBER", "RED", "CRITICAL"}
+    if risk_level not in allowed_risks:
+        return False, f"Invalid or missing risk_level: {risk_level}", {}
+
+    age = telemetry.get("telemetry_age_seconds")
+    if age is None or isinstance(age, bool) or not isinstance(age, (int, float)) or not math.isfinite(age) or age < 0:
+        return False, f"Missing or non-finite telemetry_age_seconds: {age}", {}
+    if age > 300.0:
+        return False, f"Machine telemetry is stale (age={age:.1f}s > 300s)", {}
+
+    numeric_fields = {
+        "memory_psi_some_avg10": telemetry.get("memory_psi_some_avg10"),
+        "memory_psi_full_avg10": telemetry.get("memory_psi_full_avg10"),
+        "iowait_pct": telemetry.get("iowait_pct"),
+        "mem_available_pct": telemetry.get("mem_available_pct"),
+        "swap_used_pct": telemetry.get("swap_used_pct"),
+    }
+
+    validated: dict[str, Any] = {
+        "m_well_verdict": verdict,
+        "risk_level": risk_level,
+        "telemetry_age_seconds": float(age),
+    }
+
+    for fname, val in numeric_fields.items():
+        if val is None or isinstance(val, bool) or not isinstance(val, (int, float)):
+            return False, f"Required numeric field {fname} missing or non-numeric: {val}", {}
+        if not math.isfinite(val):
+            return False, f"Required numeric field {fname} is not finite (NaN/Inf): {val}", {}
+        if val < 0.0 or val > 100.0:
+            return False, f"Required numeric field {fname} out of range [0, 100]: {val}", {}
+        validated[fname] = float(val)
+
+    return True, "VALID", validated
+
+
+def _classify_machine_operation(task_description: str | None, decision_class: str | None) -> tuple[str, bool]:
+    """Classify machine task into structured operation class.
+    Keyword matching suggests a class but NEVER establishes authorization or harmlessness.
+    Unknown consequences remain explicit (UNKNOWN_OPERATION -> consequential).
+    """
+    dc = (decision_class or "").lower().strip()
+    td = (task_description or "").lower().strip()
+
+    if dc in ("read", "diagnosis", "inspection", "probe", "status"):
+        return "DIAGNOSTIC_READ", False
+    if dc in ("destructive", "cleanup", "mutation", "delete", "prune"):
+        return "CONSEQUENTIAL_MUTATION", True
+    if dc in ("db", "database", "database_maintenance"):
+        return "DATABASE_MAINTENANCE", True
+    if dc in ("build", "compute"):
+        return "BUILD_COMPUTE", True
+    if dc in ("scan", "audit", "hash"):
+        return "SCAN_AUDIT", False
+
+    destructive_keywords = ("clean", "rm ", "delete", "prune", "truncate", "drop", "wipe", "format", "purge", "destroy", "kill", "restart")
+    if any(k in td for k in destructive_keywords):
+        return "CONSEQUENTIAL_MUTATION", True
+
+    if any(k in td for k in ("vacuum", "backup", "checkpoint", "dump", "restore", "migrate")):
+        return "DATABASE_MAINTENANCE", True
+
+    if any(k in td for k in ("build", "compile", "cargo", "make", "docker build", "npm run build")):
+        return "BUILD_COMPUTE", True
+
+    if any(k in td for k in ("hash", "scan", "checksum", "audit", "find")):
+        return "SCAN_AUDIT", False
+
+    if any(k in td for k in ("check", "inspect", "diagnose", "probe", "status", "read", "health", "test", "metric")):
+        return "DIAGNOSTIC_READ", False
+
+    return "UNKNOWN_OPERATION", True
+
+
+def _evaluate_machine_task_readiness(
+    task_description: str | None,
+    decision_class: str | None,
+    telemetry: Any,
+    operator_approved: bool = False,
+) -> dict[str, Any]:
+    """Evaluate machine task readiness keeping condition, task-readiness, approval,
+    and recovery strictly separate.
+
+    - Static defaults or missing telemetry NEVER establish live readiness.
+    - Operator approval NEVER substitutes for missing/stale telemetry.
+    - Readiness PASS NEVER authorizes execution of consequential operations.
+    - Normal mode NEVER permits consequential action without approval.
+    """
+    op_class, is_consequential = _classify_machine_operation(task_description, decision_class)
+    policy = _get_pressure_policy().get(op_class, PROVISIONAL_POLICY_DEFAULTS["UNKNOWN_OPERATION"])
+
+    is_valid, validation_reason, validated_tel = _validate_machine_telemetry(telemetry)
+
+    if not is_valid:
+        action_note = f"Machine evidence invalid or absent: {validation_reason}. Execution is not authorized."
+        if operator_approved:
+            action_note += " (Operator approval recorded, but cannot substitute for missing machine evidence)."
+
+        return {
+            "status": "HOLD",
+            "observed_condition": "UNKNOWN",
+            "machine_readiness": "UNKNOWN",
+            "task_readiness": "UNKNOWN",
+            "risk_level": "UNKNOWN",
+            "operation_class": op_class,
+            "human_confirmation_required": True,
+            "operator_approved": operator_approved,
+            "recommended_mode": "pause",
+            "action_note": action_note,
+            "validation_reason": validation_reason,
+            "recovery_verified": False,
+        }
+
+    condition = validated_tel["m_well_verdict"]
+    risk_level = validated_tel["risk_level"]
+    mem_psi_full = validated_tel["memory_psi_full_avg10"]
+    iowait = validated_tel["iowait_pct"]
+
+    warnings = []
+    pressure_exceeded = False
+    if mem_psi_full > policy["max_mem_psi_full_avg10"]:
+        warnings.append(f"memory_psi_full_avg10={mem_psi_full:.1f}% exceeds threshold ({policy['max_mem_psi_full_avg10']}%)")
+        pressure_exceeded = True
+    if iowait > policy["max_iowait_pct"]:
+        warnings.append(f"iowait_pct={iowait:.1f}% exceeds threshold ({policy['max_iowait_pct']}%)")
+        pressure_exceeded = True
+
+    if condition in ("CRITICAL", "DEGRADED") or pressure_exceeded:
+        task_readiness = "DEFERRED_PRESSURE"
+    elif condition in ("STABLE", "HEALTHY", "STRAINED", "FUNCTIONAL"):
+        task_readiness = "READY"
+    else:
+        task_readiness = "UNKNOWN"
+
+    human_required = is_consequential or policy.get("human_always", False) or pressure_exceeded or (condition in ("CRITICAL", "DEGRADED"))
+
+    if is_consequential:
+        status = "HOLD" if not operator_approved else ("PASS" if task_readiness == "READY" else "HOLD")
+        recommended_mode = "normal" if (operator_approved and task_readiness == "READY") else "draft_only"
+        action_note = f"Machine condition: {condition}. Consequential operation ({op_class}) requires explicit human approval before execution."
+        if warnings:
+            action_note += f" Elevated load warning: {'; '.join(warnings)}."
+    elif pressure_exceeded:
+        status = "HOLD"
+        recommended_mode = "draft_only"
+        action_note = f"Machine condition: {condition}. Elevated pressure for {op_class}: {'; '.join(warnings)}."
+    elif op_class == "DIAGNOSTIC_READ":
+        status = "PASS" if condition != "CRITICAL" else "HOLD"
+        recommended_mode = "normal" if status == "PASS" else "draft_only"
+        action_note = f"Machine condition: {condition}. Diagnostic read permitted; no mutation involved."
+    else:
+        status = "PASS" if task_readiness == "READY" and not human_required else "HOLD"
+        recommended_mode = "normal" if status == "PASS" else "draft_only"
+        action_note = f"Machine condition: {condition}. Task readiness: {task_readiness}."
+
+    return {
+        "status": status,
+        "observed_condition": condition,
+        "machine_readiness": condition,
+        "task_readiness": task_readiness,
+        "risk_level": risk_level,
+        "operation_class": op_class,
+        "human_confirmation_required": human_required,
+        "operator_approved": operator_approved,
+        "recommended_mode": recommended_mode,
+        "action_note": action_note,
+        "validation_reason": "VALID",
+        "recovery_verified": False,
+    }
+
+
 @mcp.tool()
 def well_forge_precheck(
     task_description: str | None = None,
@@ -7355,7 +7576,7 @@ def well_forge_precheck(
     m_verdict = m_state.get("m_well_verdict", "UNKNOWN")
 
     _td = (task_description or "").lower()
-    _task_is_machine = decision_class == "machine" or any(
+    _task_is_machine = decision_class in ("machine", "vps", "server", "system", "infrastructure") or any(
         k in _td
         for k in (
             "swap",
@@ -7369,32 +7590,41 @@ def well_forge_precheck(
             "zombie",
             "memory pressure",
             "cpu",
+            "clean",
+            "prune",
+            "vacuum",
+            "checkpoint",
         )
     )
-    # FIX 2026-11-01 (external audit): machine-class tasks gate on M-WELL
-    # telemetry, never on the human body. Asking for body telemetry to
-    # repair swap was the misroute.
-    if not has_telemetry and _task_is_machine:
-        _machine_ok = m_verdict in ("HEALTHY", "DEGRADED")
-        return _compose_verdict(
+    # FIX 2026-11-02: machine-class tasks gate on verified M-WELL telemetry
+    # and explicit task-specific pressure policy, independent of operator telemetry presence.
+    # Consequential actions (cleanup/deletion) always require human confirmation.
+    if _task_is_machine:
+        real_enrichment = _build_machine_enrichment()
+        m_eval = _evaluate_machine_task_readiness(task_description, decision_class, real_enrichment)
+
+        human_readiness_val = "UNMEASURED" if not has_telemetry else h_resolved.get("readiness_capped", "UNKNOWN")
+        domain_verdict_str = "MACHINE_TELEMETRY_ONLY" if not has_telemetry else "MACHINE_TASK_WITH_BODY_TELEMETRY"
+
+        res = _compose_verdict(
             mcp="AFWELL",
             task=f"forge_precheck: {task_description or 'unspecified'}",
-            status="PASS" if _machine_ok else "HOLD",
-            domain_verdict="MACHINE_TELEMETRY_ONLY",
-            human_readiness="UNMEASURED",
-            machine_readiness=m_verdict,
-            confidence="MEDIUM" if _machine_ok else "LOW",
-            risk_level="LOW" if _machine_ok else "UNKNOWN",
-            recommended_mode="normal" if _machine_ok else "draft_only",
-            human_required=not _machine_ok,
-            next_safe_action=(
-                f"Machine telemetry present (M-WELL {m_verdict}); body telemetry "
-                "is not required for machine-class tasks. Proceed; Arif confirms "
-                "anything risky."
-                if _machine_ok
-                else "Machine telemetry degraded -- adopt draft-only mode."
-            ),
+            status=m_eval["status"],
+            domain_verdict=domain_verdict_str,
+            human_readiness=human_readiness_val,
+            machine_readiness=m_eval["machine_readiness"],
+            confidence="MEDIUM" if m_eval["status"] == "PASS" else "LOW",
+            risk_level=m_eval["risk_level"],
+            recommended_mode=m_eval["recommended_mode"],
+            human_required=m_eval["human_confirmation_required"],
+            next_safe_action=m_eval["action_note"],
         )
+        res["machine_readiness"] = m_eval["machine_readiness"]
+        res["human_readiness"] = human_readiness_val
+        res["task_readiness"] = m_eval["task_readiness"]
+        res["operation_class"] = m_eval["operation_class"]
+        res["recovery_verified"] = m_eval["recovery_verified"]
+        return res
 
     # ── No body telemetry → cannot recommend real readiness ──
     if not has_telemetry:
@@ -14294,6 +14524,79 @@ else:
         "StreamableHTTPServerTransport._check_accept_headers not found (mcp>=2.0); "
         "skipping 406 Accept-header patch"
     )
+
+# ── WellStack Session Resilience Monkey ─────────────────────────────────────
+# Allows reconnecting clients (e.g. Antigravity, long-lived harness) whose
+# sessions were established before a service restart/reload to continue
+# without getting 404 "Session not found".
+try:
+    from mcp.server.streamable_http import MCP_SESSION_ID_HEADER
+    from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
+    from mcp.shared.jsonrpc_dispatcher import JSONRPCDispatcher
+    from mcp.server.connection import Connection
+    from mcp.server.runner import serve_connection
+    from starlette.requests import Request
+    import anyio as _anyio
+
+    _orig_handle_stateful = StreamableHTTPSessionManager._handle_stateful_request
+
+    async def _resilient_handle_stateful(self, scope, receive, send):
+        request = Request(scope, receive)
+        request_mcp_session_id = request.headers.get(MCP_SESSION_ID_HEADER)
+        if request_mcp_session_id is not None and request_mcp_session_id not in self._server_instances:
+            import logging as _log
+            _log.getLogger("well").info(f"Re-admitting reconnecting session: {request_mcp_session_id[:64]}")
+            http_transport = StreamableHTTPServerTransport(
+                mcp_session_id=request_mcp_session_id,
+                is_json_response_enabled=self.json_response,
+                event_store=self.event_store,
+                security_settings=self.security_settings,
+                retry_interval=self.retry_interval,
+                idle_timeout=self.session_idle_timeout,
+            )
+            self._server_instances[request_mcp_session_id] = http_transport
+
+            async def run_server(*, task_status=_anyio.TASK_STATUS_IGNORED):
+                async with http_transport.connect() as streams:
+                    read_stream, write_stream = streams
+                    task_status.started()
+                    try:
+                        idle_scope = http_transport.idle_scope or _anyio.CancelScope()
+                        with idle_scope:
+                            dispatcher = JSONRPCDispatcher(
+                                read_stream,
+                                write_stream,
+                                inline_methods=frozenset({"initialize"}),
+                            )
+                            connection = Connection.for_loop(dispatcher, session_id=request_mcp_session_id)
+                            connection.initialized.set()
+                            await serve_connection(
+                                self.app,
+                                dispatcher,
+                                connection=connection,
+                                lifespan_state=self._lifespan_state,
+                            )
+                    except Exception:
+                        _log.getLogger("well").exception(f"Session {request_mcp_session_id} crashed")
+                    finally:
+                        await self._discard_session(request_mcp_session_id, http_transport)
+
+            assert self._task_group is not None
+            await self._task_group.start(run_server)
+            await http_transport.handle_request(scope, receive, send)
+            return
+
+        return await _orig_handle_stateful(self, scope, receive, send)
+
+    StreamableHTTPSessionManager._handle_stateful_request = _resilient_handle_stateful
+    try:
+        from fastmcp.server.http import FastMCPStreamableHTTPSessionManager
+        FastMCPStreamableHTTPSessionManager._handle_stateful_request = _resilient_handle_stateful
+    except Exception:
+        pass
+except Exception as _ex:
+    import logging as _logging
+    _logging.getLogger("well").warning(f"Could not apply session resilience monkeypatch: {_ex}")
 
 # ============================================================
 # ORGAN_GOVERNANCE: arifOS L1-L13 Wrapper
@@ -22134,19 +22437,24 @@ if __name__ == "__main__":
                     )
 
                 if session_id not in _well_valid_mcp_sessions:
-                    return _MWResponse(
-                        content=json.dumps(
-                            {
-                                "jsonrpc": "2.0",
-                                "error": {
-                                    "code": -32000,
-                                    "message": "SESSION_INVALID: Unknown or expired session ID",
-                                },
-                            }
-                        ),
-                        status_code=404,
-                        media_type="application/json",
-                    )
+                    # Allow reconnecting valid hex/uuid sessions across service restarts
+                    import re as _re_mw
+                    if _re_mw.match(r"^[a-fA-F0-9-]{32,36}$", session_id):
+                        _well_valid_mcp_sessions.add(session_id)
+                    else:
+                        return _MWResponse(
+                            content=json.dumps(
+                                {
+                                    "jsonrpc": "2.0",
+                                    "error": {
+                                        "code": -32000,
+                                        "message": "SESSION_INVALID: Unknown or expired session ID",
+                                    },
+                                }
+                            ),
+                            status_code=404,
+                            media_type="application/json",
+                        )
                 request._body = body
 
             return await call_next(request)
