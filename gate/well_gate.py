@@ -47,20 +47,22 @@ def validate_session_at_arifos(
             "actor_id": actor_id,
         }
 
-    payload = json.dumps({
-        "jsonrpc": "2.0",
-        "id": 1,
-        "method": "tools/call",
-        "params": {
-            "name": "arif_init",
-            "arguments": {
-                "mode": "validate",
-                "session_id": session_id,
-                "actor_id": actor_id,
-                "session_token": session_token,
+    payload = json.dumps(
+        {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/call",
+            "params": {
+                "name": "arif_init",
+                "arguments": {
+                    "mode": "validate",
+                    "session_id": session_id,
+                    "actor_id": actor_id,
+                    "session_token": session_token,
+                },
             },
-        },
-    }).encode("utf-8")
+        }
+    ).encode("utf-8")
 
     try:
         req = urllib.request.Request(
@@ -101,7 +103,11 @@ def validate_session_at_arifos(
                 # ground truth. effective_verdict can be HOLD/VOID/APPROVED;
                 # we accept only when arifOS explicitly says valid=True AND
                 # the session standing has a verified actor (or session_token).
-                inner_result = parsed.get("result", {}) if isinstance(parsed.get("result"), dict) else {}
+                inner_result = (
+                    parsed.get("result", {})
+                    if isinstance(parsed.get("result"), dict)
+                    else {}
+                )
                 arifos_says_valid = inner_result.get("valid")
                 if arifos_says_valid is False:
                     return {
@@ -113,8 +119,16 @@ def validate_session_at_arifos(
                         "actor_id": actor_id,
                         "session_id": session_id,
                     }
-                standing = parsed.get("standing", {}) if isinstance(parsed.get("standing"), dict) else {}
-                standing_actor = standing.get("actor", {}) if isinstance(standing.get("actor"), dict) else {}
+                standing = (
+                    parsed.get("standing", {})
+                    if isinstance(parsed.get("standing"), dict)
+                    else {}
+                )
+                standing_actor = (
+                    standing.get("actor", {})
+                    if isinstance(standing.get("actor"), dict)
+                    else {}
+                )
                 actor_verified = standing_actor.get("verified") is True
                 session_token_present = bool(parsed.get("session_token"))
                 resp_sid = parsed.get("session_id") or standing.get("session_id")
@@ -128,8 +142,7 @@ def validate_session_at_arifos(
                         or actor_id,
                         "authority": standing.get("authority", {}).get("band")
                         if isinstance(standing.get("authority"), dict)
-                        else parsed.get("authority")
-                        or "OBSERVE_ONLY",
+                        else parsed.get("authority") or "OBSERVE_ONLY",
                         "session_id": resp_sid or session_id,
                     }
                 return {
@@ -145,7 +158,12 @@ def validate_session_at_arifos(
                 "fail_mode": "CLOSED",
                 "actor_id": actor_id,
             }
-    except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, OSError) as exc:
+    except (
+        urllib.error.HTTPError,
+        urllib.error.URLError,
+        TimeoutError,
+        OSError,
+    ) as exc:
         return {
             "valid": False,
             "reason": f"ARIFOS_UNREACHABLE: {type(exc).__name__}: {str(exc)[:80]}",
@@ -168,10 +186,16 @@ def reflect_readiness(self_report_rasa=None, text_context=None):
     Returns: (status, message, readiness_score, violations, rasa_witness)
     """
     if not WELL_STATE_PATH.exists():
-        return "UNANCHORED", "WARNING: Biological state unknown. Mirror is dark.", 50, ["W_MISSING"], None
+        return (
+            "UNANCHORED",
+            "WARNING: Biological state unknown. Mirror is dark.",
+            50,
+            ["W_MISSING"],
+            None,
+        )
 
     try:
-        with open(WELL_STATE_PATH, 'r') as f:
+        with open(WELL_STATE_PATH, "r") as f:
             state = json.load(f)
 
         metrics = state.get("metrics", {})
@@ -192,9 +216,17 @@ def reflect_readiness(self_report_rasa=None, text_context=None):
             score_raw = 0
 
         # Rasa Witness Contract evaluation (F6)
+        #
+        # HUMAN_RASA P0 REMEDIATION G9 (2026-11-01): this block used to swallow
+        # ImportError and continue WITHOUT the witness, so reflect_readiness()
+        # could report STABLE on a run where the Rasa Witness Contract never
+        # executed. That is a fail-open gate. The witness contract is fail-closed:
+        # witness unavailable (import failure OR any exception inside it) => HOLD
+        # with reason RASA_WITNESS_UNAVAILABLE. Readiness is withheld, not guessed.
         rasa_result = None
         try:
             from gate.rasa_witness import rasa_witness_gate
+
             rasa_result = rasa_witness_gate(
                 str(WELL_STATE_PATH),
                 self_report_rasa=self_report_rasa,
@@ -203,15 +235,35 @@ def reflect_readiness(self_report_rasa=None, text_context=None):
             # Enforce RWC-6: strip prohibited conclusions from any output
             if rasa_result and rasa_result.prohibited_violations:
                 violations.append("RWC6_PROHIBITED_CONCLUSIONS")
-        except ImportError:
-            pass  # rasa_witness not available — gate operates without it
+        except Exception as exc:  # ImportError, or any witness-side failure
+            detail = f"{type(exc).__name__}: {exc}" if str(exc) else type(exc).__name__
+            return (
+                "HOLD",
+                f"[WELL-HOLD] RASA_WITNESS_UNAVAILABLE: rasa witness contract could "
+                f"not be evaluated — readiness withheld ({detail})",
+                score_raw,
+                violations + ["RASA_WITNESS_UNAVAILABLE"],
+                None,
+            )
 
         rasa_dict = rasa_result.to_dict() if rasa_result else None
 
         if violations:
-            return "DEGRADED", f"[WELL-MIRROR] Biological substrate flagging: {', '.join(violations)}", score_raw, violations, rasa_dict
+            return (
+                "DEGRADED",
+                f"[WELL-MIRROR] Biological substrate flagging: {', '.join(violations)}",
+                score_raw,
+                violations,
+                rasa_dict,
+            )
 
-        return "STABLE", "[WELL-MIRROR] Substrate stable. Mirror is clear.", max(score_raw, 100) if score_raw < 100 else score_raw, [], rasa_dict
+        return (
+            "STABLE",
+            "[WELL-MIRROR] Substrate stable. Mirror is clear.",
+            max(score_raw, 100) if score_raw < 100 else score_raw,
+            [],
+            rasa_dict,
+        )
     except Exception as e:
         return "ERROR", f"[WELL-ERROR] Schema mismatch: {str(e)}", 0, ["W_ERROR"], None
 
