@@ -7354,6 +7354,48 @@ def well_forge_precheck(
     m_state.get("m_well_score", 100)
     m_verdict = m_state.get("m_well_verdict", "UNKNOWN")
 
+    _td = (task_description or "").lower()
+    _task_is_machine = decision_class == "machine" or any(
+        k in _td
+        for k in (
+            "swap",
+            "docker",
+            "disk",
+            "vps",
+            "server",
+            "service",
+            "container",
+            "cron",
+            "zombie",
+            "memory pressure",
+            "cpu",
+        )
+    )
+    # FIX 2026-11-01 (external audit): machine-class tasks gate on M-WELL
+    # telemetry, never on the human body. Asking for body telemetry to
+    # repair swap was the misroute.
+    if not has_telemetry and _task_is_machine:
+        _machine_ok = m_verdict in ("HEALTHY", "DEGRADED")
+        return _compose_verdict(
+            mcp="AFWELL",
+            task=f"forge_precheck: {task_description or 'unspecified'}",
+            status="PASS" if _machine_ok else "HOLD",
+            domain_verdict="MACHINE_TELEMETRY_ONLY",
+            human_readiness="UNMEASURED",
+            machine_readiness=m_verdict,
+            confidence="MEDIUM" if _machine_ok else "LOW",
+            risk_level="LOW" if _machine_ok else "UNKNOWN",
+            recommended_mode="normal" if _machine_ok else "draft_only",
+            human_required=not _machine_ok,
+            next_safe_action=(
+                f"Machine telemetry present (M-WELL {m_verdict}); body telemetry "
+                "is not required for machine-class tasks. Proceed; Arif confirms "
+                "anything risky."
+                if _machine_ok
+                else "Machine telemetry degraded -- adopt draft-only mode."
+            ),
+        )
+
     # ── No body telemetry → cannot recommend real readiness ──
     if not has_telemetry:
         return _compose_verdict(
@@ -9052,7 +9094,25 @@ def _well_classify_substrate_impl(
         "i am a",
     ]
     _is_clearly_human = any(ind in combined for ind in HUMAN_ROLE_INDICATORS)
+    # FIX 2026-11-01 (external audit): a VPS/host description is a compute
+    # substrate (MACHINE_SYSTEM), not a GOVERNANCE_SYSTEM.
     if (
+        not _is_clearly_human
+        and any(
+            k in combined
+            for k in (
+                "vps",
+                "ubuntu",
+                "linux host",
+                "host machine",
+                "compute node",
+                "zram",
+                "disk usage",
+            )
+        )
+    ):
+        detected_class = "MACHINE_SYSTEM"
+    elif (
         "arif" in combined
         and any(
             k in combined for k in ["mcp", "governance", "kernel", "arifos", "arifmcp"]
@@ -10242,15 +10302,11 @@ def _omega_well_output(
             "stage": stage,
             "lane": lane,
             "mode": mode,
-            # verdict kept for backward compat -- agents should ignore
-            "verdict": verdict,
             "signal": signal,
         },
         "arifos": {
             "stage": stage,
             "lane": lane,
-            # verdict kept for backward compat -- agents should ignore
-            "verdict": verdict,
             "signal": signal,
             "compliance": constitutional_compliance or {},
         },
@@ -12426,10 +12482,10 @@ def well_machine_diagnose(
         recommendations.append(
             {
                 "issue": f"Disk at {disk_pct}%",
-                "action": "docker system prune -a --volumes (CAREFUL: destroys unused images). Safer: journalctl --vacuum-time=7d, apt-get clean, snap list --all | awk '/disabled/{print $1, $3}' | xargs -r snap remove",
-                "blast_radius": "HIGH for prune -a, LOW for journal/snap",
+                "action": "journalctl --vacuum-time=7d, apt-get clean, snap list --all | awk '/disabled/{print $1, $3}' | xargs -r snap remove",
+                "blast_radius": "LOW (log/package-cache cleanup only; destructive docker prunes are NOT offered here)",
                 "reversible": False,
-                "route_to": "888_HOLD for docker system prune -a",
+                "route_to": "888_HOLD if any destructive prune is proposed",
             }
         )
 
@@ -12791,6 +12847,7 @@ def well_machine_recommend(
 
     if issue_type == "all":
         return _omega_well_output(
+            telemetry_status="present",
             ok=True,
             stage="M_RECOMMEND",
             lane="AGI",
@@ -12815,6 +12872,7 @@ def well_machine_recommend(
         )
 
     return _omega_well_output(
+        telemetry_status="present",
         ok=True,
         stage="M_RECOMMEND",
         lane="AGI",
@@ -16138,10 +16196,24 @@ def well_trace_lineage(
             tool_name="well_trace_lineage",
         )
     if mode in ("ledger", "chain"):
+        # FIX 2026-11-01: bare async call leaked a raw coroutine to the MCP
+        # serialization layer (well_999_vault is async). Corougate + fallback.
+        try:
+            import asyncio as _asyncio
+
+            _vault_res = _asyncio.run(
+                well_999_vault(
+                    mode=mode, dry_run=dry_run, reason=reason, force=force, ctx=ctx
+                )
+            )
+        except RuntimeError:
+            _vault_res = {
+                "error": "async_in_event_loop",
+                "signal": "UNAVAILABLE",
+                "note": "ledger/chain lane unavailable inside a running event loop",
+            }
         return _to_federation_output(
-            well_999_vault(
-                mode=mode, dry_run=dry_run, reason=reason, force=force, ctx=ctx
-            ),
+            _vault_res,
             tool_name="well_trace_lineage",
         )
     return _to_federation_output(

@@ -48,7 +48,9 @@ WITNESS_DIR = Path("/var/witness")
 LEDGER_PATH = WITNESS_DIR / "ledger.jsonl"
 SIGNALS_PATH = WITNESS_DIR / "signals.jsonl"  # append-only 888_HOLD ring buffer
 WELL_DIR = Path("/root/WELL")
-WELL_MACHINE_STATE = WELL_DIR / "machine_state.json"
+WELL_MACHINE_STATE = Path(  # FIX 2026-11-01: env-var resolution; writer uses /var/lib/well
+    os.environ.get("WELL_MACHINE_STATE_PATH", "/var/lib/well/machine_state.json")
+)
 PROMETHEUS_URL = "http://127.0.0.1:9090"
 WELL_HEALTH_URL = "http://127.0.0.1:18083/health"
 QUERY_TIMEOUT_S = 3.0

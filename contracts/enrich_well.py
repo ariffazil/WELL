@@ -382,7 +382,9 @@ def build_metabolic_output(
         "requires_888_judge": requires_888,
         # Provenance
         "timestamp_utc": timestamp_utc,
-        "constitution_hash": constitution_hash,  # DEPRECATED — backward compat
+        "constitution_hash": constitution_hash
+        or substrate_manifest_hash
+        or _compute_substrate_manifest_hash(),  # FIX 2026-11-01: empty hash is trash
         "domain_law": domain_law,
         "substrate_manifest_hash": substrate_manifest_hash
         or _compute_substrate_manifest_hash(),
