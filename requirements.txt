@@ -28,8 +28,8 @@
 #
 # fastapi is intentionally ABSENT: WELL neither declares nor installs it.
 mcp==2.3.0
-fastmcp==4.0.10
-fastmcp-slim==4.0.10
+fastmcp==4.1.4
+fastmcp-slim==4.1.4
 pydantic==2.14.2
 uvicorn==0.54.0
 starlette==1.10.0
