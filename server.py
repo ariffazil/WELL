@@ -20522,6 +20522,10 @@ except ImportError:
 # Entropy Integrity Mesh -- WELL Extensions (Phase 2)
 # DITEMPA BUKAN DIBERI
 # ═══════════════════════════════════════════════════════════════════
+# Canonical resolver (2026-11-05): loaders below used to resolve
+# parent(WELL)/entropy-integrity — dead since ad88f6f1 moved the tree
+# into WEALTH git (2026-07-28). See tools_sot.yaml audit_2026_11_05.
+from well_mcp.entropy_mesh import mesh_dir
 
 
 @mcp.tool()
@@ -20540,9 +20544,7 @@ def well_sabar_latency(
         _spec = importlib.util.spec_from_file_location(
             "sabar_latency",
             os.path.join(
-                os.path.dirname(os.path.abspath(__file__)),
-                "..",
-                "entropy-integrity",
+                mesh_dir(),
                 "mcp",
                 "well",
                 "sabar_latency.py",
@@ -20580,9 +20582,7 @@ def well_trust_compression(
         _spec = importlib.util.spec_from_file_location(
             "trust_compression",
             os.path.join(
-                os.path.dirname(os.path.abspath(__file__)),
-                "..",
-                "entropy-integrity",
+                mesh_dir(),
                 "mcp",
                 "well",
                 "trust_compression.py",
@@ -20620,9 +20620,7 @@ def well_niat_impact_mirror(
         _spec = importlib.util.spec_from_file_location(
             "niat_impact_mirror",
             os.path.join(
-                os.path.dirname(os.path.abspath(__file__)),
-                "..",
-                "entropy-integrity",
+                mesh_dir(),
                 "mcp",
                 "well",
                 "niat_impact_mirror.py",
@@ -20660,9 +20658,7 @@ def well_correction_capacity(
         _spec = importlib.util.spec_from_file_location(
             "correction_capacity",
             os.path.join(
-                os.path.dirname(os.path.abspath(__file__)),
-                "..",
-                "entropy-integrity",
+                mesh_dir(),
                 "mcp",
                 "well",
                 "correction_capacity.py",
@@ -20699,9 +20695,7 @@ def well_regulation_recovery(
         _spec = importlib.util.spec_from_file_location(
             "regulation_recovery",
             os.path.join(
-                os.path.dirname(os.path.abspath(__file__)),
-                "..",
-                "entropy-integrity",
+                mesh_dir(),
                 "mcp",
                 "well",
                 "regulation_recovery.py",
@@ -21528,6 +21522,35 @@ _TOOL_ANNOTATIONS: dict[str, dict[str, Any]] = {
     },
     "well_classify_state": {
         "title": "Classify Human State",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": False,
+    },
+    # ── 2026-11-04 (333-AGI · Gemini/Connected Apps) ────────────────────────
+    # These three were served with annotations=null, so the MCP default
+    # (readOnlyHint=false + destructiveHint=true) made an agentic client
+    # prompt for confirmation on every call — including pure reads.
+    # All three are read-only by body evidence:
+    #   well_machine_diagnose  — reads machine_state.json only (server.py:12586)
+    #   well_machine_recommend — returns advisory command STRINGS, executes none
+    #   well_registry_status   — in-memory registry read (server.py:20774+)
+    "well_machine_diagnose": {
+        "title": "Machine Diagnostic",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": False,
+    },
+    "well_machine_recommend": {
+        "title": "Machine Repair Recommendations",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": False,
+    },
+    "well_registry_status": {
+        "title": "Registry Status",
         "readOnlyHint": True,
         "destructiveHint": False,
         "idempotentHint": True,
@@ -22439,6 +22462,7 @@ if __name__ == "__main__":
                 if session_id not in _well_valid_mcp_sessions:
                     # Allow reconnecting valid hex/uuid sessions across service restarts
                     import re as _re_mw
+
                     if _re_mw.match(r"^[a-fA-F0-9-]{32,36}$", session_id):
                         _well_valid_mcp_sessions.add(session_id)
                     else:
