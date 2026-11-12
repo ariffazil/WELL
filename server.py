@@ -12916,7 +12916,6 @@ def well_machine_diagnose(
             "severity": severity,
             "signal": signal_state,
             "condition": "ADVISORY",
-            "verdict": verdict,  # DEPRECATED: backward-compat only, arifOS 888 adjudicates verdicts
             "readiness": readiness_block,
             "recovery": recovery_block,
             "metric_coverage": metric_coverage,

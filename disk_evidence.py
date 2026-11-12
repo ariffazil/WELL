@@ -418,8 +418,8 @@ _STATIC_ACTIONS: list[dict[str, Any]] = [
     {
         "recommendation_id": "disk.snap.remove_disabled",
         "command": "snap list --all | awk '/disabled/{print $1, $3}' | while read n r; do snap remove \"$n\" --revision=\"$r\"; done",
-        "risk": "LOW", "reversible": False, "requires_approval": False,
-        "expected_effect": "remove disabled snap revisions",
+        "risk": "MEDIUM", "reversible": False, "requires_approval": True,
+        "expected_effect": "remove disabled snap revisions (deletes data)",
         "expected_recovery_gb": None,
         "verification": ["snap list --all"],
     },
