@@ -1,0 +1,17 @@
+[Unit]
+Description=WELL disk evidence — bounded hourly du scan (advisory evidence only)
+Documentation=file:/root/WELL/disk_evidence.py
+
+[Service]
+Type=oneshot
+User=root
+Nice=19
+IOSchedulingClass=idle
+CPUSchedulingPolicy=idle
+TimeoutStartSec=50min
+Environment=WELL_DISK_PER_PATH_TIMEOUT_S=900
+Environment=WELL_DISK_TOTAL_BUDGET_S=2400
+ExecStart=/usr/bin/python3 /root/WELL/scripts/disk_evidence_scan.py
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=well-disk-evidence

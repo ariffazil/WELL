@@ -12635,7 +12635,7 @@ def well_machine_diagnose(
     }
 
     if load_ratio > 4 or iowait > 20:
-        severity = "AMBER"
+        severity = "RED" if severity == "RED" else "AMBER"  # never downgrade
         issues.append(
             f"CPU strained: load={load_1m:.1f} ({load_ratio:.1f}/core) iowait={iowait}%"
         )
@@ -12673,17 +12673,38 @@ def well_machine_diagnose(
         "memory_psi_avg10": mem_psi,
     }
 
-    if swap_pct > 30:
-        if swap_pct > 50:
-            severity = "RED"
-            issues.append(
-                f"Swap HIGH: {swap_pct:.0f}% used ({swap_used_kb / 1024**2:.1f}GB), PSI={mem_psi:.1f}"
-            )
-        else:
-            severity = "AMBER"
-            issues.append(
-                f"Swap {swap_pct:.0f}% used ({swap_used_kb / 1024**2:.1f}GB), PSI={mem_psi:.1f}"
-            )
+    # Swap severity = memory PRESSURE (PSI), not occupancy. zram is compressed
+    # RAM, not disk swap: excluded from the disk-swap figure (2026-11-12: 21 GB
+    # zram at PSI 0.0 raised a false RED).
+    zram_used_kb = 0
+    try:
+        for _ln in open("/proc/swaps").read().splitlines()[1:]:
+            _f = _ln.split()
+            if len(_f) >= 4 and _f[0].startswith("/dev/zram"):
+                zram_used_kb += int(_f[3])
+    except (OSError, ValueError):
+        pass
+    disk_swap_used_kb = max(swap_used_kb - zram_used_kb, 0)
+    mem_status["zram_used_gb"] = round(zram_used_kb / 1024**2, 1)
+    mem_status["disk_swap_used_gb"] = round(disk_swap_used_kb / 1024**2, 1)
+    mem_psi_full = pressure.get("memory_full_avg10", 0) or 0
+
+    swap_level = None
+    if mem_psi_full >= 5 or mem_psi >= 20:
+        swap_level = "RED"
+    elif mem_psi >= 5:
+        swap_level = "AMBER"
+    elif swap_pct > 30:
+        mem_status["swap_note"] = (
+            f"swap {swap_pct:.0f}% occupied (zram {zram_used_kb / 1024**2:.1f}GB) "
+            f"but memory PSI={mem_psi:.1f} -- no pressure, not an issue"
+        )
+    if swap_level:
+        severity = "RED" if (severity == "RED" or swap_level == "RED") else "AMBER"
+        issues.append(
+            f"Memory pressure {swap_level}: PSI some={mem_psi:.1f} full={mem_psi_full:.1f}, "
+            f"swap {swap_pct:.0f}% ({swap_used_kb / 1024**2:.1f}GB, zram {zram_used_kb / 1024**2:.1f}GB)"
+        )
         recommendations.append(
             {
                 "issue": f"High swap occupancy ({swap_pct:.0f}%, {swap_used_kb / 1024**2:.1f}GB)",
@@ -12701,23 +12722,51 @@ def well_machine_diagnose(
         severity = "RED"
         issues.append(f"Memory CRITICAL: {avail_pct:.0f}% available")
 
-    # Disk
+    # Disk -- percentage is NOT a diagnosis; reconcile against bounded-scan evidence.
+    import disk_evidence as _de
+
     disk_pct = disk.get("root_used_pct", 0)
     disk_free_gb = disk.get("root_free_gb", 0)
-    disk_status = {"used_pct": disk_pct, "free_gb": disk_free_gb}
+    _disk_ev = _de.load_evidence()
+    try:
+        _live_used = _de.fs_usage("/")["used_bytes"]
+    except OSError:
+        _live_used = None
+    disk_reconciliation = _de.reconcile(_disk_ev, _live_used)
+    disk_status = {
+        "used_pct": disk_pct,
+        "free_gb": disk_free_gb,
+        "reconciliation": disk_reconciliation,
+    }
 
     if disk_pct > 85:
-        severity = "AMBER"
-        issues.append(f"Disk {disk_pct}% used ({disk_free_gb}GB free)")
-        recommendations.append(
-            {
-                "issue": f"Disk at {disk_pct}%",
-                "action": "journalctl --vacuum-time=7d, apt-get clean, snap list --all | awk '/disabled/{print $1, $3}' | xargs -r snap remove",
-                "blast_radius": "LOW (log/package-cache cleanup only; destructive docker prunes are NOT offered here)",
-                "reversible": False,
-                "route_to": "888_HOLD if any destructive prune is proposed",
-            }
+        if severity == "GREEN":  # never downgrade RED
+            severity = "RED" if severity == "RED" else "AMBER"  # never downgrade
+        issues.append(
+            f"Disk {disk_pct}% used ({disk_free_gb}GB free) -- "
+            + (
+                f"root cause: {disk_reconciliation['root_cause']}"
+                if disk_reconciliation.get("root_cause")
+                else "insufficient evidence: " + disk_reconciliation["message"]
+            )
         )
+        for _a in _de.disk_actions(_disk_ev):
+            if _a.get("worth_it") is False:
+                continue  # measured ~0 reclaimable: not worth recommending
+            recommendations.append(
+                {
+                    "issue": f"Disk at {disk_pct}%",
+                    "recommendation_id": _a["recommendation_id"],
+                    "target": _a.get("target"),
+                    "action": _a.get("command") or _a.get("expected_effect") or _a.get("warning"),
+                    "expected_recovery_gb": _a.get("expected_recovery_gb"),
+                    "risk": _a["risk"],
+                    "blast_radius": _a["risk"],
+                    "reversible": _a["reversible"],
+                    "requires_approval": _a["requires_approval"],
+                    "route_to": "888_HOLD" if _a["requires_approval"] else "A-FORGE forge_shell",
+                }
+            )
 
     # PSI Pressure
     psi_status = {
@@ -12742,7 +12791,7 @@ def well_machine_diagnose(
         )
         if not active:
             dead_services.append(name)
-            severity = "AMBER"
+            severity = "RED" if severity == "RED" else "AMBER"  # never downgrade
             issues.append(f"Service DOWN: {name}")
             recommendations.append(
                 {
@@ -12767,7 +12816,7 @@ def well_machine_diagnose(
         )
         if health == "unhealthy":
             unhealthy_containers.append(name)
-            severity = "AMBER"
+            severity = "RED" if severity == "RED" else "AMBER"  # never downgrade
             issues.append(f"Docker UNHEALTHY: {name}")
             recommendations.append(
                 {
@@ -12939,6 +12988,15 @@ def well_machine_recommend(
         pressure.get("memory_full_avg10", 0),
     )
 
+    import disk_evidence as _de_mr
+
+    _disk_ev_mr = _de_mr.load_evidence()
+    try:
+        _live_used_mr = _de_mr.fs_usage("/")["used_bytes"]
+    except OSError:
+        _live_used_mr = None
+    _disk_recon = _de_mr.reconcile(_disk_ev_mr, _live_used_mr)
+
     RECOMMENDATIONS = {
         "swap": {
             "condition": f"swap at {swap_pct:.0f}%, PSI={mem_psi:.1f}",
@@ -12981,35 +13039,17 @@ def well_machine_recommend(
             ],
         },
         "disk": {
+            # Shared table with well_machine_diagnose (disk_evidence.disk_actions).
+            "condition": _disk_recon["message"],
+            "safe": False,  # disk actions delete data; operator reviews each ID
+            "reconciliation": _disk_recon,
             "commands": [
                 {
-                    "command": "journalctl --vacuum-time=3d",
-                    "description": "Vacuum systemd journals older than 3 days.",
-                    "risk": "LOW",
-                    "blast_radius": "LOW",
-                    "reversible": False,
-                },
-                {
-                    "command": "apt-get clean && apt-get autoremove --purge -y",
-                    "description": "Clean APT package cache and remove unused packages.",
-                    "risk": "LOW",
-                    "blast_radius": "LOW",
-                    "reversible": False,
-                },
-                {
-                    "command": "docker system prune -f",
-                    "description": "Remove stopped containers, unused networks, dangling images.",
-                    "risk": "MEDIUM",
-                    "blast_radius": "MEDIUM",
-                    "reversible": False,
-                },
-                {
-                    "command": 'snap list --all | awk \'/disabled/{print $1, $3}\' | while read name rev; do snap remove "$name" --revision="$rev"; done',
-                    "description": "Remove disabled snap revisions (can free GBs).",
-                    "risk": "LOW",
-                    "blast_radius": "LOW",
-                    "reversible": False,
-                },
+                    **_a,
+                    "description": _a.get("expected_effect") or _a.get("warning"),
+                    "blast_radius": _a["risk"],
+                }
+                for _a in _de_mr.disk_actions(_disk_ev_mr)
             ],
         },
         "service": {
