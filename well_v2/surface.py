@@ -17,7 +17,7 @@ from typing import Any
 _DEPRECATION = {
     "epoch": "2026-09-16",
     "removal": "2026-10-16",
-    "note": "v2 mode-surface; legacy tools remain registered during epoch",
+    "note": "REMOVAL PASSED 2026-10-16: legacy v1 aliases deregistered (legacy_still_registered=false); canonical surface = 10 public tools",
 }
 
 
@@ -63,19 +63,31 @@ _BASELINE_PATH = "/var/lib/well/reality_baseline.json"
 _FRESH_DAYS = 7.0
 
 
-def _http_probe(url: str, body: dict | None, timeout: float = 4.0) -> tuple[bool, float, str]:
+def _http_probe(
+    url: str, body: dict | None, timeout: float = 4.0
+) -> tuple[bool, float, str]:
     import json as _json
     import time as _time
     import urllib.request as _rq
+
     t0 = _time.monotonic()
     try:
         data = _json.dumps(body).encode() if body is not None else None
-        req = _rq.Request(url, data=data,
-                          headers={"Content-Type": "application/json",
-                                   "Accept": "application/json, text/event-stream"})
+        req = _rq.Request(
+            url,
+            data=data,
+            headers={
+                "Content-Type": "application/json",
+                "Accept": "application/json, text/event-stream",
+            },
+        )
         with _rq.urlopen(req, timeout=timeout) as resp:
             body_txt = resp.read(400).decode("utf-8", "replace")
-        return (resp.status == 200 and bool(body_txt.strip())), (_time.monotonic() - t0) * 1000, body_txt[:80]
+        return (
+            (resp.status == 200 and bool(body_txt.strip())),
+            (_time.monotonic() - t0) * 1000,
+            body_txt[:80],
+        )
     except Exception as e:
         return False, (_time.monotonic() - t0) * 1000, str(e)[:80]
 
@@ -84,6 +96,7 @@ def _falkor_query(graph: str, cypher: str) -> str | None:
     """GRAPH.QUERY via redis lib, docker exec fallback, else None."""
     try:
         import redis  # type: ignore
+
         r = redis.Redis(host=_FALKOR_HOST, port=_FALKOR_PORT, socket_timeout=4)
         out = r.execute_command("GRAPH.QUERY", graph, cypher)
         return str(out)
@@ -91,8 +104,13 @@ def _falkor_query(graph: str, cypher: str) -> str | None:
         pass
     try:
         import subprocess as _sp
-        p = _sp.run(["docker", "exec", "falkordb", "redis-cli", "GRAPH.QUERY", graph, cypher],
-                    capture_output=True, text=True, timeout=8)
+
+        p = _sp.run(
+            ["docker", "exec", "falkordb", "redis-cli", "GRAPH.QUERY", graph, cypher],
+            capture_output=True,
+            text=True,
+            timeout=8,
+        )
         return p.stdout if p.returncode == 0 else None
     except Exception:
         return None
@@ -103,6 +121,7 @@ def _falkor_int(graph: str, cypher: str) -> int | None:
     if not out:
         return None
     import re as _re
+
     m = _re.search(r"\b(\d+)\b", out)
     return int(m.group(1)) if m else None
 
@@ -128,9 +147,15 @@ def _probe_reality_sources() -> dict[str, Any]:
     except Exception:
         drift = None
     classes["commit_alignment"] = (
-        "UNKNOWN" if drift is None else ("VERIFIED" if not drift else "STALE"))
-    table.append({"source": "commit_alignment", "class": classes["commit_alignment"],
-                  "detail": f"drift={drift}"})
+        "UNKNOWN" if drift is None else ("VERIFIED" if not drift else "STALE")
+    )
+    table.append(
+        {
+            "source": "commit_alignment",
+            "class": classes["commit_alignment"],
+            "detail": f"drift={drift}",
+        }
+    )
 
     # 2. machine telemetry
     try:
@@ -139,17 +164,37 @@ def _probe_reality_sources() -> dict[str, Any]:
     except Exception:
         band = "UNKNOWN"
     classes["machine_telemetry"] = "OBSERVED" if band == "FRESH" else str(band).upper()
-    table.append({"source": "machine_telemetry", "class": classes["machine_telemetry"],
-                  "detail": f"band={band}"})
+    table.append(
+        {
+            "source": "machine_telemetry",
+            "class": classes["machine_telemetry"],
+            "detail": f"band={band}",
+        }
+    )
 
     # 3. graphiti MCP (OBSERVED/MISSING)
-    ok, lat, det = _http_probe(_GRAPHITI_URL, {
-        "jsonrpc": "2.0", "id": 1, "method": "initialize",
-        "params": {"protocolVersion": "2025-06-18", "capabilities": {},
-                   "clientInfo": {"name": "rwell-probe", "version": "1"}}})
+    ok, lat, det = _http_probe(
+        _GRAPHITI_URL,
+        {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "initialize",
+            "params": {
+                "protocolVersion": "2025-06-18",
+                "capabilities": {},
+                "clientInfo": {"name": "rwell-probe", "version": "1"},
+            },
+        },
+    )
     classes["graphiti_mcp"] = "OBSERVED" if ok else "MISSING"
-    table.append({"source": "graphiti_mcp", "class": classes["graphiti_mcp"],
-                  "latency_ms": round(lat, 1), "detail": det})
+    table.append(
+        {
+            "source": "graphiti_mcp",
+            "class": classes["graphiti_mcp"],
+            "latency_ms": round(lat, 1),
+            "detail": det,
+        }
+    )
 
     # 4. falkordb memory plane + freshness + growth baseline
     now = _dt.datetime.now(_dt.timezone.utc)
@@ -158,9 +203,13 @@ def _probe_reality_sources() -> dict[str, Any]:
         n = _falkor_int(k, "MATCH (n) RETURN count(n)")
         e = _falkor_int(k, "MATCH ()-[r]->() RETURN count(r)")
         graphs[k] = {"nodes": n, "edges": e}
-        fr = _falkor_query(k, "MATCH (n) WHERE n.created_at IS NOT NULL RETURN n.created_at ORDER BY n.created_at DESC LIMIT 1")
+        fr = _falkor_query(
+            k,
+            "MATCH (n) WHERE n.created_at IS NOT NULL RETURN n.created_at ORDER BY n.created_at DESC LIMIT 1",
+        )
         if fr:
             import re as _re2
+
             m = _re2.search(r"(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})", fr)
             if m:
                 latest_iso = max(latest_iso or "", m.group(1))
@@ -188,8 +237,14 @@ def _probe_reality_sources() -> dict[str, Any]:
     }
     try:
         _os.makedirs(_os.path.dirname(_BASELINE_PATH), exist_ok=True)
-        _json.dump({"ts": now.isoformat(), "total_nodes": total_nodes,
-                    "total_edges": total_edges}, open(_BASELINE_PATH, "w"))
+        _json.dump(
+            {
+                "ts": now.isoformat(),
+                "total_nodes": total_nodes,
+                "total_edges": total_edges,
+            },
+            open(_BASELINE_PATH, "w"),
+        )
     except Exception:
         pass
 
@@ -197,16 +252,32 @@ def _probe_reality_sources() -> dict[str, Any]:
     fresh = age_days is not None and age_days <= _FRESH_DAYS
     memory_alive = bool(exists and fresh)
     classes["memory_plane"] = (
-        "OBSERVED" if memory_alive else ("STALE" if exists else "MISSING"))
-    table.append({"source": "falkor_memory", "class": classes["memory_plane"],
-                  "detail": f"nodes={total_nodes} edges={total_edges} last_episode_age_d={age_days}"})
+        "OBSERVED" if memory_alive else ("STALE" if exists else "MISSING")
+    )
+    table.append(
+        {
+            "source": "falkor_memory",
+            "class": classes["memory_plane"],
+            "detail": f"nodes={total_nodes} edges={total_edges} last_episode_age_d={age_days}",
+        }
+    )
 
     # 5. witness bridge lane
-    lane_off = str(_os.environ.get("WELL_BRIDGE_ARIFFLOW", "1")).lower() in ("0", "false", "off", "no")
+    lane_off = str(_os.environ.get("WELL_BRIDGE_ARIFFLOW", "1")).lower() in (
+        "0",
+        "false",
+        "off",
+        "no",
+    )
     classes["witness_bridge"] = "OBSERVED" if not lane_off else "ASSUMED"
-    table.append({"source": "witness_bridge", "class": classes["witness_bridge"],
-                  "detail": "arifFlow lane (arifOS lane DEAD by Option B)" +
-                            ("" if not lane_off else " — routing DISABLED by env")})
+    table.append(
+        {
+            "source": "witness_bridge",
+            "class": classes["witness_bridge"],
+            "detail": "arifFlow lane (arifOS lane DEAD by Option B)"
+            + ("" if not lane_off else " — routing DISABLED by env"),
+        }
+    )
 
     good = sum(1 for v in classes.values() if v in ("OBSERVED", "VERIFIED"))
     confidence = round(good / len(classes), 2) if classes else 0.0
@@ -227,7 +298,12 @@ def _probe_reality_sources() -> dict[str, Any]:
             "entity_resolution_health": "UNMEASURED — needs resolution audit",
         },
     }
-    return {"classes": classes, "table": table, "confidence": confidence, "memory": memory}
+    return {
+        "classes": classes,
+        "table": table,
+        "confidence": confidence,
+        "memory": memory,
+    }
 
 
 _RG: dict = {}
@@ -249,56 +325,102 @@ def _probe_adaptation() -> dict[str, Any]:
 
     def _file_has(path: str, pattern: str) -> bool | None:
         try:
-            return _re.search(pattern, open(path, encoding="utf-8", errors="replace").read(400_000)) is not None
+            return (
+                _re.search(
+                    pattern,
+                    open(path, encoding="utf-8", errors="replace").read(400_000),
+                )
+                is not None
+            )
         except Exception:
             return None
 
     # Capability 1: graphiti MCP — contract declares :8000, live probe :18412
-    ok_g, _, _ = _http_probe(_GRAPHITI_URL, {
-        "jsonrpc": "2.0", "id": 1, "method": "initialize",
-        "params": {"protocolVersion": "2025-06-18", "capabilities": {},
-                   "clientInfo": {"name": "awell-probe", "version": "1"}}})
+    ok_g, _, _ = _http_probe(
+        _GRAPHITI_URL,
+        {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "initialize",
+            "params": {
+                "protocolVersion": "2025-06-18",
+                "capabilities": {},
+                "clientInfo": {"name": "awell-probe", "version": "1"},
+            },
+        },
+    )
     contract = "/root/arifOS/docs/FEDERATION_MEMORY_CONTRACT.md"
     decl_8000 = _file_has(contract, r"localhost:8000")
     if ok_g:
         checked.append("graphiti_mcp")
         if decl_8000:
-            gaps.append({
-                "capability": "graphiti_mcp", "gap_class": "declaration_vs_live",
-                "sot_file": contract,
-                "evidence": "contract declares localhost:8000/mcp; live surface observed at 127.0.0.1:18412/mcp",
-                "correction": "update FEDERATION_MEMORY_CONTRACT.md L5 endpoint to :18412",
-            })
+            gaps.append(
+                {
+                    "capability": "graphiti_mcp",
+                    "gap_class": "declaration_vs_live",
+                    "sot_file": contract,
+                    "evidence": "contract declares localhost:8000/mcp; live surface observed at 127.0.0.1:18412/mcp",
+                    "correction": "update FEDERATION_MEMORY_CONTRACT.md L5 endpoint to :18412",
+                }
+            )
 
     # Capability 2: litellm/FED — local :4000 liveliness vs topology SOT
-    ok_l, _, _ = _http_probe("http://127.0.0.1:4000/health/liveliness", None, timeout=4.0)
+    ok_l, _, _ = _http_probe(
+        "http://127.0.0.1:4000/health/liveliness", None, timeout=4.0
+    )
     if ok_l:
         checked.append("litellm_fed")
         stale = _file_has("/root/.config/federation-models.json", r"100\.64\.0\.2:4000")
         if stale:
-            gaps.append({"capability": "litellm_fed", "gap_class": "stale_host_ref",
-                         "sot_file": "/root/.config/federation-models.json",
-                         "evidence": "FED endpoint still declared on KVM8 (100.64.0.2:4000)"})
+            gaps.append(
+                {
+                    "capability": "litellm_fed",
+                    "gap_class": "stale_host_ref",
+                    "sot_file": "/root/.config/federation-models.json",
+                    "evidence": "FED endpoint still declared on KVM8 (100.64.0.2:4000)",
+                }
+            )
 
     # Capability 3: ollama — doctrine says moved KVM8→KVM4; scan SOTs for stale KVM8 endpoint refs
     checked.append("ollama")
     for sot in ("/root/.config/federation-models.json",):
         if _file_has(sot, r"100\.64\.0\.2:11434"):
-            gaps.append({"capability": "ollama", "gap_class": "stale_host_ref",
-                         "sot_file": sot, "evidence": "ollama endpoint still declared on KVM8 (100.64.0.2:11434)"})
+            gaps.append(
+                {
+                    "capability": "ollama",
+                    "gap_class": "stale_host_ref",
+                    "sot_file": sot,
+                    "evidence": "ollama endpoint still declared on KVM8 (100.64.0.2:11434)",
+                }
+            )
     if not any(gm.get("capability") == "ollama" for gm in gaps):
-        gaps.append({"capability": "ollama", "gap_class": "no_evidence",
-                     "evidence": "no stale KVM8 refs found in model SOT; live probe of KVM4 not reachable from WELL (ssh lane absent) — declared-consistent, unverified"})
+        gaps.append(
+            {
+                "capability": "ollama",
+                "gap_class": "no_evidence",
+                "evidence": "no stale KVM8 refs found in model SOT; live probe of KVM4 not reachable from WELL (ssh lane absent) — declared-consistent, unverified",
+            }
+        )
 
-    gaps_score = round((len(checked) - sum(1 for gp in gaps if gp["gap_class"] != "no_evidence")) / max(len(checked), 1), 2)
+    gaps_score = round(
+        (len(checked) - sum(1 for gp in gaps if gp["gap_class"] != "no_evidence"))
+        / max(len(checked), 1),
+        2,
+    )
 
     # MTTR metabolism ledger — real incident history (hermes cron_incidents)
     incidents, mean_mttr = [], None
     try:
-        c = _sq.connect("file:/root/.hermes/cron/executions.db?mode=ro&immutable=1", uri=True, timeout=4)
-        rows = c.execute("SELECT job_id, first_seen_at, closed_at FROM cron_incidents "
-                         "WHERE closed_at IS NOT NULL AND first_seen_at IS NOT NULL "
-                         "ORDER BY closed_at DESC LIMIT 20").fetchall()
+        c = _sq.connect(
+            "file:/root/.hermes/cron/executions.db?mode=ro&immutable=1",
+            uri=True,
+            timeout=4,
+        )
+        rows = c.execute(
+            "SELECT job_id, first_seen_at, closed_at FROM cron_incidents "
+            "WHERE closed_at IS NOT NULL AND first_seen_at IS NOT NULL "
+            "ORDER BY closed_at DESC LIMIT 20"
+        ).fetchall()
         c.close()
         spans = []
         for jid, f, cl in rows:
@@ -369,30 +491,42 @@ def _probe_patterns(g: dict) -> dict[str, Any]:
         a = _probe_adaptation()
         for gp in a.get("gaps", []):
             if gp.get("gap_class") in ("declaration_vs_live", "stale_host_ref"):
-                evidence1.append(f"{gp['capability']}: {gp.get('evidence','')[:90]}")
+                evidence1.append(f"{gp['capability']}: {gp.get('evidence', '')[:90]}")
     except Exception as e:
         evidence1.append(f"gap-scan unavailable: {e}")
     # stale-incident lie: open incident whose job's last execution SUCCEEDED
     try:
-        c = _sq.connect("file:/root/.hermes/cron/executions.db?mode=ro&immutable=1", uri=True, timeout=4)
+        c = _sq.connect(
+            "file:/root/.hermes/cron/executions.db?mode=ro&immutable=1",
+            uri=True,
+            timeout=4,
+        )
         rows = c.execute(
-            "SELECT i.job_id, i.first_seen_at FROM cron_incidents i WHERE i.closed_at IS NULL").fetchall()
+            "SELECT i.job_id, i.first_seen_at FROM cron_incidents i WHERE i.closed_at IS NULL"
+        ).fetchall()
         for jid, fs in rows:
             last = c.execute(
                 "SELECT status FROM executions WHERE job_id=? ORDER BY started_at DESC LIMIT 1",
-                (jid,)).fetchone()
+                (jid,),
+            ).fetchone()
             if last and last[0] == "completed":
-                evidence1.append(f"incident {jid} open (since {str(fs)[:10]}) but last execution COMPLETED — era-ended lie")
+                evidence1.append(
+                    f"incident {jid} open (since {str(fs)[:10]}) but last execution COMPLETED — era-ended lie"
+                )
         c.close()
     except Exception:
         pass
-    fps.append({
-        "id": "FP1", "name": "WITNESS_SURFACE_MISMATCH",
-        "source_scar": "Graphiti session 2026-09-15 + WELL C1-C8 (2026-09-16)",
-        "canon": "System healthy, but the observer watched the wrong reality surface",
-        "status": "ACTIVE" if evidence1 else "CLEAR",
-        "evidence": evidence1 or ["no declared-vs-live drift; no era-ended open incidents"],
-    })
+    fps.append(
+        {
+            "id": "FP1",
+            "name": "WITNESS_SURFACE_MISMATCH",
+            "source_scar": "Graphiti session 2026-09-15 + WELL C1-C8 (2026-09-16)",
+            "canon": "System healthy, but the observer watched the wrong reality surface",
+            "status": "ACTIVE" if evidence1 else "CLEAR",
+            "evidence": evidence1
+            or ["no declared-vs-live drift; no era-ended open incidents"],
+        }
+    )
 
     # FP2 — TWIN_MODULE_TRAP (three strikes this session)
     evidence2: list[str] = []
@@ -401,49 +535,79 @@ def _probe_patterns(g: dict) -> dict[str, Any]:
         for name in ("well_attest_to_kernel",):
             n = len(_re.findall(rf"^def {name}\(", src, _re.MULTILINE))
             if n > 1:
-                evidence2.append(f"{n} module-level defs of {name}() in server.py — name shadowing (L13800 class, Phase 3 will delete)")
+                evidence2.append(
+                    f"{n} module-level defs of {name}() in server.py — name shadowing (L13800 class, Phase 3 will delete)"
+                )
     except Exception:
         pass
     # twin state-writer: dead twin still being written?
     try:
         dead_twin, live_twin = "/root/WELL/state.json", "/var/lib/well/state.json"
-        now = _dt.datetime.now().timezone and _dt.datetime.now(_dt.timezone.utc).timestamp()
+        now = (
+            _dt.datetime.now().timezone
+            and _dt.datetime.now(_dt.timezone.utc).timestamp()
+        )
         age_h = lambda p: (now - _os.path.getmtime(p)) / 3600.0
         if _os.path.exists(dead_twin) and _os.path.exists(live_twin):
             if age_h(dead_twin) < 48:
-                evidence2.append(f"dead twin {dead_twin} modified {age_h(dead_twin):.0f}h ago — a writer still targets the wrong tree")
+                evidence2.append(
+                    f"dead twin {dead_twin} modified {age_h(dead_twin):.0f}h ago — a writer still targets the wrong tree"
+                )
     except Exception:
         pass
-    fps.append({
-        "id": "FP2", "name": "TWIN_MODULE_TRAP",
-        "source_scar": "well_mcp vs monolith vs /opt/well; L13800 shadow (3 strikes, 2026-09-16)",
-        "canon": "Edited Reality != Executed Reality",
-        "status": "ACTIVE" if evidence2 else "CLEAR",
-        "evidence": evidence2 or ["no duplicate module-level tool defs; no live twin-writer"],
-    })
+    fps.append(
+        {
+            "id": "FP2",
+            "name": "TWIN_MODULE_TRAP",
+            "source_scar": "well_mcp vs monolith vs /opt/well; L13800 shadow (3 strikes, 2026-09-16)",
+            "canon": "Edited Reality != Executed Reality",
+            "status": "ACTIVE" if evidence2 else "CLEAR",
+            "evidence": evidence2
+            or ["no duplicate module-level tool defs; no live twin-writer"],
+        }
+    )
 
     # FP3 — OPEN_INCIDENT_LIE (era ended, incident never closed)
     open_n = None
     try:
-        c = _sq.connect("file:/root/.hermes/cron/executions.db?mode=ro&immutable=1", uri=True, timeout=4)
-        open_n = c.execute("SELECT COUNT(*) FROM cron_incidents WHERE closed_at IS NULL").fetchone()[0]
+        c = _sq.connect(
+            "file:/root/.hermes/cron/executions.db?mode=ro&immutable=1",
+            uri=True,
+            timeout=4,
+        )
+        open_n = c.execute(
+            "SELECT COUNT(*) FROM cron_incidents WHERE closed_at IS NULL"
+        ).fetchone()[0]
         c.close()
     except Exception:
         pass
-    fps.append({
-        "id": "FP3", "name": "OPEN_INCIDENT_LIE",
-        "source_scar": "incident sweep 2026-09-16 (4 era-ended lies-by-omission)",
-        "status": ("ACTIVE" if (open_n or 0) > 0 else ("CLEAR" if open_n == 0 else "UNKNOWN")),
-        "evidence": [f"open incidents: {open_n}"] + (["swept to zero 2026-09-16"] if open_n == 0 else []),
-    })
+    fps.append(
+        {
+            "id": "FP3",
+            "name": "OPEN_INCIDENT_LIE",
+            "source_scar": "incident sweep 2026-09-16 (4 era-ended lies-by-omission)",
+            "status": (
+                "ACTIVE"
+                if (open_n or 0) > 0
+                else ("CLEAR" if open_n == 0 else "UNKNOWN")
+            ),
+            "evidence": [f"open incidents: {open_n}"]
+            + (["swept to zero 2026-09-16"] if open_n == 0 else []),
+        }
+    )
 
     # FP4 — STATUS_OK_ARTIFACT_MISSING (backup-report class) — known, honestly unmonitored
-    fps.append({
-        "id": "FP4", "name": "STATUS_OK_ARTIFACT_MISSING",
-        "source_scar": "gdrive backup 21-day silent outage (2026-09-16 report)",
-        "status": "UNMONITORED",
-        "evidence": ["job status 'ok' measures agent turn, not artifact — detector needs per-job artifact verification; scheduler-audit skill carries the manual sweep"],
-    })
+    fps.append(
+        {
+            "id": "FP4",
+            "name": "STATUS_OK_ARTIFACT_MISSING",
+            "source_scar": "gdrive backup 21-day silent outage (2026-09-16 report)",
+            "status": "UNMONITORED",
+            "evidence": [
+                "job status 'ok' measures agent turn, not artifact — detector needs per-job artifact verification; scheduler-audit skill carries the manual sweep"
+            ],
+        }
+    )
 
     active = [f["name"] for f in fps if f["status"] == "ACTIVE"]
     return {
@@ -482,16 +646,23 @@ def register_v2_tools(g: dict) -> None:
         """
         if mode == "homeostasis":
             r = _call(
-                g, "well_assess_homeostasis",
+                g,
+                "well_assess_homeostasis",
                 mode="fatigue" if decision_class else "sleep",
-                decision_class=decision_class, sleep_debt_days=sleep_debt_days,
-                cognitive_clarity=cognitive_clarity, decision_fatigue=decision_fatigue,
-                stress_load=stress_load, emotional_state=emotional_state,
-                hrv_status=hrv_status, chronic_fatigue=chronic_fatigue,
+                decision_class=decision_class,
+                sleep_debt_days=sleep_debt_days,
+                cognitive_clarity=cognitive_clarity,
+                decision_fatigue=decision_fatigue,
+                stress_load=stress_load,
+                emotional_state=emotional_state,
+                hrv_status=hrv_status,
+                chronic_fatigue=chronic_fatigue,
             )
         elif mode == "dignity":
             r = _call(
-                g, "well_guard_dignity", mode="consent",
+                g,
+                "well_guard_dignity",
+                mode="consent",
                 subject=subject or "Arif",
                 dignity_preservation=dignity_preservation,
                 coercion_signals=coercion_signals,
@@ -518,7 +689,9 @@ def register_v2_tools(g: dict) -> None:
         elif mode == "classify":
             r = _call(g, "well_classify_machine_state", agent_id=agent_id)
         elif mode == "observe" and scope == "federation":
-            r = _call(g, "well_observe_federation_thermal", lookback_hours=lookback_hours)
+            r = _call(
+                g, "well_observe_federation_thermal", lookback_hours=lookback_hours
+            )
         elif mode == "observe":
             r = _call(g, "well_observe_machine", agent_id=agent_id, surface="all")
         else:
@@ -568,21 +741,29 @@ def register_v2_tools(g: dict) -> None:
         if mode == "memory":
             return _tag(src["memory"], "well_reality", mode)
         if mode == "witness":
-            return _tag({
-                "ok": True,
-                "witness_quality_table": src["table"],
-                "note": "class semantics: OBSERVED=live-probed · VERIFIED=cross-checked · ASSUMED=declared only · STALE=probed but old",
-            }, "well_reality", mode)
+            return _tag(
+                {
+                    "ok": True,
+                    "witness_quality_table": src["table"],
+                    "note": "class semantics: OBSERVED=live-probed · VERIFIED=cross-checked · ASSUMED=declared only · STALE=probed but old",
+                },
+                "well_reality",
+                mode,
+            )
 
-        return _tag({
-            "ok": True,
-            "implementation_status": "v1 — live evidence classes",
-            "reality_confidence": src["confidence"],
-            "evidence_classes": src["classes"],
-            "memory_alive": src["memory"].get("memory_alive"),
-            "drift": src["classes"].get("commit_alignment"),
-            "source_table": src["table"],
-        }, "well_reality", mode)
+        return _tag(
+            {
+                "ok": True,
+                "implementation_status": "v1 — live evidence classes",
+                "reality_confidence": src["confidence"],
+                "evidence_classes": src["classes"],
+                "memory_alive": src["memory"].get("memory_alive"),
+                "drift": src["classes"].get("commit_alignment"),
+                "source_table": src["table"],
+            },
+            "well_reality",
+            mode,
+        )
 
     @mcp.tool()
     async def well_adaptation(
@@ -596,16 +777,28 @@ def register_v2_tools(g: dict) -> None:
         Constitutional question: can witnessed reality still change future behavior?
         """
         if mode == "precheck":
-            r = _call(g, "well_check_repair", mode="precheck",
-                      task_description=task_description,
-                      decision_class=decision_class, source=source)
+            r = _call(
+                g,
+                "well_check_repair",
+                mode="precheck",
+                task_description=task_description,
+                decision_class=decision_class,
+                source=source,
+            )
             return _tag(await _res(r), "well_adaptation", mode)
         a = _probe_adaptation()
         if mode == "gaps":
-            return _tag({
-                "ok": True, "gaps": a["gaps"], "capabilities_checked": a["capabilities_checked"],
-                "gaps_score": a["gaps_score"], "test_case": a["test_case"],
-            }, "well_adaptation", mode)
+            return _tag(
+                {
+                    "ok": True,
+                    "gaps": a["gaps"],
+                    "capabilities_checked": a["capabilities_checked"],
+                    "gaps_score": a["gaps_score"],
+                    "test_case": a["test_case"],
+                },
+                "well_adaptation",
+                mode,
+            )
         if mode == "mttr":
             return _tag({"ok": True, "mttr": a["mttr"]}, "well_adaptation", mode)
         return _tag(a, "well_adaptation", mode)
@@ -631,20 +824,44 @@ def register_v2_tools(g: dict) -> None:
         Hermes actor_token; substance requires substance.full scope.
         """
         if mode == "meal":
-            r = _call(g, "well_log_intake", kcal=kcal, items=items, note=note,
-                      occurred_at=occurred_at)
+            r = _call(
+                g,
+                "well_log_intake",
+                kcal=kcal,
+                items=items,
+                note=note,
+                occurred_at=occurred_at,
+            )
         elif mode == "recovery":
-            r = _call(g, "well_log_recovery_event", event_type=event_type,
-                      note=note, source=source)
+            r = _call(
+                g,
+                "well_log_recovery_event",
+                event_type=event_type,
+                note=note,
+                source=source,
+            )
         elif mode == "substance":
-            r = _call(g, "well_log_substance", substance=substance,
-                      dose_mg=dose_mg, note=note, source=source)
+            r = _call(
+                g,
+                "well_log_substance",
+                substance=substance,
+                dose_mg=dose_mg,
+                note=note,
+                source=source,
+            )
         elif mode == "biometric":
-            r = _call(g, "well_inject_biometric", source=source,
-                      readings=readings or {}, consent_scope=consent_scope,
-                      actor_token=actor_token)
+            r = _call(
+                g,
+                "well_inject_biometric",
+                source=source,
+                readings=readings or {},
+                consent_scope=consent_scope,
+                actor_token=actor_token,
+            )
         else:
-            return _tag({"ok": False, "error": f"unknown mode: {mode}"}, "well_intake", mode)
+            return _tag(
+                {"ok": False, "error": f"unknown mode: {mode}"}, "well_intake", mode
+            )
         return _tag(await _res(r), "well_intake", mode)
 
     @mcp.tool()
@@ -661,16 +878,28 @@ def register_v2_tools(g: dict) -> None:
         grant/revoke = well_consent_set_scope (Hermes-only F11 gate preserved).
         """
         if mode == "audit":
-            r = _call(g, "well_consent_audit", scope_filter=scope_filter,
-                      include_revoked=include_revoked)
+            r = _call(
+                g,
+                "well_consent_audit",
+                scope_filter=scope_filter,
+                include_revoked=include_revoked,
+            )
         elif mode in ("grant", "revoke"):
             if not scope_id:
-                return _tag({"ok": False, "error": "scope_id required"}, "well_consent", mode)
-            r = _call(g, "well_consent_set_scope", scope_id=scope_id,
-                      level="granted" if mode == "grant" else "revoked",
-                      actor_token=actor_token)
+                return _tag(
+                    {"ok": False, "error": "scope_id required"}, "well_consent", mode
+                )
+            r = _call(
+                g,
+                "well_consent_set_scope",
+                scope_id=scope_id,
+                level="granted" if mode == "grant" else "revoked",
+                actor_token=actor_token,
+            )
         else:
-            return _tag({"ok": False, "error": f"unknown mode: {mode}"}, "well_consent", mode)
+            return _tag(
+                {"ok": False, "error": f"unknown mode: {mode}"}, "well_consent", mode
+            )
         return _tag(await _res(r), "well_consent", mode)
 
     @mcp.tool()
@@ -695,25 +924,51 @@ def register_v2_tools(g: dict) -> None:
         WELL never returns verdicts — proposals + evidence only.
         """
         if mode == "attest":
-            r = _call(g, "_wt_well_attest_to_kernel", attestation_kind=attestation_kind,
-                      actor_id=actor_id)
+            r = _call(
+                g,
+                "_wt_well_attest_to_kernel",
+                attestation_kind=attestation_kind,
+                actor_id=actor_id,
+            )
         elif mode == "signal":
-            r = _call(g, "_wt_well_propose_governance_signal", signal_kind=signal_kind,
-                      severity=severity, description=description, actor_id=actor_id)
+            r = _call(
+                g,
+                "_wt_well_propose_governance_signal",
+                signal_kind=signal_kind,
+                severity=severity,
+                description=description,
+                actor_id=actor_id,
+            )
         elif mode == "recommend":
             if not candidate:
-                return _tag({"ok": False, "error": "candidate required"}, "well_bridge", mode)
-            r = _call(g, "_wt_well_propose_seal_recommendation", candidate=candidate,
-                      recommendation=recommendation, actor_id=actor_id)
+                return _tag(
+                    {"ok": False, "error": "candidate required"}, "well_bridge", mode
+                )
+            r = _call(
+                g,
+                "_wt_well_propose_seal_recommendation",
+                candidate=candidate,
+                recommendation=recommendation,
+                actor_id=actor_id,
+            )
         elif mode == "dignity":
-            r = _call(g, "_wt_well_handoff_dignity_to_arifos", signal=signal,
-                      coercion_signals=coercion_signals,
-                      dignity_preservation=dignity_preservation,
-                      reductionism_risk=reductionism_risk, actor_id=actor_id)
+            r = _call(
+                g,
+                "_wt_well_handoff_dignity_to_arifos",
+                signal=signal,
+                coercion_signals=coercion_signals,
+                dignity_preservation=dignity_preservation,
+                reductionism_risk=reductionism_risk,
+                actor_id=actor_id,
+            )
         elif mode == "log":
-            r = _call(g, "_wt_well_seal_recommendation_log", lookback_hours=lookback_hours)
+            r = _call(
+                g, "_wt_well_seal_recommendation_log", lookback_hours=lookback_hours
+            )
         else:
-            return _tag({"ok": False, "error": f"unknown mode: {mode}"}, "well_bridge", mode)
+            return _tag(
+                {"ok": False, "error": f"unknown mode: {mode}"}, "well_bridge", mode
+            )
         return _tag(await _res(r), "well_bridge", mode)
 
     @mcp.tool()
@@ -728,17 +983,30 @@ def register_v2_tools(g: dict) -> None:
         commits = g["_compute_well_commits"]()
         ms = g["_machine_substrate_health"]()
         checks = [
-            {"id": "commit_alignment", "pass": not commits.get("drift"),
-             "detail": f"src={commits.get('source_commit')} dep={commits.get('deployed_commit')} built={commits.get('built_commit')}"},
-            {"id": "machine_freshness", "pass": (ms.get("freshness_band") == "FRESH"),
-             "detail": f"band={ms.get('freshness_band') or ms.get('status')}"},
-            {"id": "witness_lane_truth", "pass": True,
-             "detail": "arifOS lane DEAD (Option B); arifFlow routing live"},
+            {
+                "id": "commit_alignment",
+                "pass": not commits.get("drift"),
+                "detail": f"src={commits.get('source_commit')} dep={commits.get('deployed_commit')} built={commits.get('built_commit')}",
+            },
+            {
+                "id": "machine_freshness",
+                "pass": (ms.get("freshness_band") == "FRESH"),
+                "detail": f"band={ms.get('freshness_band') or ms.get('status')}",
+            },
+            {
+                "id": "witness_lane_truth",
+                "pass": True,
+                "detail": "arifOS lane DEAD (Option B); arifFlow routing live",
+            },
         ]
-        return _tag({
-            "ok": True,
-            "mode": "contradictions",
-            "checks": checks,
-            "open_contradictions": sum(1 for c in checks if not c["pass"]),
-            "class_reference": "C1-C8 (WELL_V2_APEX_ZEN_MUTATION_GUIDE §1)",
-        }, "well_registry", mode)
+        return _tag(
+            {
+                "ok": True,
+                "mode": "contradictions",
+                "checks": checks,
+                "open_contradictions": sum(1 for c in checks if not c["pass"]),
+                "class_reference": "C1-C8 (WELL_V2_APEX_ZEN_MUTATION_GUIDE §1)",
+            },
+            "well_registry",
+            mode,
+        )

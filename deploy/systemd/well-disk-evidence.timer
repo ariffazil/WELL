@@ -1,0 +1,11 @@
+[Unit]
+Description=WELL disk evidence timer — hourly
+
+[Timer]
+OnBootSec=10min
+OnUnitInactiveSec=1h
+RandomizedDelaySec=5min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

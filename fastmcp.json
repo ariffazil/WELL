@@ -17,5 +17,6 @@
     "path": "/mcp",
     "log_level": "INFO"
   },
-  "name": "AFWELL"
+  "name": "AFWELL",
+  "deployment_status": "STAGING_ONLY \u2014 production entrypoint is /root/WELL/server.py (well.service). This well_mcp/server.py FastMCP instance is NOT deployed; do not bind a second server on 18083. Shared modules under well_mcp/ ARE imported by production."
 }

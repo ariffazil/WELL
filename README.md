@@ -21,9 +21,96 @@ holds: biometric telemetry never on public or extended A2A cards
 
 ### Truth about readiness.
 
-**WELL is the arifOS federation's vitality organ.** It reflects human, machine, and coupled readiness as evidence — labelled with freshness and honesty, never dressed up as certainty — and returns every judgment to the human.
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- LANE 1: THE 60-SECOND HUMAN HORIZON                                     -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
 
-Most failures announce themselves early: fatigue hides as confidence, degradation hides as "mostly working", burnout hides as discipline. WELL makes the slow drift visible before it becomes the incident.
+## What is this?
+WELL is a private readiness mirror that reflects human fatigue, sleep debt, and machine pressure so an operator can see when their physical capacity is depleted.
+
+## Why does it exist?
+Fatigue hides as confidence, burnout hides as discipline, and late-night venting to an AI can fool the brain into believing real-world problems are solved. WELL makes the slow physical drift visible before it becomes a personal or operational collapse.
+
+## Who bears the consequence if this fails?
+The human operator. A server can be rebooted; an exhausted human bears the real-world health, relational, and financial consequences of burning out.
+
+## What does it protect?
+Human dignity (*maruah*), physical vitality, and absolute personal privacy.
+
+## What WELL will never do
+* **NEVER secretly report or alert anyone:** WELL will never alert an employer, family member, friend, or third party behind your back.
+* **NEVER diagnose illness:** WELL does not diagnose depression, anxiety, or medical conditions from typing habits, late-night messages, or tone of voice.
+* **NEVER act as a corporate nanny (*bibik*):** WELL will never lock your account, lecture you, or inject patronizing pop-ups demanding proof of rest.
+* **NEVER combine human worth into a single score:** WELL treats human vitality and machine uptime as ontologically separate.
+
+## Human First
+This system exists to serve humans. Humans remain sovereign.  
+The system may recommend.  
+The system may assist.  
+The system may execute permitted actions.  
+**The system may never become authority over a human.**
+
+## Reality Connection
+* **Reality:** Sleep. Biology. Circadian rhythm. Autonomic nervous system limits.
+* **Failure Cost:** Chronic illness, burnout, broken relationships, cognitive collapse.
+* **Doctrine:** *Teks bukan manusia. Sensor bukan diagnosis. Lega bukan selesai.*
+
+---
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- LANE 2: MACHINE-EXECUTABLE CONTRACT                                     -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+
+```yaml
+organ:
+  name: WELL
+  purpose: consequence-sensing-mirror
+  repository: https://github.com/ariffazil/WELL
+
+authority:
+  owner: Muhammad Arif bin Fazil (F13 SOVEREIGN)
+  ceiling: REFLECT_ONLY
+  can_propose: yes
+  can_verify: yes
+  can_authorize: no
+  can_execute: no
+  can_witness: yes
+  can_record: no
+
+boundaries:
+  self_authorization: prohibited
+  silent_external_contact: prohibited
+  silent_escalation: prohibited
+  surveillance: prohibited
+  diagnosis_from_text: prohibited
+  claim_beyond_evidence: prohibited
+
+execution:
+  authorization_required: true
+  approved_executor: A-FORGE
+  receipt_required: true
+  outcome_witness_required: true
+  human_acceptance_separate: true
+
+truth:
+  current_state_source: http://127.0.0.1:18083/health
+  evidence_source: machine_state.json
+  freshness_rule: live_health_beats_static_prose
+  unknown_behavior: fail_closed
+
+status:
+  proven: machine_substrate_telemetry_and_honesty_degradation
+  partial: human_vitality_mirror
+  target: user_led_handoff_integration
+  research: wearable_biometric_calibration
+```
+
+---
+
+### The invariant
+
+> **WELL holds a mirror, not a veto. Operator sovereignty is invariant.**
+> WELL informs. arifOS judges. Arif decides.
 
 [30-second proof](#30-second-proof) · [What it does](#what-it-does) · [Current verified state](#current-verified-state) · [Known gaps](#evidence--known-gaps) · [Security](./SECURITY.md)
 
@@ -32,13 +119,6 @@ Most failures announce themselves early: fatigue hides as confidence, degradatio
 [![Authority](https://img.shields.io/badge/authority-REFLECT__ONLY-3fbf7f?style=flat-square)](#the-invariant)
 [![Security](https://img.shields.io/badge/security-policy-d4a853?style=flat-square)](./SECURITY.md)
 [![License](https://img.shields.io/badge/license-AGPL--3.0-blue?style=flat-square)](./LICENSE)
-
-### The invariant
-
-> **WELL holds a mirror, not a veto. Operator sovereignty is invariant.**
-> WELL informs. arifOS judges. Arif decides.
-
-**What WELL is not:** not a medical device · not a diagnosis or therapy · not a judge (arifOS judges) · not an executor (A-FORGE executes) · not a veto. Biometric telemetry never appears on public or extended A2A surfaces.
 
 | Audience | What you get |
 |---|---|

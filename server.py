@@ -1978,9 +1978,20 @@ def _apply_public_host_allowlist(app: Any) -> Any:
     return app
 
 
+# WELL_VERSION — single source of identity (S38 provenance: running version ↔ source revision).
+# Stamped by scripts/refresh_deploy_stamp.sh (ExecStartPre) from HEAD commit date; falls
+# back to the last released literal when the stamp is absent (fresh clones, tests).
+from pathlib import Path as _WellPath
+
+try:
+    _well_v = (_WellPath(__file__).parent / ".well_version").read_text().strip()
+    WELL_VERSION = _well_v if _well_v else "v2026.07.24"
+except Exception:
+    WELL_VERSION = "v2026.07.24"
+
 mcp = FastMCP(
     name="WELL",
-    version="v2026.07.24",
+    version=WELL_VERSION,
     website_url="https://well.arif-fazil.com",
     # MCP spec 2026-07-28 compliance: declare listChanged capabilities
     experimental_capabilities={
@@ -2011,6 +2022,7 @@ mcp = FastMCP(
 # Isolated preflight verified: without extension -> RuntimeError; with -> gate clears.
 try:
     from fastmcp_tasks import TasksExtension
+
     _tasks_ext = TasksExtension()
     mcp.add_extension(_tasks_ext)
 except Exception:
@@ -2609,7 +2621,7 @@ def _mcp_health_check_impl() -> dict:
         "status": status,
         "transport": "SSE_VALID",
         "auth": "OK",
-        "schema_version": "v2026.07.24",
+        "schema_version": WELL_VERSION,
         # FEDERATION HANDSHAKE (canonical: arifOS/arifosmcp/schemas/federation_enums.py)
         # See: /root/AAA/governance/FEDERATION_HANDSHAKE.md
         "federation_schema_version": "2.0.0",
@@ -7313,6 +7325,330 @@ def well_decision_bandwidth(
 
 
 # internal -- not MCP-facing (collapsed 2026-05-26)
+import math
+
+# Provisional policy defaults (empirical bounds for Linux PSI stalls;
+# configurable via WELL_PRESSURE_POLICY_JSON env var; uncalibrated).
+PROVISIONAL_POLICY_DEFAULTS = {
+    "DIAGNOSTIC_READ": {
+        "max_mem_psi_full_avg10": 50.0,
+        "max_iowait_pct": 50.0,
+        "human_always": False,
+    },
+    "SCAN_AUDIT": {
+        "max_mem_psi_full_avg10": 20.0,
+        "max_iowait_pct": 25.0,
+        "human_always": False,
+    },
+    "BUILD_COMPUTE": {
+        "max_mem_psi_full_avg10": 10.0,
+        "max_iowait_pct": 20.0,
+        "human_always": False,
+    },
+    "DATABASE_MAINTENANCE": {
+        "max_mem_psi_full_avg10": 10.0,
+        "max_iowait_pct": 10.0,
+        "human_always": True,
+    },
+    "CONSEQUENTIAL_MUTATION": {
+        "max_mem_psi_full_avg10": 10.0,
+        "max_iowait_pct": 10.0,
+        "human_always": True,
+    },
+    "UNKNOWN_OPERATION": {
+        "max_mem_psi_full_avg10": 10.0,
+        "max_iowait_pct": 10.0,
+        "human_always": True,
+    },
+}
+
+
+def _get_pressure_policy() -> dict[str, dict[str, Any]]:
+    override_json = _os.environ.get("WELL_PRESSURE_POLICY_JSON")
+    if override_json:
+        try:
+            custom = json.loads(override_json)
+            if isinstance(custom, dict):
+                merged = {**PROVISIONAL_POLICY_DEFAULTS}
+                for k, v in custom.items():
+                    if isinstance(v, dict):
+                        merged[k] = {**merged.get(k, {}), **v}
+                return merged
+        except Exception:
+            pass
+    return PROVISIONAL_POLICY_DEFAULTS
+
+
+def _validate_machine_telemetry(telemetry: Any) -> tuple[bool, str, dict[str, Any]]:
+    """Strict validation of machine evidence emitted by _build_machine_enrichment().
+    Removes optimistic defaults. Rejects non-finite, missing, out-of-range, or stale fields.
+    """
+    if not isinstance(telemetry, dict):
+        return False, "Telemetry payload must be a dictionary", {}
+
+    if not telemetry.get("has_telemetry", False):
+        return False, "Machine telemetry flag has_telemetry is False", {}
+
+    tel_status = telemetry.get("telemetry_status")
+    if tel_status != "FULL":
+        return (
+            False,
+            f"Machine telemetry status is not FULL (received: {tel_status})",
+            {},
+        )
+
+    verdict = telemetry.get("m_well_verdict")
+    allowed_verdicts = {"STABLE", "STRAINED", "DEGRADED", "CRITICAL", "HEALTHY"}
+    if verdict not in allowed_verdicts:
+        return False, f"Invalid or missing m_well_verdict: {verdict}", {}
+
+    risk_level = telemetry.get("risk_level")
+    allowed_risks = {"GREEN", "AMBER", "RED", "CRITICAL"}
+    if risk_level not in allowed_risks:
+        return False, f"Invalid or missing risk_level: {risk_level}", {}
+
+    age = telemetry.get("telemetry_age_seconds")
+    if (
+        age is None
+        or isinstance(age, bool)
+        or not isinstance(age, (int, float))
+        or not math.isfinite(age)
+        or age < 0
+    ):
+        return False, f"Missing or non-finite telemetry_age_seconds: {age}", {}
+    if age > 300.0:
+        return False, f"Machine telemetry is stale (age={age:.1f}s > 300s)", {}
+
+    numeric_fields = {
+        "memory_psi_some_avg10": telemetry.get("memory_psi_some_avg10"),
+        "memory_psi_full_avg10": telemetry.get("memory_psi_full_avg10"),
+        "iowait_pct": telemetry.get("iowait_pct"),
+        "mem_available_pct": telemetry.get("mem_available_pct"),
+        "swap_used_pct": telemetry.get("swap_used_pct"),
+    }
+
+    validated: dict[str, Any] = {
+        "m_well_verdict": verdict,
+        "risk_level": risk_level,
+        "telemetry_age_seconds": float(age),
+    }
+
+    for fname, val in numeric_fields.items():
+        if val is None or isinstance(val, bool) or not isinstance(val, (int, float)):
+            return (
+                False,
+                f"Required numeric field {fname} missing or non-numeric: {val}",
+                {},
+            )
+        if not math.isfinite(val):
+            return (
+                False,
+                f"Required numeric field {fname} is not finite (NaN/Inf): {val}",
+                {},
+            )
+        if val < 0.0 or val > 100.0:
+            return (
+                False,
+                f"Required numeric field {fname} out of range [0, 100]: {val}",
+                {},
+            )
+        validated[fname] = float(val)
+
+    return True, "VALID", validated
+
+
+def _classify_machine_operation(
+    task_description: str | None, decision_class: str | None
+) -> tuple[str, bool]:
+    """Classify machine task into structured operation class.
+    Keyword matching suggests a class but NEVER establishes authorization or harmlessness.
+    Unknown consequences remain explicit (UNKNOWN_OPERATION -> consequential).
+    """
+    dc = (decision_class or "").lower().strip()
+    td = (task_description or "").lower().strip()
+
+    if dc in ("read", "diagnosis", "inspection", "probe", "status"):
+        return "DIAGNOSTIC_READ", False
+    if dc in ("destructive", "cleanup", "mutation", "delete", "prune"):
+        return "CONSEQUENTIAL_MUTATION", True
+    if dc in ("db", "database", "database_maintenance"):
+        return "DATABASE_MAINTENANCE", True
+    if dc in ("build", "compute"):
+        return "BUILD_COMPUTE", True
+    if dc in ("scan", "audit", "hash"):
+        return "SCAN_AUDIT", False
+
+    destructive_keywords = (
+        "clean",
+        "rm ",
+        "delete",
+        "prune",
+        "truncate",
+        "drop",
+        "wipe",
+        "format",
+        "purge",
+        "destroy",
+        "kill",
+        "restart",
+    )
+    if any(k in td for k in destructive_keywords):
+        return "CONSEQUENTIAL_MUTATION", True
+
+    if any(
+        k in td
+        for k in ("vacuum", "backup", "checkpoint", "dump", "restore", "migrate")
+    ):
+        return "DATABASE_MAINTENANCE", True
+
+    if any(
+        k in td
+        for k in ("build", "compile", "cargo", "make", "docker build", "npm run build")
+    ):
+        return "BUILD_COMPUTE", True
+
+    if any(k in td for k in ("hash", "scan", "checksum", "audit", "find")):
+        return "SCAN_AUDIT", False
+
+    if any(
+        k in td
+        for k in (
+            "check",
+            "inspect",
+            "diagnose",
+            "probe",
+            "status",
+            "read",
+            "health",
+            "test",
+            "metric",
+        )
+    ):
+        return "DIAGNOSTIC_READ", False
+
+    return "UNKNOWN_OPERATION", True
+
+
+def _evaluate_machine_task_readiness(
+    task_description: str | None,
+    decision_class: str | None,
+    telemetry: Any,
+    operator_approved: bool = False,
+) -> dict[str, Any]:
+    """Evaluate machine task readiness keeping condition, task-readiness, approval,
+    and recovery strictly separate.
+
+    - Static defaults or missing telemetry NEVER establish live readiness.
+    - Operator approval NEVER substitutes for missing/stale telemetry.
+    - Readiness PASS NEVER authorizes execution of consequential operations.
+    - Normal mode NEVER permits consequential action without approval.
+    """
+    op_class, is_consequential = _classify_machine_operation(
+        task_description, decision_class
+    )
+    policy = _get_pressure_policy().get(
+        op_class, PROVISIONAL_POLICY_DEFAULTS["UNKNOWN_OPERATION"]
+    )
+
+    is_valid, validation_reason, validated_tel = _validate_machine_telemetry(telemetry)
+
+    if not is_valid:
+        action_note = f"Machine evidence invalid or absent: {validation_reason}. Execution is not authorized."
+        if operator_approved:
+            action_note += " (Operator approval recorded, but cannot substitute for missing machine evidence)."
+
+        return {
+            "status": "HOLD",
+            "observed_condition": "UNKNOWN",
+            "machine_readiness": "UNKNOWN",
+            "task_readiness": "UNKNOWN",
+            "risk_level": "UNKNOWN",
+            "operation_class": op_class,
+            "human_confirmation_required": True,
+            "operator_approved": operator_approved,
+            "recommended_mode": "pause",
+            "action_note": action_note,
+            "validation_reason": validation_reason,
+            "recovery_verified": False,
+        }
+
+    condition = validated_tel["m_well_verdict"]
+    risk_level = validated_tel["risk_level"]
+    mem_psi_full = validated_tel["memory_psi_full_avg10"]
+    iowait = validated_tel["iowait_pct"]
+
+    warnings = []
+    pressure_exceeded = False
+    if mem_psi_full > policy["max_mem_psi_full_avg10"]:
+        warnings.append(
+            f"memory_psi_full_avg10={mem_psi_full:.1f}% exceeds threshold ({policy['max_mem_psi_full_avg10']}%)"
+        )
+        pressure_exceeded = True
+    if iowait > policy["max_iowait_pct"]:
+        warnings.append(
+            f"iowait_pct={iowait:.1f}% exceeds threshold ({policy['max_iowait_pct']}%)"
+        )
+        pressure_exceeded = True
+
+    if condition in ("CRITICAL", "DEGRADED") or pressure_exceeded:
+        task_readiness = "DEFERRED_PRESSURE"
+    elif condition in ("STABLE", "HEALTHY", "STRAINED", "FUNCTIONAL"):
+        task_readiness = "READY"
+    else:
+        task_readiness = "UNKNOWN"
+
+    human_required = (
+        is_consequential
+        or policy.get("human_always", False)
+        or pressure_exceeded
+        or (condition in ("CRITICAL", "DEGRADED"))
+    )
+
+    if is_consequential:
+        status = (
+            "HOLD"
+            if not operator_approved
+            else ("PASS" if task_readiness == "READY" else "HOLD")
+        )
+        recommended_mode = (
+            "normal"
+            if (operator_approved and task_readiness == "READY")
+            else "draft_only"
+        )
+        action_note = f"Machine condition: {condition}. Consequential operation ({op_class}) requires explicit human approval before execution."
+        if warnings:
+            action_note += f" Elevated load warning: {'; '.join(warnings)}."
+    elif pressure_exceeded:
+        status = "HOLD"
+        recommended_mode = "draft_only"
+        action_note = f"Machine condition: {condition}. Elevated pressure for {op_class}: {'; '.join(warnings)}."
+    elif op_class == "DIAGNOSTIC_READ":
+        status = "PASS" if condition != "CRITICAL" else "HOLD"
+        recommended_mode = "normal" if status == "PASS" else "draft_only"
+        action_note = f"Machine condition: {condition}. Diagnostic read permitted; no mutation involved."
+    else:
+        status = "PASS" if task_readiness == "READY" and not human_required else "HOLD"
+        recommended_mode = "normal" if status == "PASS" else "draft_only"
+        action_note = (
+            f"Machine condition: {condition}. Task readiness: {task_readiness}."
+        )
+
+    return {
+        "status": status,
+        "observed_condition": condition,
+        "machine_readiness": condition,
+        "task_readiness": task_readiness,
+        "risk_level": risk_level,
+        "operation_class": op_class,
+        "human_confirmation_required": human_required,
+        "operator_approved": operator_approved,
+        "recommended_mode": recommended_mode,
+        "action_note": action_note,
+        "validation_reason": "VALID",
+        "recovery_verified": False,
+    }
+
+
 @mcp.tool()
 def well_forge_precheck(
     task_description: str | None = None,
@@ -7341,6 +7677,73 @@ def well_forge_precheck(
     m_state = well_machine_state(ctx=None)
     m_state.get("m_well_score", 100)
     m_verdict = m_state.get("m_well_verdict", "UNKNOWN")
+
+    _td = (task_description or "").lower()
+    _task_is_machine = decision_class in (
+        "machine",
+        "vps",
+        "server",
+        "system",
+        "infrastructure",
+    ) or any(
+        k in _td
+        for k in (
+            "swap",
+            "docker",
+            "disk",
+            "vps",
+            "server",
+            "service",
+            "container",
+            "cron",
+            "zombie",
+            "memory pressure",
+            "cpu",
+            "clean",
+            "prune",
+            "vacuum",
+            "checkpoint",
+        )
+    )
+    # FIX 2026-11-02: machine-class tasks gate on verified M-WELL telemetry
+    # and explicit task-specific pressure policy, independent of operator telemetry presence.
+    # Consequential actions (cleanup/deletion) always require human confirmation.
+    if _task_is_machine:
+        real_enrichment = _build_machine_enrichment()
+        m_eval = _evaluate_machine_task_readiness(
+            task_description, decision_class, real_enrichment
+        )
+
+        human_readiness_val = (
+            "UNMEASURED"
+            if not has_telemetry
+            else h_resolved.get("readiness_capped", "UNKNOWN")
+        )
+        domain_verdict_str = (
+            "MACHINE_TELEMETRY_ONLY"
+            if not has_telemetry
+            else "MACHINE_TASK_WITH_BODY_TELEMETRY"
+        )
+
+        res = _compose_verdict(
+            mcp="AFWELL",
+            task=f"forge_precheck: {task_description or 'unspecified'}",
+            status=m_eval["status"],
+            domain_verdict=domain_verdict_str,
+            human_readiness=human_readiness_val,
+            machine_readiness=m_eval["machine_readiness"],
+            confidence="MEDIUM" if m_eval["status"] == "PASS" else "LOW",
+            risk_level=m_eval["risk_level"],
+            recommended_mode=m_eval["recommended_mode"],
+            human_required=m_eval["human_confirmation_required"],
+            next_safe_action=m_eval["action_note"],
+        )
+        res["machine_readiness"] = m_eval["machine_readiness"]
+        res["human_readiness"] = human_readiness_val
+        res["task_readiness"] = m_eval["task_readiness"]
+        res["operation_class"] = m_eval["operation_class"]
+        res["recovery_verified"] = m_eval["recovery_verified"]
+        return res
 
     # ── No body telemetry → cannot recommend real readiness ──
     if not has_telemetry:
@@ -9040,7 +9443,22 @@ def _well_classify_substrate_impl(
         "i am a",
     ]
     _is_clearly_human = any(ind in combined for ind in HUMAN_ROLE_INDICATORS)
-    if (
+    # FIX 2026-11-01 (external audit): a VPS/host description is a compute
+    # substrate (MACHINE_SYSTEM), not a GOVERNANCE_SYSTEM.
+    if not _is_clearly_human and any(
+        k in combined
+        for k in (
+            "vps",
+            "ubuntu",
+            "linux host",
+            "host machine",
+            "compute node",
+            "zram",
+            "disk usage",
+        )
+    ):
+        detected_class = "MACHINE_SYSTEM"
+    elif (
         "arif" in combined
         and any(
             k in combined for k in ["mcp", "governance", "kernel", "arifos", "arifmcp"]
@@ -10230,15 +10648,11 @@ def _omega_well_output(
             "stage": stage,
             "lane": lane,
             "mode": mode,
-            # verdict kept for backward compat -- agents should ignore
-            "verdict": verdict,
             "signal": signal,
         },
         "arifos": {
             "stage": stage,
             "lane": lane,
-            # verdict kept for backward compat -- agents should ignore
-            "verdict": verdict,
             "signal": signal,
             "compliance": constitutional_compliance or {},
         },
@@ -11717,17 +12131,47 @@ def _build_machine_enrichment() -> dict[str, Any]:
         ms = collect_from_prometheus()
         gate = assess_m_well()
     except ImportError:
-        enrichment["telemetry_status"] = "PARTIAL"
-        enrichment["missing_fields"].append("prometheus_adapter_or_vitality_gate")
-        enrichment["diagnosis"] = (
-            "Prometheus adapter or vitality_gate unavailable -- legacy data only"
-        )
-        return enrichment
+        # 2026-11-15 fix: prometheus adapter is OPTIONAL, not load-bearing. The
+        # gate reads the durable cron-collected machine_state.json -- telemetry
+        # must not die with the adapter. Log the cause and fall through to the
+        # machine_state.json-only path below.
+        logger.warning("machine enrichment: adapter import failed", exc_info=True)
+        ms, gate = {}, None
     except Exception as e:
-        enrichment["telemetry_status"] = "PARTIAL"
-        enrichment["missing_fields"].append(f"adapter_error:{e}")
-        enrichment["diagnosis"] = f"Telemetry collection failed: {e}"
-        return enrichment
+        # 2026-11-15 fix: silent PARTIAL masked the real cause for weeks (the
+        # "has_telemetry is False" HOLD). Log it, then try the durable file.
+        logger.warning("machine enrichment: primary path failed: %s", e, exc_info=True)
+        ms, gate = {}, None
+
+    # ── Fallback: vitality_gate over machine_state.json alone ────────────────
+    if gate is None:
+        try:
+            from vitality_gate import assess_m_well
+
+            gate = assess_m_well()
+            ms = _read_machine_state_field("", {}) or {}
+            if not ms:
+                _msp = Path(
+                    _os.environ.get(
+                        "WELL_MACHINE_STATE_PATH", "/var/lib/well/machine_state.json"
+                    )
+                )
+                ms = json.loads(_msp.read_text())
+            enrichment["telemetry_source"] = (
+                "machine_state.json (fallback; prometheus adapter unavailable)"
+            )
+        except ImportError:
+            enrichment["telemetry_status"] = "PARTIAL"
+            enrichment["missing_fields"].append("prometheus_adapter_or_vitality_gate")
+            enrichment["diagnosis"] = (
+                "Prometheus adapter or vitality_gate unavailable -- legacy data only"
+            )
+            return enrichment
+        except Exception as e:
+            enrichment["telemetry_status"] = "PARTIAL"
+            enrichment["missing_fields"].append(f"adapter_error:{e}")
+            enrichment["diagnosis"] = f"Telemetry collection failed: {e}"
+            return enrichment
 
     # ── Structured evidence (no regex parsing) ───────────────────────────────
     cpu = ms.get("cpu", {})
@@ -12045,15 +12489,26 @@ def _well_assess_machine_telemetry() -> dict[str, Any]:
     elif cpu_psi_some > 10:
         warnings.append(f"CPU PSI elevated: some_avg60={cpu_psi_some}%")
 
-    # 2026-07-29 F13: PSI full pressure -- all tasks stalled simultaneously
+    # 2026-11-15 fix: PSI full avgNN is a TIME-FRACTION (non-idle tasks stalled
+    # X% of the window), not a count of tasks stalled right now. >1% is normal
+    # jitter on a busy host. Tier honestly: >=25 CRITICAL, >=5 DEGRADED, >1 note.
+    # Wording states the fraction; "all tasks stalled" overstated it.
     for res_name, psi_key in [
         ("Memory", "memory_full_avg60"),
         ("I/O", "io_full_avg60"),
     ]:
         full_val = pressure.get(psi_key, 0)
-        if full_val > 1:
+        if full_val >= 25:
             issues.append(
-                f"{res_name} FULL pressure CRITICAL: {psi_key}={full_val}% -- all tasks stalled"
+                f"{res_name} FULL pressure CRITICAL: {psi_key}={full_val}% of the window (tasks stalled most of the time)"
+            )
+        elif full_val >= 5:
+            issues.append(
+                f"{res_name} FULL pressure DEGRADED: {psi_key}={full_val}% of the window (tasks stalled {full_val:.0f}% of the time)"
+            )
+        elif full_val > 1:
+            warnings.append(
+                f"{res_name} FULL pressure elevated: {psi_key}={full_val}% of the window (stall fraction, not a current stall)"
             )
 
     mem_total = max(mem.get("total_kb", 1), 1)
@@ -12067,8 +12522,33 @@ def _well_assess_machine_telemetry() -> dict[str, Any]:
 
     swap_total = max(mem.get("swap_total_kb", 1), 1)
     swap_used_pct = mem.get("swap_used_kb", 0) / swap_total * 100
-    if swap_used_pct > 50:
-        issues.append(f"Swap DEGRADED: {swap_used_pct:.0f}% used")
+    # 2026-11-15 fix: swap severity must gate on DISK-swap share + memory PSI.
+    # zram is RAM-backed compression, not disk pressure: high zram occupancy with
+    # low PSI is healthy behaviour (diagnose's own zram note says so). Only
+    # significant DISK-swap, or swap occupancy joined by real PSI pressure,
+    # degrades.
+    _zram_used_kb_swap = 0
+    try:
+        for _ln_swap in open("/proc/swaps").read().splitlines()[1:]:
+            _f_swap = _ln_swap.split()
+            if len(_f_swap) >= 4 and _f_swap[0].startswith("/dev/zram"):
+                _zram_used_kb_swap += int(_f_swap[3])
+    except (OSError, ValueError):
+        pass
+    _disk_swap_pct = max(swap_used_pct - (_zram_used_kb_swap / swap_total * 100), 0)
+    _mem_psi_full10_swap = pressure.get("memory_full_avg10", 0) or 0
+    _mem_psi_some10_swap = pressure.get("memory_some_avg10", 0) or 0
+    if _disk_swap_pct > 50 or (_mem_psi_full10_swap >= 5 and swap_used_pct > 80):
+        issues.append(
+            f"Swap DEGRADED: {swap_used_pct:.0f}% used "
+            f"(disk-swap {_disk_swap_pct:.0f}%, zram {_zram_used_kb_swap / 1024**2:.1f}GB) "
+            f"PSI some={_mem_psi_some10_swap:.1f} full={_mem_psi_full10_swap:.1f}"
+        )
+    elif swap_used_pct > 50:
+        warnings.append(
+            f"Swap {swap_used_pct:.0f}% occupied (mostly zram {_zram_used_kb_swap / 1024**2:.1f}GB, "
+            f"disk-swap {_disk_swap_pct:.0f}%) with low PSI -- no pressure, not an issue"
+        )
 
     # vmstat counters are cumulative. Summing the last samples reports a lifetime
     # total (hundreds of millions) as if it happened in the last few minutes.
@@ -12337,7 +12817,7 @@ def well_machine_diagnose(
     }
 
     if load_ratio > 4 or iowait > 20:
-        severity = "AMBER"
+        severity = "RED" if severity == "RED" else "AMBER"  # never downgrade
         issues.append(
             f"CPU strained: load={load_1m:.1f} ({load_ratio:.1f}/core) iowait={iowait}%"
         )
@@ -12375,15 +12855,38 @@ def well_machine_diagnose(
         "memory_psi_avg10": mem_psi,
     }
 
-    if swap_pct > 30:
-        if swap_pct > 50:
-            severity = "RED"
-            issues.append(f"Swap HIGH: {swap_pct:.0f}% used ({swap_used_kb / 1024**2:.1f}GB), PSI={mem_psi:.1f}")
-        else:
-            severity = "AMBER"
-            issues.append(
-                f"Swap {swap_pct:.0f}% used ({swap_used_kb / 1024**2:.1f}GB), PSI={mem_psi:.1f}"
-            )
+    # Swap severity = memory PRESSURE (PSI), not occupancy. zram is compressed
+    # RAM, not disk swap: excluded from the disk-swap figure (2026-11-12: 21 GB
+    # zram at PSI 0.0 raised a false RED).
+    zram_used_kb = 0
+    try:
+        for _ln in open("/proc/swaps").read().splitlines()[1:]:
+            _f = _ln.split()
+            if len(_f) >= 4 and _f[0].startswith("/dev/zram"):
+                zram_used_kb += int(_f[3])
+    except (OSError, ValueError):
+        pass
+    disk_swap_used_kb = max(swap_used_kb - zram_used_kb, 0)
+    mem_status["zram_used_gb"] = round(zram_used_kb / 1024**2, 1)
+    mem_status["disk_swap_used_gb"] = round(disk_swap_used_kb / 1024**2, 1)
+    mem_psi_full = pressure.get("memory_full_avg10", 0) or 0
+
+    swap_level = None
+    if mem_psi_full >= 5 or mem_psi >= 20:
+        swap_level = "RED"
+    elif mem_psi >= 5:
+        swap_level = "AMBER"
+    elif swap_pct > 30:
+        mem_status["swap_note"] = (
+            f"swap {swap_pct:.0f}% occupied (zram {zram_used_kb / 1024**2:.1f}GB) "
+            f"but memory PSI={mem_psi:.1f} -- no pressure, not an issue"
+        )
+    if swap_level:
+        severity = "RED" if (severity == "RED" or swap_level == "RED") else "AMBER"
+        issues.append(
+            f"Memory pressure {swap_level}: PSI some={mem_psi:.1f} full={mem_psi_full:.1f}, "
+            f"swap {swap_pct:.0f}% ({swap_used_kb / 1024**2:.1f}GB, zram {zram_used_kb / 1024**2:.1f}GB)"
+        )
         recommendations.append(
             {
                 "issue": f"High swap occupancy ({swap_pct:.0f}%, {swap_used_kb / 1024**2:.1f}GB)",
@@ -12401,23 +12904,55 @@ def well_machine_diagnose(
         severity = "RED"
         issues.append(f"Memory CRITICAL: {avail_pct:.0f}% available")
 
-    # Disk
+    # Disk -- percentage is NOT a diagnosis; reconcile against bounded-scan evidence.
+    import disk_evidence as _de
+
     disk_pct = disk.get("root_used_pct", 0)
     disk_free_gb = disk.get("root_free_gb", 0)
-    disk_status = {"used_pct": disk_pct, "free_gb": disk_free_gb}
+    _disk_ev = _de.load_evidence()
+    try:
+        _live_used = _de.fs_usage("/")["used_bytes"]
+    except OSError:
+        _live_used = None
+    disk_reconciliation = _de.reconcile(_disk_ev, _live_used)
+    disk_status = {
+        "used_pct": disk_pct,
+        "free_gb": disk_free_gb,
+        "reconciliation": disk_reconciliation,
+    }
 
     if disk_pct > 85:
-        severity = "AMBER"
-        issues.append(f"Disk {disk_pct}% used ({disk_free_gb}GB free)")
-        recommendations.append(
-            {
-                "issue": f"Disk at {disk_pct}%",
-                "action": "docker system prune -a --volumes (CAREFUL: destroys unused images). Safer: journalctl --vacuum-time=7d, apt-get clean, snap list --all | awk '/disabled/{print $1, $3}' | xargs -r snap remove",
-                "blast_radius": "HIGH for prune -a, LOW for journal/snap",
-                "reversible": False,
-                "route_to": "888_HOLD for docker system prune -a",
-            }
+        if severity == "GREEN":  # never downgrade RED
+            severity = "RED" if severity == "RED" else "AMBER"  # never downgrade
+        issues.append(
+            f"Disk {disk_pct}% used ({disk_free_gb}GB free) -- "
+            + (
+                f"root cause: {disk_reconciliation['root_cause']}"
+                if disk_reconciliation.get("root_cause")
+                else "insufficient evidence: " + disk_reconciliation["message"]
+            )
         )
+        for _a in _de.disk_actions(_disk_ev):
+            if _a.get("worth_it") is False:
+                continue  # measured ~0 reclaimable: not worth recommending
+            recommendations.append(
+                {
+                    "issue": f"Disk at {disk_pct}%",
+                    "recommendation_id": _a["recommendation_id"],
+                    "target": _a.get("target"),
+                    "action": _a.get("command")
+                    or _a.get("expected_effect")
+                    or _a.get("warning"),
+                    "expected_recovery_gb": _a.get("expected_recovery_gb"),
+                    "risk": _a["risk"],
+                    "blast_radius": _a["risk"],
+                    "reversible": _a["reversible"],
+                    "requires_approval": _a["requires_approval"],
+                    "route_to": "888_HOLD"
+                    if _a["requires_approval"]
+                    else "A-FORGE forge_shell",
+                }
+            )
 
     # PSI Pressure
     psi_status = {
@@ -12442,7 +12977,7 @@ def well_machine_diagnose(
         )
         if not active:
             dead_services.append(name)
-            severity = "AMBER"
+            severity = "RED" if severity == "RED" else "AMBER"  # never downgrade
             issues.append(f"Service DOWN: {name}")
             recommendations.append(
                 {
@@ -12467,7 +13002,7 @@ def well_machine_diagnose(
         )
         if health == "unhealthy":
             unhealthy_containers.append(name)
-            severity = "AMBER"
+            severity = "RED" if severity == "RED" else "AMBER"  # never downgrade
             issues.append(f"Docker UNHEALTHY: {name}")
             recommendations.append(
                 {
@@ -12508,7 +13043,9 @@ def well_machine_diagnose(
     # not a task scope. _task_scoped_readiness gates readiness on a real
     # task_class / task_id pair; passing the recovery hint would fabricate
     # a readiness verdict from a recovery scope.
-    _task_scope_for_readiness = None if str(task_id or '').startswith('recovery:') else task_id
+    _task_scope_for_readiness = (
+        None if str(task_id or "").startswith("recovery:") else task_id
+    )
     readiness_block = _task_scoped_readiness(
         _task_scope_for_readiness,
         task_class,
@@ -12565,7 +13102,6 @@ def well_machine_diagnose(
             "severity": severity,
             "signal": signal_state,
             "condition": "ADVISORY",
-            "verdict": verdict,  # DEPRECATED: backward-compat only, arifOS 888 adjudicates verdicts
             "readiness": readiness_block,
             "recovery": recovery_block,
             "metric_coverage": metric_coverage,
@@ -12637,6 +13173,32 @@ def well_machine_recommend(
         pressure.get("memory_full_avg10", 0),
     )
 
+    import disk_evidence as _de_mr
+
+    _disk_ev_mr = _de_mr.load_evidence()
+    try:
+        _live_used_mr = _de_mr.fs_usage("/")["used_bytes"]
+    except OSError:
+        _live_used_mr = None
+    _disk_recon = _de_mr.reconcile(_disk_ev_mr, _live_used_mr)
+
+    # 2026-11-15 fix: the advisory signal must match the data this function just
+    # read. Disk >=90%, memory PSI some >=20, or PSI full >=5 means the machine
+    # needs recovery work -- PROCEED/stable_signal/T0 contradicted the evidence.
+    _disk_pct_mr = (ms.get("disk", {}) or {}).get("root_used_pct", 0) or 0
+    _mem_psi_full10_mr = pressure.get("memory_full_avg10", 0) or 0
+    _needs_recovery_mr = bool(
+        _disk_pct_mr >= 90 or mem_psi >= 20 or _mem_psi_full10_mr >= 5
+    )
+    _verdict_mr = "RECOVER" if _needs_recovery_mr else "PROCEED"
+    _binding_mr = (
+        f"disk {_disk_pct_mr:.0f}% used"
+        if _disk_pct_mr >= 90
+        else f"mem PSI some={mem_psi:.1f} full={_mem_psi_full10_mr:.1f}"
+        if _needs_recovery_mr
+        else "no binding machine constraint"
+    )
+
     RECOMMENDATIONS = {
         "swap": {
             "condition": f"swap at {swap_pct:.0f}%, PSI={mem_psi:.1f}",
@@ -12679,35 +13241,17 @@ def well_machine_recommend(
             ],
         },
         "disk": {
+            # Shared table with well_machine_diagnose (disk_evidence.disk_actions).
+            "condition": _disk_recon["message"],
+            "safe": False,  # disk actions delete data; operator reviews each ID
+            "reconciliation": _disk_recon,
             "commands": [
                 {
-                    "command": "journalctl --vacuum-time=3d",
-                    "description": "Vacuum systemd journals older than 3 days.",
-                    "risk": "LOW",
-                    "blast_radius": "LOW",
-                    "reversible": False,
-                },
-                {
-                    "command": "apt-get clean && apt-get autoremove --purge -y",
-                    "description": "Clean APT package cache and remove unused packages.",
-                    "risk": "LOW",
-                    "blast_radius": "LOW",
-                    "reversible": False,
-                },
-                {
-                    "command": "docker system prune -f",
-                    "description": "Remove stopped containers, unused networks, dangling images.",
-                    "risk": "MEDIUM",
-                    "blast_radius": "MEDIUM",
-                    "reversible": False,
-                },
-                {
-                    "command": 'snap list --all | awk \'/disabled/{print $1, $3}\' | while read name rev; do snap remove "$name" --revision="$rev"; done',
-                    "description": "Remove disabled snap revisions (can free GBs).",
-                    "risk": "LOW",
-                    "blast_radius": "LOW",
-                    "reversible": False,
-                },
+                    **_a,
+                    "description": _a.get("expected_effect") or _a.get("warning"),
+                    "blast_radius": _a["risk"],
+                }
+                for _a in _de_mr.disk_actions(_disk_ev_mr)
             ],
         },
         "service": {
@@ -12775,12 +13319,14 @@ def well_machine_recommend(
 
     if issue_type == "all":
         return _omega_well_output(
+            telemetry_status="present",
             ok=True,
             stage="M_RECOMMEND",
             lane="AGI",
             mode="recommend",
-            verdict="PROCEED",
+            verdict=_verdict_mr,
             data={
+                "binding_constraint": _binding_mr,
                 "recommendations": RECOMMENDATIONS,
                 "note": "ADVISORY_ONLY -- route to A-FORGE forge_shell for execution",
                 "w0": "WELL recommends. arifOS judges. A-FORGE executes.",
@@ -12799,13 +13345,15 @@ def well_machine_recommend(
         )
 
     return _omega_well_output(
+        telemetry_status="present",
         ok=True,
         stage="M_RECOMMEND",
         lane="AGI",
         mode="recommend",
-        verdict="PROCEED",
+        verdict=_verdict_mr,
         data={
             "issue_type": issue_type,
+            "binding_constraint": _binding_mr,
             "condition": recs.get("condition", "N/A"),
             "safe_to_proceed": recs.get("safe", True),
             "commands": recs["commands"],
@@ -14221,6 +14769,97 @@ else:
         "skipping 406 Accept-header patch"
     )
 
+# ── WellStack Session Resilience Monkey ─────────────────────────────────────
+# Allows reconnecting clients (e.g. Antigravity, long-lived harness) whose
+# sessions were established before a service restart/reload to continue
+# without getting 404 "Session not found".
+try:
+    from mcp.server.streamable_http import MCP_SESSION_ID_HEADER
+    from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
+    from mcp.shared.jsonrpc_dispatcher import JSONRPCDispatcher
+    from mcp.server.connection import Connection
+    from mcp.server.runner import serve_connection
+    from starlette.requests import Request
+    import anyio as _anyio
+
+    _orig_handle_stateful = StreamableHTTPSessionManager._handle_stateful_request
+
+    async def _resilient_handle_stateful(self, scope, receive, send):
+        request = Request(scope, receive)
+        request_mcp_session_id = request.headers.get(MCP_SESSION_ID_HEADER)
+        if (
+            request_mcp_session_id is not None
+            and request_mcp_session_id not in self._server_instances
+        ):
+            import logging as _log
+
+            _log.getLogger("well").info(
+                f"Re-admitting reconnecting session: {request_mcp_session_id[:64]}"
+            )
+            http_transport = StreamableHTTPServerTransport(
+                mcp_session_id=request_mcp_session_id,
+                is_json_response_enabled=self.json_response,
+                event_store=self.event_store,
+                security_settings=self.security_settings,
+                retry_interval=self.retry_interval,
+                idle_timeout=self.session_idle_timeout,
+            )
+            self._server_instances[request_mcp_session_id] = http_transport
+
+            async def run_server(*, task_status=_anyio.TASK_STATUS_IGNORED):
+                async with http_transport.connect() as streams:
+                    read_stream, write_stream = streams
+                    task_status.started()
+                    try:
+                        idle_scope = http_transport.idle_scope or _anyio.CancelScope()
+                        with idle_scope:
+                            dispatcher = JSONRPCDispatcher(
+                                read_stream,
+                                write_stream,
+                                inline_methods=frozenset({"initialize"}),
+                            )
+                            connection = Connection.for_loop(
+                                dispatcher, session_id=request_mcp_session_id
+                            )
+                            connection.initialized.set()
+                            await serve_connection(
+                                self.app,
+                                dispatcher,
+                                connection=connection,
+                                lifespan_state=self._lifespan_state,
+                            )
+                    except Exception:
+                        _log.getLogger("well").exception(
+                            f"Session {request_mcp_session_id} crashed"
+                        )
+                    finally:
+                        await self._discard_session(
+                            request_mcp_session_id, http_transport
+                        )
+
+            assert self._task_group is not None
+            await self._task_group.start(run_server)
+            await http_transport.handle_request(scope, receive, send)
+            return
+
+        return await _orig_handle_stateful(self, scope, receive, send)
+
+    StreamableHTTPSessionManager._handle_stateful_request = _resilient_handle_stateful
+    try:
+        from fastmcp.server.http import FastMCPStreamableHTTPSessionManager
+
+        FastMCPStreamableHTTPSessionManager._handle_stateful_request = (
+            _resilient_handle_stateful
+        )
+    except Exception:
+        pass
+except Exception as _ex:
+    import logging as _logging
+
+    _logging.getLogger("well").warning(
+        f"Could not apply session resilience monkeypatch: {_ex}"
+    )
+
 # ============================================================
 # ORGAN_GOVERNANCE: arifOS L1-L13 Wrapper
 # Patch mcp.call_tool to intercept all tool execution.
@@ -15238,7 +15877,7 @@ if __name__ == "__main__":
                 "role": "Body / Human Intelligence -- Operator Cognitive Pressure Monitor",
                 "authority": "REFLECT_ONLY -- WELL informs. arifOS judges. Arif decides.",
                 "schema": "well-federation-v2026.05.08",
-                "version": "v2026.07.24",
+                "version": WELL_VERSION,
                 "count": len(tools),
                 "w0_invariant": "WELL holds a mirror, not a veto. Operator sovereignty is invariant.",
                 "danger_taxonomy": {
@@ -15304,7 +15943,7 @@ if __name__ == "__main__":
                 "identity_valid": classification["well_ok"],
                 "has_telemetry": classification["has_telemetry"],
                 "service": "well-mcp",
-                "version": "v2026.07.24",
+                "version": WELL_VERSION,
                 "identity_hash": identity_hash,
                 # P6 -- WELL identity anchor (SUBSTRATE_LAW, not constitutional)
                 "domain_law": domain_law,
@@ -16122,10 +16761,24 @@ def well_trace_lineage(
             tool_name="well_trace_lineage",
         )
     if mode in ("ledger", "chain"):
+        # FIX 2026-11-01: bare async call leaked a raw coroutine to the MCP
+        # serialization layer (well_999_vault is async). Corougate + fallback.
+        try:
+            import asyncio as _asyncio
+
+            _vault_res = _asyncio.run(
+                well_999_vault(
+                    mode=mode, dry_run=dry_run, reason=reason, force=force, ctx=ctx
+                )
+            )
+        except RuntimeError:
+            _vault_res = {
+                "error": "async_in_event_loop",
+                "signal": "UNAVAILABLE",
+                "note": "ledger/chain lane unavailable inside a running event loop",
+            }
         return _to_federation_output(
-            well_999_vault(
-                mode=mode, dry_run=dry_run, reason=reason, force=force, ctx=ctx
-            ),
+            _vault_res,
             tool_name="well_trace_lineage",
         )
     return _to_federation_output(
@@ -19314,7 +19967,7 @@ def well_system_registry_status(actor_id: str | None = None) -> dict[str, Any]:
         telemetry_status="registry_probe",
         data={
             "service": "well-mcp",
-            "version": "v2026.07.24",
+            "version": WELL_VERSION,
             "registry_status": registry_truth,
             "overall_signal": overall_signal,
             # P1: Explicit two-layer split
@@ -19670,6 +20323,7 @@ def well_registry_status(
         "alias_conflicts": alias_conflicts,
         "verdict": verdict,
         "migration": migration,
+        "well_version": WELL_VERSION,
         "measurement_boundary": "/root/AAA/docs/MEASUREMENT_BOUNDARY_CONTRACT.md",
         "well_system_registry_status": "DEPRECATED -- use well_registry_status",
         "registry_note": (
@@ -19701,6 +20355,7 @@ def well_registry_status(
             "alias_conflicts_count": len(payload["alias_conflicts"]),
             "verdict": payload["verdict"],
             "migration": payload["migration"],
+            "well_version": payload.get("well_version"),
             "authority": "ADVISORY_ONLY",
             "final_authority": "ARIF",
             "w0": payload["w0"],
@@ -20129,6 +20784,10 @@ except ImportError:
 # Entropy Integrity Mesh -- WELL Extensions (Phase 2)
 # DITEMPA BUKAN DIBERI
 # ═══════════════════════════════════════════════════════════════════
+# Canonical resolver (2026-11-05): loaders below used to resolve
+# parent(WELL)/entropy-integrity — dead since ad88f6f1 moved the tree
+# into WEALTH git (2026-07-28). See tools_sot.yaml audit_2026_11_05.
+from well_mcp.entropy_mesh import mesh_dir
 
 
 @mcp.tool()
@@ -20147,9 +20806,7 @@ def well_sabar_latency(
         _spec = importlib.util.spec_from_file_location(
             "sabar_latency",
             os.path.join(
-                os.path.dirname(os.path.abspath(__file__)),
-                "..",
-                "entropy-integrity",
+                mesh_dir(),
                 "mcp",
                 "well",
                 "sabar_latency.py",
@@ -20187,9 +20844,7 @@ def well_trust_compression(
         _spec = importlib.util.spec_from_file_location(
             "trust_compression",
             os.path.join(
-                os.path.dirname(os.path.abspath(__file__)),
-                "..",
-                "entropy-integrity",
+                mesh_dir(),
                 "mcp",
                 "well",
                 "trust_compression.py",
@@ -20227,9 +20882,7 @@ def well_niat_impact_mirror(
         _spec = importlib.util.spec_from_file_location(
             "niat_impact_mirror",
             os.path.join(
-                os.path.dirname(os.path.abspath(__file__)),
-                "..",
-                "entropy-integrity",
+                mesh_dir(),
                 "mcp",
                 "well",
                 "niat_impact_mirror.py",
@@ -20267,9 +20920,7 @@ def well_correction_capacity(
         _spec = importlib.util.spec_from_file_location(
             "correction_capacity",
             os.path.join(
-                os.path.dirname(os.path.abspath(__file__)),
-                "..",
-                "entropy-integrity",
+                mesh_dir(),
                 "mcp",
                 "well",
                 "correction_capacity.py",
@@ -20306,9 +20957,7 @@ def well_regulation_recovery(
         _spec = importlib.util.spec_from_file_location(
             "regulation_recovery",
             os.path.join(
-                os.path.dirname(os.path.abspath(__file__)),
-                "..",
-                "entropy-integrity",
+                mesh_dir(),
                 "mcp",
                 "well",
                 "regulation_recovery.py",
@@ -21140,6 +21789,35 @@ _TOOL_ANNOTATIONS: dict[str, dict[str, Any]] = {
         "idempotentHint": True,
         "openWorldHint": False,
     },
+    # ── 2026-11-04 (333-AGI · Gemini/Connected Apps) ────────────────────────
+    # These three were served with annotations=null, so the MCP default
+    # (readOnlyHint=false + destructiveHint=true) made an agentic client
+    # prompt for confirmation on every call — including pure reads.
+    # All three are read-only by body evidence:
+    #   well_machine_diagnose  — reads machine_state.json only (server.py:12586)
+    #   well_machine_recommend — returns advisory command STRINGS, executes none
+    #   well_registry_status   — in-memory registry read (server.py:20774+)
+    "well_machine_diagnose": {
+        "title": "Machine Diagnostic",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": False,
+    },
+    "well_machine_recommend": {
+        "title": "Machine Repair Recommendations",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": False,
+    },
+    "well_registry_status": {
+        "title": "Registry Status",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": False,
+    },
 }
 
 
@@ -21603,7 +22281,7 @@ if __name__ == "__main__":
             if _compute_well_commits()["drift"]:
                 _pub_status = "degraded"
             return JSONResponse(
-                {"status": _pub_status, "organ": "WELL", "version": "v2026.07.24"}
+                {"status": _pub_status, "organ": "WELL", "version": WELL_VERSION}
             )
         try:
             with open(".identity_hash", "r") as f:
@@ -21682,7 +22360,7 @@ if __name__ == "__main__":
                     "well_signal"
                 ],  # REFLECT_ONLY -- never "verdict"
                 "service": "well-mcp",
-                "version": "v2026.07.24",
+                "version": WELL_VERSION,
                 # FEDERATION HANDSHAKE (canonical: arifOS/arifosmcp/schemas/federation_enums.py)
                 # See: /root/AAA/governance/FEDERATION_HANDSHAKE.md
                 "federation_schema_version": "2.0.0",
@@ -21832,7 +22510,7 @@ if __name__ == "__main__":
                 "role": "Body / Human Intelligence -- Operator Cognitive Pressure Monitor",
                 "authority": "REFLECT_ONLY -- WELL informs. arifOS judges. Arif decides.",
                 "schema": "well-federation-v2026.05.08",
-                "version": "v2026.07.24",
+                "version": WELL_VERSION,
                 "count": len(tools),
                 "w0_invariant": "WELL holds a mirror, not a veto. Operator sovereignty is invariant.",
                 "danger_taxonomy": {
@@ -22044,19 +22722,25 @@ if __name__ == "__main__":
                     )
 
                 if session_id not in _well_valid_mcp_sessions:
-                    return _MWResponse(
-                        content=json.dumps(
-                            {
-                                "jsonrpc": "2.0",
-                                "error": {
-                                    "code": -32000,
-                                    "message": "SESSION_INVALID: Unknown or expired session ID",
-                                },
-                            }
-                        ),
-                        status_code=404,
-                        media_type="application/json",
-                    )
+                    # Allow reconnecting valid hex/uuid sessions across service restarts
+                    import re as _re_mw
+
+                    if _re_mw.match(r"^[a-fA-F0-9-]{32,36}$", session_id):
+                        _well_valid_mcp_sessions.add(session_id)
+                    else:
+                        return _MWResponse(
+                            content=json.dumps(
+                                {
+                                    "jsonrpc": "2.0",
+                                    "error": {
+                                        "code": -32000,
+                                        "message": "SESSION_INVALID: Unknown or expired session ID",
+                                    },
+                                }
+                            ),
+                            status_code=404,
+                            media_type="application/json",
+                        )
                 request._body = body
 
             return await call_next(request)

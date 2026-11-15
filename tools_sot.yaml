@@ -1,8 +1,24 @@
 organ: WELL
-version: 2026.07.25
+version: 2026.11.01
 sot_source: SOMATIC_TOOLS (canonical public surface) + AUTONOMIC_TOOLS (internal)
 live_port: 18083
 registry_note: Single source of truth. Both manifests and live server derive from this.
+audit_2026_11_01:  # 333-AGI hardening sweep — all numbers from live probes + registry_status mode=full
+  tested: 10 public tools via tools/list (all respond; machine_diagnose + consent_audit call-verified OK)
+  live_counts: {intended: 10, registered: 10, exported: 10, callable: 10, phantom: 0, missing_public: 0, unexpected_public: 0, alias_conflicts: 0}
+  verdict: REGISTRY_PASS
+  tests: "491 passed, 23 skipped (pytest, 2026-11-01)"
+  version_identity: "WELL_VERSION single-source from .well_version stamp (S38) — serverInfo tracks HEAD"
+  internal_lane: "consent/triadic/frame aliases registered, hidden from tools/list (somatic boundary) — callable via tools/call"
+
+audit_2026_11_05:  # 333-AGI full-surface liveness sweep (systematic-debugging: root cause -> failing test -> fix -> green)
+  scope: "all registered names: 10 public + 34 internal_aliases = 44"
+  result: "43/43 callable ALIVE (12 internal read + 11 mutation-gated dispatch-probe + 10 public + 10 remaining)"
+  root_cause: "entropy-integrity path drift — loaders (server.py, commit 9728806 2026-07-12) resolve parent(WELL)/entropy-integrity = /root/entropy-integrity (absent since tree absorbed into WEALTH git ad88f6f1 2026-07-28). 5 file-backed tools dead: sabar_latency, trust_compression, correction_capacity, regulation_recovery, niat_impact_mirror."
+  fix: "symlink /root/entropy-integrity -> /root/WEALTH/entropy-integrity (canonical home). ZERO service restart (importlib per-call; pid 564269 unchanged). Reversible: rm symlink; canonical code fix: COMMITTED 61c6426 (well_mcp/entropy_mesh.mesh_dir() + 5 call sites; version bump 143e1e8) — activation pending well.service restart, queued as p2-well-entropy-activation-restart (precondition: sibling's 20-hunk server.py work lands first; well.service runs disk bytes). Symlink REMAINS load-bearing until that restart."
+  tests: "forge_work/test_entropy_path_liveness.py RED 5/5 -> GREEN 5/5; forge_work/test_full_surface_liveness.py"
+  retired_not_defective: "11 lifecycle aliases (well_111_sense..well_888_judge, well_000_ops/444_gateway/444_reply/555/666/777) + well_detect_boundary + well_classify_state = defs kept, @mcp.tool REMOVED (KUTIP SAMPAH). Listed in internal_aliases metadata but NOT callable — metadata drift, not tool failure. well_000_init + well_999_vault ARE registered (init=alias, vault=task)."
+
 audit_2026_07_25:
   tested: 15 tools (8 public + 7 internal)
   all_respond: true
@@ -53,6 +69,18 @@ public_tools:  # discoverable via tools/list (somatic boundary enforced)
   valid_modes: [consent, boundary, shadow]
   description: Guard soul, personhood, meaning, and symbolic boundaries
 
+- name: well_machine_diagnose
+  domain: M-WELL
+  omega: Ω-WELL-09
+  valid_modes: []  # no mode param — direct call
+  description: Full VPS health from machine_state.json cron telemetry (CPU/RAM/swap/disk/PSI/services)
+
+- name: well_machine_recommend
+  domain: M-WELL
+  omega: Ω-WELL-09
+  valid_modes: []  # no mode param — direct call
+  description: Map machine issue → concrete fix commands, ADVISORY_ONLY (A-FORGE executes)
+
 - name: well_registry_status
   domain: Federation
   valid_modes: [status, full]
@@ -66,7 +94,11 @@ public_tools:  # discoverable via tools/list (somatic boundary enforced)
     phantom_tools_count: 0
     verdict: REGISTRY_PASS
 
-internal_tools:  # callable via tools/call, hidden from tools/list
+internal_tools:  # callable via tools/call, hidden from tools/list — LIVE STATUS 2026-11-05 (333-AGI sweep):
+  # 23 alive (incl. m_well: assess_metabolism, compute_metabolic_flux) | 15 RETIRED-not-registered (defs kept,
+  # @mcp.tool REMOVED — KUTIP SAMPAH): detect_boundary, classify_state, signal_coverage, health_check, and
+  # 11 lifecycle aliases except well_000_init + well_999_vault (both registered). Retired rows below are
+  # HISTORICAL, not callable — do not test them as live.
   h_well:
   - well_assess_sovereign_entropy  # modes: current, assess, protect, baseline
   - well_measure_gradient          # reflect-only
@@ -74,16 +106,16 @@ internal_tools:  # callable via tools/call, hidden from tools/list
   - well_regulation_recovery
   - well_medical_boundary          # modes: boundary, query
   - well_correction_capacity
-  - well_detect_boundary
+  - well_detect_boundary              # RETIRED (KUTIP SAMPAH) — historical only, not callable
   - well_sabar_latency
   - well_dark_geometry_mirror      # requires text_or_events arg
   - well_trust_compression
-  - well_classify_state
+  - well_classify_state            # RETIRED (KUTIP SAMPAH) — historical only, not callable
   m_well:
-  - well_assess_metabolism         # modes: gradient, flux, coupled, etc.
-  - well_compute_metabolic_flux
-  - well_signal_coverage           # no mode param — direct call
-  - well_health_check              # no mode param — direct call
+  - well_assess_metabolism         # modes: gradient, flux, coupled, etc. — LIVE 2026-11-05
+  - well_compute_metabolic_flux    # LIVE 2026-11-05 (flux measured 1.975)
+  - well_signal_coverage           # RETIRED (KUTIP SAMPAH) — historical only, not callable
+  - well_health_check              # RETIRED (KUTIP SAMPAH) — historical only, not callable
   g_well:
   - well_assess_livelihood
   federation:
@@ -92,9 +124,9 @@ internal_tools:  # callable via tools/call, hidden from tools/list
   - well_handoff_livelihood_to_wealth
 
 resources:
-  exposed: 10
+  exposed: 30   # live tools/resources/list 2026-11-05 (was 10 — stale since server fastmcp consolidation; measured 30 URIs)
   canonical: 29
-  gap_note: "19 resources defined in refactored server_fastmcp.py but not exposed in production server.py"
+  gap_note: "exposed=30 measured live 2026-11-05 via resources/list; canonical=29 retained from prior count (unrecounted). Prior '10' was stale (server_fastmcp.py removed from repo pre-2026-10; production server.py exposes 10 resources — historical note). [merged 2026-11-06: duplicate gap_note keys broke yaml parse at line 130 and blocked FEDERATION-YAML-BOOT-CANARY]"
 
 prompts:
   exposed: 9
@@ -112,7 +144,7 @@ telemetry:
 v2_deprecation:
   epoch: 2026-09-16
   removal: 2026-10-16
-  note: "v2 = 10 mode-tools (thin delegation, zero logic duplication). Legacy 31 stay registered during epoch."
+  note: "RESOLVED 2026-11-01: removal date passed; v2 consolidated names (well_human/well_machine/well_triad) never shipped. Canonical surface = the 10 names above. Legacy v1 aliases already unregistered (registry_status: legacy_still_registered=false)."
 
 v2_public_tools:
 - {name: well_human,        plane: H, modes: "homeostasis|readiness|dignity"}

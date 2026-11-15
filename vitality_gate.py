@@ -26,7 +26,9 @@ from pathlib import Path
 from typing import Any
 
 WELL_DIR = Path(__file__).parent
-MACHINE_STATE_PATH = WELL_DIR / "machine_state.json"
+MACHINE_STATE_PATH = Path(  # FIX 2026-11-01: env-var resolution; writer uses /var/lib/well
+    os.environ.get("WELL_MACHINE_STATE_PATH", "/var/lib/well/machine_state.json")
+)
 STATE_PATH = WELL_DIR / "state.json"
 SCHEMA_PATH = WELL_DIR / "WELL_STATE_SCHEMA.json"
 

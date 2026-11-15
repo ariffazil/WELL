@@ -8,7 +8,8 @@ never destructive). Repointed from the repo-dir fixture file to the
 live organ state by F13 directive 2026-09-12 — the kernel L13 gate and
 the organ both read/write this file.
 
-Reversible: does NOT switch environment to LIVE. Does NOT replace state.json — it merges derived signals
+Merge targets the live organ path; environment stays PROD after a
+successful merge (a TEST label here stranded honest ingests in quarantine).
 into state.json's "metrics" + "signals_meta" fields.
 
 Honesty contract (F13 order 2026-09-29, trace_id HRFID-20260929):
@@ -498,6 +499,7 @@ def process_intake_file(intake_path: Path) -> str:
     }
     src = payload["source"]
     state["truth_status"] = truth_map.get(src, "OPERATOR_REPORTED")
+    state["environment"] = "PROD"  # FIX 2026-11-01: live-organ merge is production state
     state["source_type"] = state["truth_status"]
     state["evidence_class"] = (payload.get("provenance") or {}).get(
         "evidence_class", "SOVEREIGN_SELF_REPORT"
