@@ -30,15 +30,17 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - name: Check for boundary violations
+      # Q1 v2 (2026-11-15): person-directed adjudication only, code files only,
+      # new content only. v1 grepped the bare stem "diagnos" with no file
+      # attribution and fired 35 times on PR #84 — all machine vocabulary
+      # (well_machine_diagnose, DIAGNOSTIC_READ) or prohibition text, 0 real
+      # boundary violations. The check is NOT weakened: self-test runs positive
+      # controls (must be caught) and negative controls (must be spared) before
+      # judging the PR, and `scan` proves it bites on a committed violation.
+      - name: Check for boundary violations (Q1 v2 — person-directed only)
         run: |
-          HITS=$(git diff origin/main...HEAD | grep '^+' | grep -iE "diagnosis|diagnostic|diagnose|medical_advice|treatment_recommend" | grep -v "^++\|#\|test_\|SKILL\.md" || true)
-          if [[ -n "$HITS" ]]; then
-            echo "::error::Q1 BOUNDARY VIOLATION: Diagnostic claims in WELL (REFLECT_ONLY organ)"
-            echo "$HITS"
-            exit 1
-          fi
-          echo "✅ Q1 PASS — REFLECT_ONLY boundary intact"
+          python3 scripts/q1_boundary_check.py --self-test
+          python3 scripts/q1_boundary_check.py --base origin/main
 
   q2-dignity:
     if: github.actor != 'dependabot[bot]' && github.actor != 'app/dependabot'
