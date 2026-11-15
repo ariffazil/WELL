@@ -143,6 +143,26 @@ def _requires_888_judge(tool_name: str, verdict: str | None) -> bool:
 # ── Main builder ───────────────────────────────────────────────────────────────
 
 
+def _constitution_content_hash(domain_law: str = "SUBSTRATE_LAW") -> str:
+    """Constitution anchor -- 2026-11-15.
+
+    Hashes the constitutional SURFACE of the organ (domain law + advisory-only
+    boundary + sovereign authority), not the substrate manifest. Distinct from
+    substrate_manifest_hash by construction: the manifest is identity, the
+    constitution is behaviour. Change the boundary, the hash changes.
+    """
+    import hashlib
+
+    payload = (
+        f"domain_law={domain_law}"
+        "|recommendation_only=True"
+        "|execution_authorized=False"
+        "|human_final_authority=Arif"
+        "|w0=OPERATOR_VETO_INTACT/HIERARCHY_INVARIANT"
+    )
+    return "sha256:" + hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
 def _compute_substrate_manifest_hash() -> str:
     """SHA-256 of WELL substrate manifest — identity anchor."""
     try:
@@ -174,7 +194,9 @@ def _observation_risk_level(observation_data: dict[str, Any]) -> str:
         nested_risk = nested.get("risk_level")
         if isinstance(nested_risk, str) and nested_risk.upper() in _KNOWN_RISK_LEVELS:
             return nested_risk.upper()
-        verdict = str(nested.get("m_well_verdict") or nested.get("severity") or "").upper()
+        verdict = str(
+            nested.get("m_well_verdict") or nested.get("severity") or ""
+        ).upper()
         mapped = {
             "HEALTHY": "GREEN",
             "GREEN": "GREEN",
@@ -382,9 +404,13 @@ def build_metabolic_output(
         "requires_888_judge": requires_888,
         # Provenance
         "timestamp_utc": timestamp_utc,
+        # 2026-11-15 fix: this used to alias substrate_manifest_hash (recycled
+        # hash -- two fields, one value, zero meaning). Anchor it to the actual
+        # constitutional surface instead: domain law + advisory-only boundary +
+        # sovereign authority. Callers passing an explicit constitution_hash
+        # still win; the default is now independently derived.
         "constitution_hash": constitution_hash
-        or substrate_manifest_hash
-        or _compute_substrate_manifest_hash(),  # FIX 2026-11-01: empty hash is trash
+        or _constitution_content_hash(domain_law),
         "domain_law": domain_law,
         "substrate_manifest_hash": substrate_manifest_hash
         or _compute_substrate_manifest_hash(),

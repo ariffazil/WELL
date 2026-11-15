@@ -7330,12 +7330,36 @@ import math
 # Provisional policy defaults (empirical bounds for Linux PSI stalls;
 # configurable via WELL_PRESSURE_POLICY_JSON env var; uncalibrated).
 PROVISIONAL_POLICY_DEFAULTS = {
-    "DIAGNOSTIC_READ": {"max_mem_psi_full_avg10": 50.0, "max_iowait_pct": 50.0, "human_always": False},
-    "SCAN_AUDIT": {"max_mem_psi_full_avg10": 20.0, "max_iowait_pct": 25.0, "human_always": False},
-    "BUILD_COMPUTE": {"max_mem_psi_full_avg10": 10.0, "max_iowait_pct": 20.0, "human_always": False},
-    "DATABASE_MAINTENANCE": {"max_mem_psi_full_avg10": 10.0, "max_iowait_pct": 10.0, "human_always": True},
-    "CONSEQUENTIAL_MUTATION": {"max_mem_psi_full_avg10": 10.0, "max_iowait_pct": 10.0, "human_always": True},
-    "UNKNOWN_OPERATION": {"max_mem_psi_full_avg10": 10.0, "max_iowait_pct": 10.0, "human_always": True},
+    "DIAGNOSTIC_READ": {
+        "max_mem_psi_full_avg10": 50.0,
+        "max_iowait_pct": 50.0,
+        "human_always": False,
+    },
+    "SCAN_AUDIT": {
+        "max_mem_psi_full_avg10": 20.0,
+        "max_iowait_pct": 25.0,
+        "human_always": False,
+    },
+    "BUILD_COMPUTE": {
+        "max_mem_psi_full_avg10": 10.0,
+        "max_iowait_pct": 20.0,
+        "human_always": False,
+    },
+    "DATABASE_MAINTENANCE": {
+        "max_mem_psi_full_avg10": 10.0,
+        "max_iowait_pct": 10.0,
+        "human_always": True,
+    },
+    "CONSEQUENTIAL_MUTATION": {
+        "max_mem_psi_full_avg10": 10.0,
+        "max_iowait_pct": 10.0,
+        "human_always": True,
+    },
+    "UNKNOWN_OPERATION": {
+        "max_mem_psi_full_avg10": 10.0,
+        "max_iowait_pct": 10.0,
+        "human_always": True,
+    },
 }
 
 
@@ -7367,7 +7391,11 @@ def _validate_machine_telemetry(telemetry: Any) -> tuple[bool, str, dict[str, An
 
     tel_status = telemetry.get("telemetry_status")
     if tel_status != "FULL":
-        return False, f"Machine telemetry status is not FULL (received: {tel_status})", {}
+        return (
+            False,
+            f"Machine telemetry status is not FULL (received: {tel_status})",
+            {},
+        )
 
     verdict = telemetry.get("m_well_verdict")
     allowed_verdicts = {"STABLE", "STRAINED", "DEGRADED", "CRITICAL", "HEALTHY"}
@@ -7380,7 +7408,13 @@ def _validate_machine_telemetry(telemetry: Any) -> tuple[bool, str, dict[str, An
         return False, f"Invalid or missing risk_level: {risk_level}", {}
 
     age = telemetry.get("telemetry_age_seconds")
-    if age is None or isinstance(age, bool) or not isinstance(age, (int, float)) or not math.isfinite(age) or age < 0:
+    if (
+        age is None
+        or isinstance(age, bool)
+        or not isinstance(age, (int, float))
+        or not math.isfinite(age)
+        or age < 0
+    ):
         return False, f"Missing or non-finite telemetry_age_seconds: {age}", {}
     if age > 300.0:
         return False, f"Machine telemetry is stale (age={age:.1f}s > 300s)", {}
@@ -7401,17 +7435,31 @@ def _validate_machine_telemetry(telemetry: Any) -> tuple[bool, str, dict[str, An
 
     for fname, val in numeric_fields.items():
         if val is None or isinstance(val, bool) or not isinstance(val, (int, float)):
-            return False, f"Required numeric field {fname} missing or non-numeric: {val}", {}
+            return (
+                False,
+                f"Required numeric field {fname} missing or non-numeric: {val}",
+                {},
+            )
         if not math.isfinite(val):
-            return False, f"Required numeric field {fname} is not finite (NaN/Inf): {val}", {}
+            return (
+                False,
+                f"Required numeric field {fname} is not finite (NaN/Inf): {val}",
+                {},
+            )
         if val < 0.0 or val > 100.0:
-            return False, f"Required numeric field {fname} out of range [0, 100]: {val}", {}
+            return (
+                False,
+                f"Required numeric field {fname} out of range [0, 100]: {val}",
+                {},
+            )
         validated[fname] = float(val)
 
     return True, "VALID", validated
 
 
-def _classify_machine_operation(task_description: str | None, decision_class: str | None) -> tuple[str, bool]:
+def _classify_machine_operation(
+    task_description: str | None, decision_class: str | None
+) -> tuple[str, bool]:
     """Classify machine task into structured operation class.
     Keyword matching suggests a class but NEVER establishes authorization or harmlessness.
     Unknown consequences remain explicit (UNKNOWN_OPERATION -> consequential).
@@ -7430,20 +7478,52 @@ def _classify_machine_operation(task_description: str | None, decision_class: st
     if dc in ("scan", "audit", "hash"):
         return "SCAN_AUDIT", False
 
-    destructive_keywords = ("clean", "rm ", "delete", "prune", "truncate", "drop", "wipe", "format", "purge", "destroy", "kill", "restart")
+    destructive_keywords = (
+        "clean",
+        "rm ",
+        "delete",
+        "prune",
+        "truncate",
+        "drop",
+        "wipe",
+        "format",
+        "purge",
+        "destroy",
+        "kill",
+        "restart",
+    )
     if any(k in td for k in destructive_keywords):
         return "CONSEQUENTIAL_MUTATION", True
 
-    if any(k in td for k in ("vacuum", "backup", "checkpoint", "dump", "restore", "migrate")):
+    if any(
+        k in td
+        for k in ("vacuum", "backup", "checkpoint", "dump", "restore", "migrate")
+    ):
         return "DATABASE_MAINTENANCE", True
 
-    if any(k in td for k in ("build", "compile", "cargo", "make", "docker build", "npm run build")):
+    if any(
+        k in td
+        for k in ("build", "compile", "cargo", "make", "docker build", "npm run build")
+    ):
         return "BUILD_COMPUTE", True
 
     if any(k in td for k in ("hash", "scan", "checksum", "audit", "find")):
         return "SCAN_AUDIT", False
 
-    if any(k in td for k in ("check", "inspect", "diagnose", "probe", "status", "read", "health", "test", "metric")):
+    if any(
+        k in td
+        for k in (
+            "check",
+            "inspect",
+            "diagnose",
+            "probe",
+            "status",
+            "read",
+            "health",
+            "test",
+            "metric",
+        )
+    ):
         return "DIAGNOSTIC_READ", False
 
     return "UNKNOWN_OPERATION", True
@@ -7463,8 +7543,12 @@ def _evaluate_machine_task_readiness(
     - Readiness PASS NEVER authorizes execution of consequential operations.
     - Normal mode NEVER permits consequential action without approval.
     """
-    op_class, is_consequential = _classify_machine_operation(task_description, decision_class)
-    policy = _get_pressure_policy().get(op_class, PROVISIONAL_POLICY_DEFAULTS["UNKNOWN_OPERATION"])
+    op_class, is_consequential = _classify_machine_operation(
+        task_description, decision_class
+    )
+    policy = _get_pressure_policy().get(
+        op_class, PROVISIONAL_POLICY_DEFAULTS["UNKNOWN_OPERATION"]
+    )
 
     is_valid, validation_reason, validated_tel = _validate_machine_telemetry(telemetry)
 
@@ -7496,10 +7580,14 @@ def _evaluate_machine_task_readiness(
     warnings = []
     pressure_exceeded = False
     if mem_psi_full > policy["max_mem_psi_full_avg10"]:
-        warnings.append(f"memory_psi_full_avg10={mem_psi_full:.1f}% exceeds threshold ({policy['max_mem_psi_full_avg10']}%)")
+        warnings.append(
+            f"memory_psi_full_avg10={mem_psi_full:.1f}% exceeds threshold ({policy['max_mem_psi_full_avg10']}%)"
+        )
         pressure_exceeded = True
     if iowait > policy["max_iowait_pct"]:
-        warnings.append(f"iowait_pct={iowait:.1f}% exceeds threshold ({policy['max_iowait_pct']}%)")
+        warnings.append(
+            f"iowait_pct={iowait:.1f}% exceeds threshold ({policy['max_iowait_pct']}%)"
+        )
         pressure_exceeded = True
 
     if condition in ("CRITICAL", "DEGRADED") or pressure_exceeded:
@@ -7509,11 +7597,24 @@ def _evaluate_machine_task_readiness(
     else:
         task_readiness = "UNKNOWN"
 
-    human_required = is_consequential or policy.get("human_always", False) or pressure_exceeded or (condition in ("CRITICAL", "DEGRADED"))
+    human_required = (
+        is_consequential
+        or policy.get("human_always", False)
+        or pressure_exceeded
+        or (condition in ("CRITICAL", "DEGRADED"))
+    )
 
     if is_consequential:
-        status = "HOLD" if not operator_approved else ("PASS" if task_readiness == "READY" else "HOLD")
-        recommended_mode = "normal" if (operator_approved and task_readiness == "READY") else "draft_only"
+        status = (
+            "HOLD"
+            if not operator_approved
+            else ("PASS" if task_readiness == "READY" else "HOLD")
+        )
+        recommended_mode = (
+            "normal"
+            if (operator_approved and task_readiness == "READY")
+            else "draft_only"
+        )
         action_note = f"Machine condition: {condition}. Consequential operation ({op_class}) requires explicit human approval before execution."
         if warnings:
             action_note += f" Elevated load warning: {'; '.join(warnings)}."
@@ -7528,7 +7629,9 @@ def _evaluate_machine_task_readiness(
     else:
         status = "PASS" if task_readiness == "READY" and not human_required else "HOLD"
         recommended_mode = "normal" if status == "PASS" else "draft_only"
-        action_note = f"Machine condition: {condition}. Task readiness: {task_readiness}."
+        action_note = (
+            f"Machine condition: {condition}. Task readiness: {task_readiness}."
+        )
 
     return {
         "status": status,
@@ -7576,7 +7679,13 @@ def well_forge_precheck(
     m_verdict = m_state.get("m_well_verdict", "UNKNOWN")
 
     _td = (task_description or "").lower()
-    _task_is_machine = decision_class in ("machine", "vps", "server", "system", "infrastructure") or any(
+    _task_is_machine = decision_class in (
+        "machine",
+        "vps",
+        "server",
+        "system",
+        "infrastructure",
+    ) or any(
         k in _td
         for k in (
             "swap",
@@ -7601,10 +7710,20 @@ def well_forge_precheck(
     # Consequential actions (cleanup/deletion) always require human confirmation.
     if _task_is_machine:
         real_enrichment = _build_machine_enrichment()
-        m_eval = _evaluate_machine_task_readiness(task_description, decision_class, real_enrichment)
+        m_eval = _evaluate_machine_task_readiness(
+            task_description, decision_class, real_enrichment
+        )
 
-        human_readiness_val = "UNMEASURED" if not has_telemetry else h_resolved.get("readiness_capped", "UNKNOWN")
-        domain_verdict_str = "MACHINE_TELEMETRY_ONLY" if not has_telemetry else "MACHINE_TASK_WITH_BODY_TELEMETRY"
+        human_readiness_val = (
+            "UNMEASURED"
+            if not has_telemetry
+            else h_resolved.get("readiness_capped", "UNKNOWN")
+        )
+        domain_verdict_str = (
+            "MACHINE_TELEMETRY_ONLY"
+            if not has_telemetry
+            else "MACHINE_TASK_WITH_BODY_TELEMETRY"
+        )
 
         res = _compose_verdict(
             mcp="AFWELL",
@@ -9326,19 +9445,16 @@ def _well_classify_substrate_impl(
     _is_clearly_human = any(ind in combined for ind in HUMAN_ROLE_INDICATORS)
     # FIX 2026-11-01 (external audit): a VPS/host description is a compute
     # substrate (MACHINE_SYSTEM), not a GOVERNANCE_SYSTEM.
-    if (
-        not _is_clearly_human
-        and any(
-            k in combined
-            for k in (
-                "vps",
-                "ubuntu",
-                "linux host",
-                "host machine",
-                "compute node",
-                "zram",
-                "disk usage",
-            )
+    if not _is_clearly_human and any(
+        k in combined
+        for k in (
+            "vps",
+            "ubuntu",
+            "linux host",
+            "host machine",
+            "compute node",
+            "zram",
+            "disk usage",
         )
     ):
         detected_class = "MACHINE_SYSTEM"
@@ -12015,17 +12131,47 @@ def _build_machine_enrichment() -> dict[str, Any]:
         ms = collect_from_prometheus()
         gate = assess_m_well()
     except ImportError:
-        enrichment["telemetry_status"] = "PARTIAL"
-        enrichment["missing_fields"].append("prometheus_adapter_or_vitality_gate")
-        enrichment["diagnosis"] = (
-            "Prometheus adapter or vitality_gate unavailable -- legacy data only"
-        )
-        return enrichment
+        # 2026-11-15 fix: prometheus adapter is OPTIONAL, not load-bearing. The
+        # gate reads the durable cron-collected machine_state.json -- telemetry
+        # must not die with the adapter. Log the cause and fall through to the
+        # machine_state.json-only path below.
+        logger.warning("machine enrichment: adapter import failed", exc_info=True)
+        ms, gate = {}, None
     except Exception as e:
-        enrichment["telemetry_status"] = "PARTIAL"
-        enrichment["missing_fields"].append(f"adapter_error:{e}")
-        enrichment["diagnosis"] = f"Telemetry collection failed: {e}"
-        return enrichment
+        # 2026-11-15 fix: silent PARTIAL masked the real cause for weeks (the
+        # "has_telemetry is False" HOLD). Log it, then try the durable file.
+        logger.warning("machine enrichment: primary path failed: %s", e, exc_info=True)
+        ms, gate = {}, None
+
+    # ── Fallback: vitality_gate over machine_state.json alone ────────────────
+    if gate is None:
+        try:
+            from vitality_gate import assess_m_well
+
+            gate = assess_m_well()
+            ms = _read_machine_state_field("", {}) or {}
+            if not ms:
+                _msp = Path(
+                    _os.environ.get(
+                        "WELL_MACHINE_STATE_PATH", "/var/lib/well/machine_state.json"
+                    )
+                )
+                ms = json.loads(_msp.read_text())
+            enrichment["telemetry_source"] = (
+                "machine_state.json (fallback; prometheus adapter unavailable)"
+            )
+        except ImportError:
+            enrichment["telemetry_status"] = "PARTIAL"
+            enrichment["missing_fields"].append("prometheus_adapter_or_vitality_gate")
+            enrichment["diagnosis"] = (
+                "Prometheus adapter or vitality_gate unavailable -- legacy data only"
+            )
+            return enrichment
+        except Exception as e:
+            enrichment["telemetry_status"] = "PARTIAL"
+            enrichment["missing_fields"].append(f"adapter_error:{e}")
+            enrichment["diagnosis"] = f"Telemetry collection failed: {e}"
+            return enrichment
 
     # ── Structured evidence (no regex parsing) ───────────────────────────────
     cpu = ms.get("cpu", {})
@@ -12343,15 +12489,26 @@ def _well_assess_machine_telemetry() -> dict[str, Any]:
     elif cpu_psi_some > 10:
         warnings.append(f"CPU PSI elevated: some_avg60={cpu_psi_some}%")
 
-    # 2026-07-29 F13: PSI full pressure -- all tasks stalled simultaneously
+    # 2026-11-15 fix: PSI full avgNN is a TIME-FRACTION (non-idle tasks stalled
+    # X% of the window), not a count of tasks stalled right now. >1% is normal
+    # jitter on a busy host. Tier honestly: >=25 CRITICAL, >=5 DEGRADED, >1 note.
+    # Wording states the fraction; "all tasks stalled" overstated it.
     for res_name, psi_key in [
         ("Memory", "memory_full_avg60"),
         ("I/O", "io_full_avg60"),
     ]:
         full_val = pressure.get(psi_key, 0)
-        if full_val > 1:
+        if full_val >= 25:
             issues.append(
-                f"{res_name} FULL pressure CRITICAL: {psi_key}={full_val}% -- all tasks stalled"
+                f"{res_name} FULL pressure CRITICAL: {psi_key}={full_val}% of the window (tasks stalled most of the time)"
+            )
+        elif full_val >= 5:
+            issues.append(
+                f"{res_name} FULL pressure DEGRADED: {psi_key}={full_val}% of the window (tasks stalled {full_val:.0f}% of the time)"
+            )
+        elif full_val > 1:
+            warnings.append(
+                f"{res_name} FULL pressure elevated: {psi_key}={full_val}% of the window (stall fraction, not a current stall)"
             )
 
     mem_total = max(mem.get("total_kb", 1), 1)
@@ -12365,8 +12522,33 @@ def _well_assess_machine_telemetry() -> dict[str, Any]:
 
     swap_total = max(mem.get("swap_total_kb", 1), 1)
     swap_used_pct = mem.get("swap_used_kb", 0) / swap_total * 100
-    if swap_used_pct > 50:
-        issues.append(f"Swap DEGRADED: {swap_used_pct:.0f}% used")
+    # 2026-11-15 fix: swap severity must gate on DISK-swap share + memory PSI.
+    # zram is RAM-backed compression, not disk pressure: high zram occupancy with
+    # low PSI is healthy behaviour (diagnose's own zram note says so). Only
+    # significant DISK-swap, or swap occupancy joined by real PSI pressure,
+    # degrades.
+    _zram_used_kb_swap = 0
+    try:
+        for _ln_swap in open("/proc/swaps").read().splitlines()[1:]:
+            _f_swap = _ln_swap.split()
+            if len(_f_swap) >= 4 and _f_swap[0].startswith("/dev/zram"):
+                _zram_used_kb_swap += int(_f_swap[3])
+    except (OSError, ValueError):
+        pass
+    _disk_swap_pct = max(swap_used_pct - (_zram_used_kb_swap / swap_total * 100), 0)
+    _mem_psi_full10_swap = pressure.get("memory_full_avg10", 0) or 0
+    _mem_psi_some10_swap = pressure.get("memory_some_avg10", 0) or 0
+    if _disk_swap_pct > 50 or (_mem_psi_full10_swap >= 5 and swap_used_pct > 80):
+        issues.append(
+            f"Swap DEGRADED: {swap_used_pct:.0f}% used "
+            f"(disk-swap {_disk_swap_pct:.0f}%, zram {_zram_used_kb_swap / 1024**2:.1f}GB) "
+            f"PSI some={_mem_psi_some10_swap:.1f} full={_mem_psi_full10_swap:.1f}"
+        )
+    elif swap_used_pct > 50:
+        warnings.append(
+            f"Swap {swap_used_pct:.0f}% occupied (mostly zram {_zram_used_kb_swap / 1024**2:.1f}GB, "
+            f"disk-swap {_disk_swap_pct:.0f}%) with low PSI -- no pressure, not an issue"
+        )
 
     # vmstat counters are cumulative. Summing the last samples reports a lifetime
     # total (hundreds of millions) as if it happened in the last few minutes.
@@ -12758,13 +12940,17 @@ def well_machine_diagnose(
                     "issue": f"Disk at {disk_pct}%",
                     "recommendation_id": _a["recommendation_id"],
                     "target": _a.get("target"),
-                    "action": _a.get("command") or _a.get("expected_effect") or _a.get("warning"),
+                    "action": _a.get("command")
+                    or _a.get("expected_effect")
+                    or _a.get("warning"),
                     "expected_recovery_gb": _a.get("expected_recovery_gb"),
                     "risk": _a["risk"],
                     "blast_radius": _a["risk"],
                     "reversible": _a["reversible"],
                     "requires_approval": _a["requires_approval"],
-                    "route_to": "888_HOLD" if _a["requires_approval"] else "A-FORGE forge_shell",
+                    "route_to": "888_HOLD"
+                    if _a["requires_approval"]
+                    else "A-FORGE forge_shell",
                 }
             )
 
@@ -12996,6 +13182,23 @@ def well_machine_recommend(
         _live_used_mr = None
     _disk_recon = _de_mr.reconcile(_disk_ev_mr, _live_used_mr)
 
+    # 2026-11-15 fix: the advisory signal must match the data this function just
+    # read. Disk >=90%, memory PSI some >=20, or PSI full >=5 means the machine
+    # needs recovery work -- PROCEED/stable_signal/T0 contradicted the evidence.
+    _disk_pct_mr = (ms.get("disk", {}) or {}).get("root_used_pct", 0) or 0
+    _mem_psi_full10_mr = pressure.get("memory_full_avg10", 0) or 0
+    _needs_recovery_mr = bool(
+        _disk_pct_mr >= 90 or mem_psi >= 20 or _mem_psi_full10_mr >= 5
+    )
+    _verdict_mr = "RECOVER" if _needs_recovery_mr else "PROCEED"
+    _binding_mr = (
+        f"disk {_disk_pct_mr:.0f}% used"
+        if _disk_pct_mr >= 90
+        else f"mem PSI some={mem_psi:.1f} full={_mem_psi_full10_mr:.1f}"
+        if _needs_recovery_mr
+        else "no binding machine constraint"
+    )
+
     RECOMMENDATIONS = {
         "swap": {
             "condition": f"swap at {swap_pct:.0f}%, PSI={mem_psi:.1f}",
@@ -13121,8 +13324,9 @@ def well_machine_recommend(
             stage="M_RECOMMEND",
             lane="AGI",
             mode="recommend",
-            verdict="PROCEED",
+            verdict=_verdict_mr,
             data={
+                "binding_constraint": _binding_mr,
                 "recommendations": RECOMMENDATIONS,
                 "note": "ADVISORY_ONLY -- route to A-FORGE forge_shell for execution",
                 "w0": "WELL recommends. arifOS judges. A-FORGE executes.",
@@ -13146,9 +13350,10 @@ def well_machine_recommend(
         stage="M_RECOMMEND",
         lane="AGI",
         mode="recommend",
-        verdict="PROCEED",
+        verdict=_verdict_mr,
         data={
             "issue_type": issue_type,
+            "binding_constraint": _binding_mr,
             "condition": recs.get("condition", "N/A"),
             "safe_to_proceed": recs.get("safe", True),
             "commands": recs["commands"],
@@ -14582,9 +14787,15 @@ try:
     async def _resilient_handle_stateful(self, scope, receive, send):
         request = Request(scope, receive)
         request_mcp_session_id = request.headers.get(MCP_SESSION_ID_HEADER)
-        if request_mcp_session_id is not None and request_mcp_session_id not in self._server_instances:
+        if (
+            request_mcp_session_id is not None
+            and request_mcp_session_id not in self._server_instances
+        ):
             import logging as _log
-            _log.getLogger("well").info(f"Re-admitting reconnecting session: {request_mcp_session_id[:64]}")
+
+            _log.getLogger("well").info(
+                f"Re-admitting reconnecting session: {request_mcp_session_id[:64]}"
+            )
             http_transport = StreamableHTTPServerTransport(
                 mcp_session_id=request_mcp_session_id,
                 is_json_response_enabled=self.json_response,
@@ -14607,7 +14818,9 @@ try:
                                 write_stream,
                                 inline_methods=frozenset({"initialize"}),
                             )
-                            connection = Connection.for_loop(dispatcher, session_id=request_mcp_session_id)
+                            connection = Connection.for_loop(
+                                dispatcher, session_id=request_mcp_session_id
+                            )
                             connection.initialized.set()
                             await serve_connection(
                                 self.app,
@@ -14616,9 +14829,13 @@ try:
                                 lifespan_state=self._lifespan_state,
                             )
                     except Exception:
-                        _log.getLogger("well").exception(f"Session {request_mcp_session_id} crashed")
+                        _log.getLogger("well").exception(
+                            f"Session {request_mcp_session_id} crashed"
+                        )
                     finally:
-                        await self._discard_session(request_mcp_session_id, http_transport)
+                        await self._discard_session(
+                            request_mcp_session_id, http_transport
+                        )
 
             assert self._task_group is not None
             await self._task_group.start(run_server)
@@ -14630,12 +14847,18 @@ try:
     StreamableHTTPSessionManager._handle_stateful_request = _resilient_handle_stateful
     try:
         from fastmcp.server.http import FastMCPStreamableHTTPSessionManager
-        FastMCPStreamableHTTPSessionManager._handle_stateful_request = _resilient_handle_stateful
+
+        FastMCPStreamableHTTPSessionManager._handle_stateful_request = (
+            _resilient_handle_stateful
+        )
     except Exception:
         pass
 except Exception as _ex:
     import logging as _logging
-    _logging.getLogger("well").warning(f"Could not apply session resilience monkeypatch: {_ex}")
+
+    _logging.getLogger("well").warning(
+        f"Could not apply session resilience monkeypatch: {_ex}"
+    )
 
 # ============================================================
 # ORGAN_GOVERNANCE: arifOS L1-L13 Wrapper

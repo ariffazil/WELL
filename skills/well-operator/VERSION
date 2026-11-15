@@ -1,0 +1,8 @@
+WELL_VERSION=v2026-11-15
+WELL_COMMIT=0c85730 (surface-identical to v2026-11-12 / a162166: same 10 public tools)
+SKILL_PACKAGE=well-operator v1.0.0
+VALIDATED_AT=2026-11-15T11:00:00Z
+VALIDATED_BY=333-AGI (opencode FI-001)
+VALIDATION_METHOD=live MCP :18083 (initialize → tools/list → tools/call well_registry_status mode=full) + unit re-tests for closed defects
+LIVE_SURFACE=10/10 REGISTRY_PASS (phantom=0, missing=0, unexpected=0)
+AUTHORITY=REFLECT_ONLY (advisory; signals, never verdicts)
