@@ -16,6 +16,8 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
+import pytest
+
 import well_mcp.entropy_mesh as em
 
 FIVE = [
@@ -33,9 +35,22 @@ def test_default_dir_is_canonical_wealth_tree() -> None:
 
 
 def test_all_five_modules_present_at_default() -> None:
+    """Presence check is host-coupled by nature: the canonical mesh lives on the
+    federation host (/root/WEALTH/entropy-integrity), not on a CI runner.
+
+    Resolution is asserted unconditionally by the other tests; here we skip only
+    when the tree is not mounted/readable on this host, and still FAIL when the
+    tree is present but a module is missing (the real defect this guard exists
+    for: 5 H-WELL tools dead with ENOENT).
+    """
     os.environ.pop("WELL_ENTROPY_MESH_DIR", None)
     root = Path(em.mesh_dir())
-    assert root.is_dir(), f"canonical mesh missing: {root}"
+    try:
+        mounted = root.is_dir()
+    except OSError as exc:  # e.g. /root not readable by the CI runner user
+        pytest.skip(f"canonical mesh not readable on this host: {root} ({exc})")
+    if not mounted:
+        pytest.skip(f"canonical mesh not mounted on this host: {root}")
     for mod in FIVE:
         assert (root / "mcp" / "well" / f"{mod}.py").exists(), mod
 
