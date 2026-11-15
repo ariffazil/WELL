@@ -1,0 +1,20 @@
+# KNOWN_BUGS — dated, with live re-test evidence
+<!-- Rule: an entry stays OPEN until a live test closes it. Closed entries keep the
+     commit + probe that closed them. Do not delete closed rows — they prevent
+     rediscovery. -->
+
+| ID | Defect | Opened | Status | Evidence |
+|---|---|---|---|---|
+| M-WELL-001 | `well_check_repair` HOLDs "has_telemetry is False" for machine tasks while telemetry exists (silent PARTIAL in `_build_machine_enrichment`) | ≤2026-11-01 | **CLOSED 2026-11-15** | commit `0c85730`; durable `machine_state.json` fallback + logged cause; live re-test: `mode=precheck task=disk cleanup` no longer emits the message; journal shows adapter failure logged (11:58 MYT) |
+| M-WELL-002 | Severity inversion: PSI `full_avg60` >1% fired CRITICAL "all tasks stalled" (a time-fraction read as a live stall); swap >50% fired DEGRADED despite zram/low-PSI | ≤2026-11-01 | **CLOSED 2026-11-15** | commit `0c85730`; tiered ≥25/≥5/>1 + wording; swap gated on disk-swap share + PSI; live re-test: no false swap/FULL messages at 50% zram / 2% PSI-full |
+| M-WELL-003 | `disk_actions` double-counted nested recovery targets (`/root/_quarantine` and its `export-20261114T043238Z` child listed as separate GB) | ≤2026-11-01 | **CLOSED 2026-11-15** | commit `0c85730`; nested targets get `nested_duplicate_of_parent=true`, `expected_recovery_gb=0`, `worth_it=false`; live re-test: export marked nested |
+| M-WELL-004 | `well_machine_recommend` reported `PROCEED`/`stable_signal`/T0 while disk 91% and load > cores | ≤2026-11-01 | **CLOSED 2026-11-15** | commit `0c85730`; verdict derived from data → `RECOVER`/`recovery_needed`/T1 + `binding_constraint`; live re-test: mode=all and mode=disk both T1 |
+| M-WELL-005 | `constitution_hash` recycled `substrate_manifest_hash` (two fields, one value) | ≤2026-11-01 | **CLOSED 2026-11-15** | commit `0c85730`; `_constitution_content_hash()` derives from domain law + advisory boundary + sovereign authority; unit re-test: hashes differ (`9521268c…` vs `fd21db85…`) |
+| M-WELL-006 | `drop_caches` still labeled LOW risk in recommendations | ≤2026-11-01 | **OPEN** | `server.py` memory/swap recommendation blocks; needs pressure-aware risk label |
+| M-WELL-007 | Consent/triadic tools (`well_consent_audit`, `well_inject_biometric`, `well_log_intake`, `well_assess_triadic_state`, `well_attest_to_kernel`, …) referenced by `well-consent-registry` and `well-triadic-ops` skills are NOT on the public 10-tool surface | ≤2026-10-25 | **OPEN (docs/surface mismatch)** | live `well_registry_status` = 10 public; skills instruct calls to internal-only tools → skills must mark them INTERNAL/UNEXPOSED or the surface must expose them. Decision belongs to the WELL surface owner |
+| M-WELL-008 | Human substrate EXPIRED (last sovereign data 2026-11-01; 168h ceiling breached) → owner RED, `DO_NOT_INFER` | 2026-11-08 | **OPEN (environment, by design)** | `/health`: `freshness.status=expired`, `age_hours=324+`, `honesty_banner=INSUFFICIENT`. Correct honest state; only the sovereign's own input (or a consented sensor feed) closes it. Do not inject |
+| M-WELL-009 | `well_assess_reliability` / `well_machine_diagnose` once disagreed on severity for the same minute (reliability louder) | ≤2026-11-01 | **PARTIAL** — PSI/swap root causes closed 2026-11-15; residual: reliability still uses its own weighting | Re-test: compare both outputs on identical machine_state.json sample before relying on reliability alone |
+
+## Claims that were checked and found NOT to exist (so nobody chases them)
+- A `well://tools/canon_map` resource listing ~20 tools: not present in the WELL repo docs at validation time (grep 2026-11-15). If it resurfaces, it is stale by definition — the surface authority is `well_registry_status`.
+- Legacy aliases `well_000_init` … `well_999_vault`: deregistered 2026-10-16; no live skill in this package references them.
