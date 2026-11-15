@@ -60,7 +60,9 @@ def fs_usage(mount: str = "/") -> dict[str, Any]:
         "used_pct": round(used / total * 100, 1) if total else None,
         "inodes_total": st.f_files,
         "inodes_used": inodes_used,
-        "inodes_used_pct": round(inodes_used / st.f_files * 100, 1) if st.f_files else None,
+        "inodes_used_pct": round(inodes_used / st.f_files * 100, 1)
+        if st.f_files
+        else None,
         "source": "statvfs",
     }
 
@@ -105,7 +107,11 @@ def scan_path(path: str, timeout_s: float, depth: int = 2) -> dict[str, Any]:
     confirmed = (
         total
         if total is not None
-        else sum(b for p, b in sizes.items() if p.count("/") == path.rstrip("/").count("/") + 1)
+        else sum(
+            b
+            for p, b in sizes.items()
+            if p.count("/") == path.rstrip("/").count("/") + 1
+        )
     )
     return {
         "path": path,
@@ -156,7 +162,10 @@ def docker_storage(timeout_s: float = 60) -> dict[str, Any]:
     try:
         p = subprocess.run(
             ["docker", "system", "df", "--format", "{{json .}}"],
-            capture_output=True, text=True, timeout=timeout_s, check=False,
+            capture_output=True,
+            text=True,
+            timeout=timeout_s,
+            check=False,
         )
     except subprocess.TimeoutExpired:
         return {"status": "timeout"}
@@ -224,7 +233,14 @@ def journal_usage() -> dict[str, Any]:
     except subprocess.TimeoutExpired:
         return {"status": "timeout"}
     m = re.search(r"([\d.]+)([KMGT])", p.stdout or "")
-    b = int(float(m.group(1)) * {"K": 2**10, "M": 2**20, "G": 2**30, "T": 2**40}[m.group(2)]) if m else None
+    b = (
+        int(
+            float(m.group(1))
+            * {"K": 2**10, "M": 2**20, "G": 2**30, "T": 2**40}[m.group(2)]
+        )
+        if m
+        else None
+    )
     return {"status": "ok", "bytes": b, "source": "journalctl --disk-usage"}
 
 
@@ -248,23 +264,36 @@ def collect(
     for d in dirs:
         remaining = total_budget_s - (time.monotonic() - t0)
         if remaining <= 1:
-            paths.append({"path": d, "status": "skipped", "bytes": None,
-                          "confirmed_bytes": 0, "children": [], "reason": "total_budget"})
+            paths.append(
+                {
+                    "path": d,
+                    "status": "skipped",
+                    "bytes": None,
+                    "confirmed_bytes": 0,
+                    "children": [],
+                    "reason": "total_budget",
+                }
+            )
             continue
         paths.append(scan_path(d, timeout_s=min(per_path_timeout_s, remaining)))
     backups = []
     for p in paths:
         for c in p.get("children", []):
-            if BACKUP_NAME.search(os.path.basename(c["path"])) or is_restic_repo(c["path"]):
-                backups.append({
-                    "path": c["path"],
-                    "bytes": c["bytes"],
-                    "kind": "restic" if is_restic_repo(c["path"]) else "backup-dir",
-                    "same_filesystem_as_root": True,  # du -x guarantees same fs
-                })
+            if BACKUP_NAME.search(os.path.basename(c["path"])) or is_restic_repo(
+                c["path"]
+            ):
+                backups.append(
+                    {
+                        "path": c["path"],
+                        "bytes": c["bytes"],
+                        "kind": "restic" if is_restic_repo(c["path"]) else "backup-dir",
+                        "same_filesystem_as_root": True,  # du -x guarantees same fs
+                    }
+                )
     # Keep the most specific hit only (no double counting /root/backups + its restic repo).
     backups = [
-        b for b in backups
+        b
+        for b in backups
         if not any(o["path"].startswith(b["path"].rstrip("/") + "/") for o in backups)
     ]
     timed_out = [p["path"] for p in paths if p["status"] != "complete"]
@@ -277,7 +306,9 @@ def collect(
         "per_path_timeout_s": per_path_timeout_s,
         "filesystem": fs,
         "top_level_file_bytes": top_file_bytes,
-        "paths": sorted(paths, key=lambda p: p.get("confirmed_bytes") or 0, reverse=True),
+        "paths": sorted(
+            paths, key=lambda p: p.get("confirmed_bytes") or 0, reverse=True
+        ),
         "deleted_open": deleted_open_files(root),
         "docker": docker_storage(),
         "journal": journal_usage(),
@@ -317,7 +348,9 @@ def _gb(b: int | float | None) -> float | None:
     return None if b is None else round(b / GB, 1)
 
 
-def reconcile(ev: dict[str, Any] | None, live_used_bytes: int | None = None) -> dict[str, Any]:
+def reconcile(
+    ev: dict[str, Any] | None, live_used_bytes: int | None = None
+) -> dict[str, Any]:
     if not ev:
         return {
             "status": "no_evidence",
@@ -351,9 +384,15 @@ def reconcile(ev: dict[str, Any] | None, live_used_bytes: int | None = None) -> 
     confidence = "low" if reasons else "high"
 
     largest = [
-        {"path": p["path"], "size_gb": _gb(p.get("confirmed_bytes")),
-         "status": p["status"],
-         "top_children": [{"path": c["path"], "size_gb": _gb(c["bytes"])} for c in p.get("children", [])[:5]]}
+        {
+            "path": p["path"],
+            "size_gb": _gb(p.get("confirmed_bytes")),
+            "status": p["status"],
+            "top_children": [
+                {"path": c["path"], "size_gb": _gb(c["bytes"])}
+                for c in p.get("children", [])[:5]
+            ],
+        }
         for p in ev.get("paths", [])[:6]
         if (p.get("confirmed_bytes") or 0) >= MIN_CHILD_BYTES
     ]
@@ -362,13 +401,21 @@ def reconcile(ev: dict[str, Any] | None, live_used_bytes: int | None = None) -> 
         top = largest[0]
         root_cause = (
             f"{top['path']} holds {top['size_gb']} GB of {_gb(used)} GB used"
-            + (f"; largest inside: " + ", ".join(f"{c['path']} {c['size_gb']} GB" for c in top["top_children"][:3])
-               if top["top_children"] else "")
+            + (
+                f"; largest inside: "
+                + ", ".join(
+                    f"{c['path']} {c['size_gb']} GB" for c in top["top_children"][:3]
+                )
+                if top["top_children"]
+                else ""
+            )
         )
-    msg = (
-        f"Scan accounts for {_gb(accounted)} GB of {_gb(used)} GB used. "
-        + ("Root cause confidence is LOW (" + "; ".join(reasons) + "). Continue with targeted scans; do not name a cause."
-           if reasons else "Totals reconcile.")
+    msg = f"Scan accounts for {_gb(accounted)} GB of {_gb(used)} GB used. " + (
+        "Root cause confidence is LOW ("
+        + "; ".join(reasons)
+        + "). Continue with targeted scans; do not name a cause."
+        if reasons
+        else "Totals reconcile."
     )
     return {
         "status": ev.get("status"),
@@ -388,9 +435,14 @@ def reconcile(ev: dict[str, Any] | None, live_used_bytes: int | None = None) -> 
         "message": msg,
         "largest": largest,
         "freeable": [
-            {"recommendation_id": a["recommendation_id"], "target": a.get("target"),
-             "expected_recovery_gb": a["expected_recovery_gb"], "risk": a["risk"]}
-            for a in disk_actions(ev) if a.get("expected_recovery_gb")
+            {
+                "recommendation_id": a["recommendation_id"],
+                "target": a.get("target"),
+                "expected_recovery_gb": a["expected_recovery_gb"],
+                "risk": a["risk"],
+            }
+            for a in disk_actions(ev)
+            if a.get("expected_recovery_gb")
         ],
         "source": DISK_EVIDENCE_PATH,
     }
@@ -404,21 +456,27 @@ _STATIC_ACTIONS: list[dict[str, Any]] = [
     {
         "recommendation_id": "disk.journal.vacuum_500m",
         "command": "journalctl --vacuum-size=500M",
-        "risk": "LOW", "reversible": False, "requires_approval": False,
+        "risk": "LOW",
+        "reversible": False,
+        "requires_approval": False,
         "expected_effect": "trim journal to 500 MB (one canonical retention rule)",
         "verification": ["journalctl --disk-usage"],
     },
     {
         "recommendation_id": "disk.apt.clean",
         "command": "apt-get clean",
-        "risk": "LOW", "reversible": True, "requires_approval": False,
+        "risk": "LOW",
+        "reversible": True,
+        "requires_approval": False,
         "expected_effect": "drop downloaded .deb cache (re-downloadable)",
         "verification": ["du -sh /var/cache/apt"],
     },
     {
         "recommendation_id": "disk.snap.remove_disabled",
-        "command": "snap list --all | awk '/disabled/{print $1, $3}' | while read n r; do snap remove \"$n\" --revision=\"$r\"; done",
-        "risk": "MEDIUM", "reversible": False, "requires_approval": True,
+        "command": 'snap list --all | awk \'/disabled/{print $1, $3}\' | while read n r; do snap remove "$n" --revision="$r"; done',
+        "risk": "MEDIUM",
+        "reversible": False,
+        "requires_approval": True,
         "expected_effect": "remove disabled snap revisions (deletes data)",
         "expected_recovery_gb": None,
         "verification": ["snap list --all"],
@@ -426,7 +484,9 @@ _STATIC_ACTIONS: list[dict[str, Any]] = [
     {
         "recommendation_id": "disk.apt.autoremove",
         "command": "apt-get autoremove --purge",
-        "risk": "MEDIUM", "reversible": False, "requires_approval": True,
+        "risk": "MEDIUM",
+        "reversible": False,
+        "requires_approval": True,
         "expected_effect": "remove packages apt thinks are unused -- review the list first",
         "expected_recovery_gb": None,
         "preconditions": ["apt-get -s autoremove reviewed by operator"],
@@ -442,7 +502,9 @@ def disk_actions(ev: dict[str, Any] | None) -> list[dict[str, Any]]:
     j = (ev.get("journal") or {}).get("bytes")
     for a in acts:
         if a["recommendation_id"] == "disk.journal.vacuum_500m":
-            a["expected_recovery_gb"] = _gb(max(j - JOURNAL_TARGET_BYTES, 0)) if j else None
+            a["expected_recovery_gb"] = (
+                _gb(max(j - JOURNAL_TARGET_BYTES, 0)) if j else None
+            )
         elif a["recommendation_id"] == "disk.apt.clean":
             a.setdefault("expected_recovery_gb", None)
 
@@ -451,42 +513,92 @@ def disk_actions(ev: dict[str, Any] | None) -> list[dict[str, Any]]:
     for t, rid, cmd, risk in (
         ("Images", "disk.docker.prune_images", "docker image prune -a", "MEDIUM"),
         ("Build Cache", "disk.docker.prune_build_cache", "docker builder prune", "LOW"),
-        ("Containers", "disk.docker.prune_containers", "docker container prune", "MEDIUM"),
+        (
+            "Containers",
+            "disk.docker.prune_containers",
+            "docker container prune",
+            "MEDIUM",
+        ),
         ("Local Volumes", "disk.docker.prune_volumes", "docker volume prune", "HIGH"),
     ):
         rec = (types.get(t) or {}).get("reclaimable_bytes")
-        acts.append({
-            "recommendation_id": rid, "command": cmd, "risk": risk,
-            "reversible": False, "requires_approval": True,
-            "expected_recovery_gb": _gb(rec) if rec is not None else None,
-            "expected_effect": f"remove unused docker {t.lower()} (measured reclaimable only)",
-            "worth_it": bool(rec and rec >= MIN_CHILD_BYTES),
-            "verification": ["docker system df"],
-        })
+        acts.append(
+            {
+                "recommendation_id": rid,
+                "command": cmd,
+                "risk": risk,
+                "reversible": False,
+                "requires_approval": True,
+                "expected_recovery_gb": _gb(rec) if rec is not None else None,
+                "expected_effect": f"remove unused docker {t.lower()} (measured reclaimable only)",
+                "worth_it": bool(rec and rec >= MIN_CHILD_BYTES),
+                "verification": ["docker system df"],
+            }
+        )
 
     for b in ev.get("backups_same_disk", []):
-        acts.append({
-            "recommendation_id": "disk.backup.move_offsite",
-            "target": b["path"], "command": None,
-            "risk": "HIGH", "reversible": False, "requires_approval": True,
-            "expected_recovery_gb": _gb(b["bytes"]),
-            "warning": "Backup on the same disk protects against file deletion, not disk failure. "
-            "Move it off-server and verify the copy BEFORE deleting locally.",
-            "preconditions": ["offsite copy exists", "offsite copy verified (restic check / checksum)"],
-            "verification": ["df -h /", f"test ! -e {b['path']}"],
-        })
+        acts.append(
+            {
+                "recommendation_id": "disk.backup.move_offsite",
+                "target": b["path"],
+                "command": None,
+                "risk": "HIGH",
+                "reversible": False,
+                "requires_approval": True,
+                "expected_recovery_gb": _gb(b["bytes"]),
+                "warning": "Backup on the same disk protects against file deletion, not disk failure. "
+                "Move it off-server and verify the copy BEFORE deleting locally.",
+                "preconditions": [
+                    "offsite copy exists",
+                    "offsite copy verified (restic check / checksum)",
+                ],
+                "verification": ["df -h /", f"test ! -e {b['path']}"],
+            }
+        )
 
     for p in ev.get("paths", []):
         for c in p.get("children", []):
-            if ARCHIVE_NAME.search(c["path"]) and not BACKUP_NAME.search(os.path.basename(c["path"])):
-                acts.append({
-                    "recommendation_id": "disk.appdata.review_archive",
-                    "target": c["path"], "command": None,
-                    "risk": "HIGH", "reversible": False, "requires_approval": True,
-                    "expected_recovery_gb": _gb(c["bytes"]),
-                    "expected_effect": "operator review: keep newest, remove stale archive/quarantine data",
-                    "verification": [f"du -sh {c['path']}"],
-                })
+            if ARCHIVE_NAME.search(c["path"]) and not BACKUP_NAME.search(
+                os.path.basename(c["path"])
+            ):
+                acts.append(
+                    {
+                        "recommendation_id": "disk.appdata.review_archive",
+                        "target": c["path"],
+                        "command": None,
+                        "risk": "HIGH",
+                        "reversible": False,
+                        "requires_approval": True,
+                        "expected_recovery_gb": _gb(c["bytes"]),
+                        "expected_effect": "operator review: keep newest, remove stale archive/quarantine data",
+                        "verification": [f"du -sh {c['path']}"],
+                    }
+                )
     rank = {"LOW": 0, "MEDIUM": 1, "HIGH": 2}
-    acts.sort(key=lambda a: (-(a.get("expected_recovery_gb") or 0), rank.get(a["risk"], 3)))
+
+    # 2026-11-15 fix: nested targets double-count recoverable bytes. When one
+    # target sits inside another (e.g. export-20261114 under /root/_quarantine),
+    # the OUTER target's du bytes already include the inner one. Mark the inner
+    # as nested_duplicate_of_parent, zero its recovery, worth_it=False (the
+    # existing filter drops it) -- but keep it visible so the operator knows why.
+    for _act_nested in acts:
+        _t = _act_nested.get("target")
+        if not _t:
+            continue
+        _t_norm = _t.rstrip("/")
+        _inside = any(
+            o is not _act_nested
+            and o.get("target")
+            and o["target"].rstrip("/") != _t_norm
+            and _t_norm.startswith(o["target"].rstrip("/") + "/")
+            for o in acts
+        )
+        if _inside:
+            _act_nested["nested_duplicate_of_parent"] = True
+            _act_nested["expected_recovery_gb"] = 0.0
+            _act_nested["worth_it"] = False
+
+    acts.sort(
+        key=lambda a: (-(a.get("expected_recovery_gb") or 0), rank.get(a["risk"], 3))
+    )
     return acts
