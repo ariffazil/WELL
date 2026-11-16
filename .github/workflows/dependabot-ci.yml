@@ -89,8 +89,12 @@ jobs:
       - name: Hard invariant — uv sync frozen
         run: |
           set -euo pipefail
-          uv sync --frozen
-          echo "✅ Frozen sync OK — lockfile is the resolver authority"
+          # `dev` ships as an optional extra in pyproject.toml, not a dependency
+          # group: without --extra dev the frozen env has no pytest, so the
+          # "Test suite" step dies on `Failed to spawn: pytest` (exit 2) and
+          # every Dependabot PR shows red for reasons unrelated to the bump.
+          uv sync --frozen --extra dev
+          echo "✅ Frozen sync OK (+dev extra) — lockfile is the resolver authority"
 
       - name: Record lockfile SHA-256
         id: lockhash
@@ -100,7 +104,9 @@ jobs:
           echo "uv.lock SHA-256: $sha"
 
       - name: Lint (ruff)
-        run: uv run ruff check src tests --output-format concise || true
+        # ruff is not a project dependency; uvx runs it isolated so the frozen
+        # env stays the resolver authority (previously: Failed to spawn: ruff).
+        run: uvx ruff check src tests --output-format concise || true
         # Non-blocking: lint drift on a lockfile-only PR is informational, not
         # a regression. Surface in probe artifact for human triage.
 
