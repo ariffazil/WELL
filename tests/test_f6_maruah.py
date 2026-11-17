@@ -11,6 +11,7 @@ Self-contained: no HTTP server, no live organ calls.
 
 import json
 import time
+from pathlib import Path
 
 import pytest
 
@@ -74,6 +75,21 @@ async def test_covered_returns_partial(tmp_path):
     assert res["f6_index"] is not None
     assert 0.5 < res["f6_index"] <= 1.0
     assert res["null_reasons"] == []
+
+
+@pytest.mark.asyncio
+async def test_string_no_contamination_not_flagged(tmp_path):
+    """Regression: live state carries test_contamination as the STRING "NO" —
+    bool("NO") is truthy and falsely flagged contamination (caught on the
+    first live reading 2026-11-18 00:51 MYT). Parse semantically."""
+    sp = _write_state(tmp_path)
+    state = json.loads(Path(sp).read_text())
+    state["test_contamination"] = "NO"  # string form, as the live file writes it
+    Path(sp).write_text(json.dumps(state))
+    ip = _write_intake_log(tmp_path)
+    res = await well_measure_floor_f6(state_path=sp, intake_log=ip, now=NOW)
+    cov = res["coverage"]["human_substrate"]
+    assert cov["contaminated"] is False
 
 
 @pytest.mark.asyncio

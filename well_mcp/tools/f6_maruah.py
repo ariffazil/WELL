@@ -125,8 +125,10 @@ async def well_measure_floor_f6(
             age_s = None
 
     truth = str(state.get("truth_status", "")).upper()
+    # "NO" (string) is truthy — parse contamination semantically, never bool() it
+    _contam_raw = str(state.get("test_contamination", "")).strip().upper()
     contaminated = (
-        bool(state.get("test_contamination"))
+        _contam_raw in {"YES", "TRUE", "1", "QUARANTINED", "TEST"}
         or state.get("environment", "").upper() == "TEST"
     )
 
