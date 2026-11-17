@@ -70,6 +70,10 @@ from .tools.federation import (
     well_signal_coverage,
 )
 
+# F6 MARUAH floor instrument (v0 — modular target only, cutover-first; see
+# tools/f6_maruah.py docstring: NOT served by :18083 until H1 parity, OS-1)
+from .tools.f6_maruah import well_measure_floor_f6
+
 
 # ── P0-B (sovereign 2026-07-18): legacy alias for well_system_registry_status ─
 # The audit's tooling called well_system_registry_status but the modern
@@ -78,6 +82,7 @@ from .tools.federation import (
 async def well_system_registry_status(ctx: Context, mode: str = "status") -> dict:
     """Legacy alias: delegates to well_registry_status."""
     return await well_registry_status(ctx, mode=mode)  # type: ignore[arg-type]
+
 
 # ============================================================
 # 3. IMPORT RESOURCES FROM MODULAR STRUCTURE
@@ -160,6 +165,9 @@ mcp.tool()(well_registry_status)
 mcp.tool()(well_signal_coverage)
 # Legacy alias (P0-B audit fix): keep well_system_registry_status available
 mcp.tool()(well_system_registry_status)
+
+# Floor F6 MARUAH instrument (v0 — modular target only; kernel wiring pending OS-1)
+mcp.tool()(well_measure_floor_f6)
 
 # ============================================================
 # 5. REGISTER RESOURCES (29 Canonical)
