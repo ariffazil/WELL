@@ -7,16 +7,14 @@
 # This file is an informational freeze of the MCP-relevant direct dependencies AS
 # INSTALLED in /root/WELL/.venv on 2026-09-15. Deliberately NOT a full venv freeze.
 #
-# ⚠ WELL IS THE FEDERATION OUTLIER ON THE MCP STACK — recorded here truthfully
-#   as-installed rather than as-hopefully-declared:
-#     WELL          mcp 1.28.1, fastmcp 3.4.4, fastmcp-slim 3.4.4
-#     arifOS / GEOX mcp 1.29.0, fastmcp 3.4.6, fastmcp-slim 3.4.6
-#     WEALTH        mcp 1.29.0, fastmcp 3.4.5, fastmcp-slim 3.4.5
-#   WELL is one mcp minor (1.28.1 vs 1.29.0) and two fastmcp patches (3.4.4 vs
-#   3.4.6) behind. Its pyproject.toml declares `fastmcp[tasks]==3.4.7` and its
-#   uv.lock resolves mcp 1.29.1 / fastmcp 3.4.7 — NEITHER is installed.
-#   Converging WELL onto the federation line is an INSTALL change and is
-#   deliberately NOT performed by this declaration reconciliation.
+# ⚠ MCP STACK TRUTH — updated 2026-11-18 (333-AGI reconciliation; previous note
+#   dated 2026-09-15 described an outliner state that no longer exists):
+#     WELL (installed .venv)   mcp 2.3.0, fastmcp 4.1.6, fastmcp-slim 4.1.6
+#     WELL is now AHEAD of the federation line (arifOS/GEOX mcp 1.29.0, WEALTH 1.29.0)
+#     and on the mcp v2 lineage (stateless HTTP 2026-07-28; sampling deprecated SEP-2577).
+#     pyproject declares fastmcp[tasks]==4.1.6 — matches installed.
+#   History: the 2026-09-15 outliner note (mcp 1.28.1 / fastmcp 3.4.4 vs siblings'
+#     1.29.0) was closed by the dependabot mcp-stack line (PR #80 merged 2026-11-16).
 #
 # Evidence: WELL source imports FastMCP, Context, fastmcp.exceptions.ToolError,
 # fastmcp.prompts.base.Message, fastmcp.server.dependencies.get_http_request,
