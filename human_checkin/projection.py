@@ -16,6 +16,7 @@ Atomic write: tmp file + os.replace in the same directory.
 from __future__ import annotations
 
 import datetime as _dt
+import fcntl
 import json
 import os
 from typing import Any
@@ -245,6 +246,133 @@ def refresh(
     proj = build_projection(load_events(event_log))
     write_projection(proj, path)
     return proj
+
+
+UNTOUCHED_STATE_KEYS = (
+    "well_score",
+    "biometric",
+    "signals_meta",
+    "metrics",
+    "signals",
+    "has_verified_telemetry",
+    "environment",
+)
+PRESENCE_TRUTH = "OPERATOR_REPORTED"
+
+
+def apply_to_state(
+    proj: dict[str, Any], state_path: str, note: str | None = None
+) -> dict[str, Any]:
+    """G1-lite presence merge (F13 2026-11-19): project a FRESH self-report
+    onto state.json presence fields so /health and the kernel F6 producer see
+    honest presence (OPERATOR_REPORTED, fresh observation clock). Closes the
+    EXPIRED hole WITHOUT creating a VERIFIED illusion.
+
+    Allowlist ONLY: truth_status, source_type, evidence_class, confidence,
+    reason, timestamp, last_successful_read, last_successful_write, and the
+    additive 'human_checkin' namespace. The 13-signal schema, biometric,
+    well_score, signals_meta, has_verified_telemetry and environment are
+    captured before write and asserted byte-identical after (RuntimeError on
+    any diff). No FRESH signal -> no presence assertion, file untouched.
+    Never restarts anything."""
+    signals = proj.get("signals", {})
+    fresh = {
+        m: signals[m]
+        for m in CHECKIN_FIELDS
+        if isinstance(signals.get(m), dict) and signals[m].get("freshness") == FRESH
+    }
+    now_iso = _dt.datetime.now(_dt.timezone.utc).isoformat(timespec="seconds")
+    if not fresh:
+        return {
+            "applied": False,
+            "state_path": state_path,
+            "reason": "no_fresh_signal presence not asserted",
+        }
+    os.makedirs(os.path.dirname(state_path) or ".", exist_ok=True)
+    lock_path = state_path + ".lock"
+    with open(lock_path, "w", encoding="utf-8") as lock:
+        fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
+        try:
+            created = False
+            if os.path.exists(state_path):
+                with open(state_path, "r", encoding="utf-8") as fh:
+                    state = json.load(fh)
+            else:
+                created = True
+                state = {
+                    "schema": "well_state_v2",
+                    "environment": "PROD",
+                    "well_score": None,
+                    "has_verified_telemetry": False,
+                }
+            untouched = {k: state.get(k) for k in UNTOUCHED_STATE_KEYS}
+            latest_obs = None
+            for s in fresh.values():
+                t = parse_observed_at(s.get("observed_at", ""))
+                if latest_obs is None or t > latest_obs:
+                    latest_obs = t
+            attention = proj.get("attention_readiness", {})
+            reason = "human_checkin_v1 SELF_REPORT attention " + str(
+                attention.get("state", "UNKNOWN")
+            )
+            if note:
+                reason += " note " + str(note)[:120]
+            state["truth_status"] = PRESENCE_TRUTH
+            state["source_type"] = PRESENCE_TRUTH
+            state["evidence_class"] = "SELF_REPORT"
+            state["confidence"] = 0.5
+            state["reason"] = reason
+            # gate keys on record write time (repo convention, server.py:1147)
+            state["timestamp"] = now_iso
+            state["last_successful_read"] = (
+                latest_obs.isoformat(timespec="seconds") if latest_obs else now_iso
+            )
+            state["last_successful_write"] = now_iso
+            state["human_checkin"] = {
+                "schema": "human_checkin_presence_v1",
+                "signals": {
+                    m: {
+                        k: s[k]
+                        for k in (
+                            "value",
+                            "unit",
+                            "observed_at",
+                            "source",
+                            "provenance",
+                            "freshness",
+                        )
+                        if k in s
+                    }
+                    for m, s in signals.items()
+                },
+                "attention_state": attention.get("state", "UNKNOWN"),
+                "attention_confidence": attention.get("confidence", "NONE"),
+                "evidence_class": proj.get("human_evidence", {}).get(
+                    "class", "PARTIAL_SELF_REPORT"
+                ),
+                "projected_at_utc": proj.get("generated_at_utc", now_iso),
+            }
+            tmp = f"{state_path}.tmp.{os.getpid()}"
+            with open(tmp, "w", encoding="utf-8") as fh:
+                json.dump(state, fh, ensure_ascii=False, indent=1, sort_keys=True)
+                fh.flush()
+                os.fsync(fh.fileno())
+            os.replace(tmp, state_path)
+            with open(state_path, "r", encoding="utf-8") as fh:
+                reread = json.load(fh)
+            for k, v in untouched.items():
+                if reread.get(k) != v:
+                    raise RuntimeError(f"state merge touched forbidden key {k}")
+            return {
+                "applied": True,
+                "created": created,
+                "state_path": state_path,
+                "fresh_signals": sorted(fresh),
+                "attention_state": attention.get("state", "UNKNOWN"),
+                "untouched_verified": True,
+            }
+        finally:
+            fcntl.flock(lock.fileno(), fcntl.LOCK_UN)
 
 
 def project(proj: dict[str, Any]) -> str:

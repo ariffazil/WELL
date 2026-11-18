@@ -109,6 +109,127 @@ def test_missing_load_never_enters_decision_logic(tmp_path):
     assert "5" not in [r.split("=")[-1] for r in a["reasons"] if "default" in r]
 
 
+# --- G1-lite: presence merge into state.json (allowlist, F6/EXPIRED closure) ----
+
+
+def _state_fixture(tmp: pathlib.Path) -> str:
+    st = {
+        "schema": "well_state_v2",
+        "environment": "PROD",
+        "truth_status": "INSUFFICIENT_DATA",
+        "source_type": "BEHAVIORAL_TELEMETRY",
+        "well_score": 0,
+        "biometric": {"hr": 71},
+        "signals_meta": {"injection_ts": "2026-11-18T20:00:00+00:00"},
+        "metrics": {"delta_s": 0.3},
+        "signals": {"peace2": 0.7},
+        "has_verified_telemetry": False,
+        "timestamp": "2026-11-18T20:00:00+00:00",
+        "last_successful_read": "2026-11-18T20:00:00+00:00",
+    }
+    p = tmp / "state.json"
+    p.write_text(json.dumps(st))
+    return str(p)
+
+
+def _load_json(p):
+    return json.loads(pathlib.Path(p).read_text())
+
+
+def test_state_merge_allowlist_only(tmp_path):
+    """Presence merge touches ONLY allowlisted keys; 13-signal schema,
+    biometric, well_score, signals_meta, telemetry flag stay byte-identical."""
+    sp = _state_fixture(tmp_path)
+    log = _log(tmp_path)
+    I.ingest("6.5,5,8", event_log=log)
+    proj = P.build_projection(P.load_events(log))
+    r = P.apply_to_state(proj, sp)
+    assert r["applied"] is True
+    after = _load_json(sp)
+    before = json.loads((tmp_path / "state.json").read_text()) if False else None
+    for k in (
+        "well_score",
+        "biometric",
+        "signals_meta",
+        "metrics",
+        "signals",
+        "has_verified_telemetry",
+        "environment",
+    ):
+        assert after[k] == json.loads(json.dumps(_STATE_FIXTURE_CACHE[k])), k
+    assert after["truth_status"] == "OPERATOR_REPORTED"
+    assert after["evidence_class"] == "SELF_REPORT"
+    assert after["confidence"] == 0.5
+    assert after["human_checkin"]["signals"]["sleep_hours"]["value"] == 6.5
+    assert (
+        after["human_checkin"]["attention_state"]
+        == proj["attention_readiness"]["state"]
+    )
+
+
+_STATE_FIXTURE_CACHE = {
+    "well_score": 0,
+    "biometric": {"hr": 71},
+    "signals_meta": {"injection_ts": "2026-11-18T20:00:00+00:00"},
+    "metrics": {"delta_s": 0.3},
+    "signals": {"peace2": 0.7},
+    "has_verified_telemetry": False,
+    "environment": "PROD",
+}
+
+
+def test_no_fresh_signal_never_asserts_presence(tmp_path):
+    """Stale-only check-in must NOT flip truth_status — presence is asserted
+    only from a FRESH observation. State file content unchanged."""
+    sp = _state_fixture(tmp_path)
+    before = pathlib.Path(sp).read_text()
+    log = _log(tmp_path)
+    I.ingest("6.5,5,8", event_log=log, observed_at=_age_iso(30 * 3600))
+    proj = P.build_projection(P.load_events(log))
+    r = P.apply_to_state(proj, sp)
+    assert r["applied"] is False
+    assert pathlib.Path(sp).read_text() == before  # byte-identical
+
+
+def test_state_merge_idempotent_on_untouched_keys(tmp_path):
+    sp = _state_fixture(tmp_path)
+    log = _log(tmp_path)
+    I.ingest("6.5,5,8", event_log=log)
+    proj = P.build_projection(P.load_events(log))
+    P.apply_to_state(proj, sp)
+    a1 = _load_json(sp)
+    P.apply_to_state(proj, sp)
+    a2 = _load_json(sp)
+    for k in (
+        "well_score",
+        "biometric",
+        "signals_meta",
+        "metrics",
+        "signals",
+        "has_verified_telemetry",
+        "environment",
+        "truth_status",
+        "evidence_class",
+        "human_checkin",
+    ):
+        assert a1[k] == a2[k], k
+
+
+def test_merge_missing_file_creates_minimal_presence_state(tmp_path):
+    """No state.json yet: apply creates a minimal honest presence shell —
+    never a fabricated full state."""
+    sp = str(tmp_path / "new_state.json")
+    log = _log(tmp_path)
+    I.ingest("6.5,5,8", event_log=log)
+    proj = P.build_projection(P.load_events(log))
+    r = P.apply_to_state(proj, sp)
+    assert r["applied"] is True
+    st = _load_json(sp)
+    assert st["truth_status"] == "OPERATOR_REPORTED"
+    assert st["well_score"] is None  # honest null, never invented
+    assert st["has_verified_telemetry"] is False
+
+
 # --- honesty invariants ----------------------------------------------------------
 
 

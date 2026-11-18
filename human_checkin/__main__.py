@@ -14,25 +14,40 @@ Telegram message contract (F13 UX, 2026-11-19):
 
 from __future__ import annotations
 
+import os
 import sys
 
 from .intake import DEFAULT_EVENT_LOG, ingest
-from .projection import DEFAULT_PROJECTION, project, refresh
+from .projection import DEFAULT_PROJECTION, apply_to_state, project, refresh
 
 
-def handle_checkin_reply(text: str,
-                         event_log: str = DEFAULT_EVENT_LOG,
-                         projection_path: str = DEFAULT_PROJECTION) -> str:
-    """Full v1 path: intake -> projection refresh -> BM receipt string."""
+def handle_checkin_reply(
+    text: str,
+    event_log: str = DEFAULT_EVENT_LOG,
+    projection_path: str = DEFAULT_PROJECTION,
+    apply_state: bool = True,
+) -> str:
+    """Full v1 path: intake -> projection refresh -> presence merge -> BM receipt."""
     receipt = ingest(text, event_log=event_log)
     if receipt["status"] == "rejected":
         return f"DITOLAK — {receipt['reason']}\n{receipt['note']}"
     if receipt["status"] == "duplicate":
         return receipt.get("note", "Check-in sama dah tercatat.")
-    # accepted: projection reads from the event log, never from state.json
+    # accepted: projection reads from the event log, never from state.json;
+    # presence merge is allowlist-only and needs a FRESH signal to assert.
     proj = refresh(event_log=event_log, path=projection_path)
+    tail = ""
+    if apply_state:
+        state_path = os.environ.get("WELL_STATE_PATH", "/var/lib/well/state.json")
+        merge = apply_to_state(proj, state_path)
+        if merge.get("applied"):
+            tail = (
+                "\nPresence: OPERATOR_REPORTED direkod (F6 kelihatan). Bukan VERIFIED."
+            )
+        else:
+            tail = "\nPresence: tiada isyarat segar — tiada dakwaan presence dibuat."
     head = "✓ " + project(proj)
-    return head
+    return head + tail
 
 
 def handle_status(projection_path: str = DEFAULT_PROJECTION) -> str:
@@ -40,6 +55,7 @@ def handle_status(projection_path: str = DEFAULT_PROJECTION) -> str:
     try:
         with open(projection_path, "r", encoding="utf-8") as fh:
             import json
+
             proj = json.load(fh)
     except (FileNotFoundError, OSError):
         return "Tiada state manusia lagi. Balas check-in: 6.5,5,8 (tidur,tenaga,beban)."
@@ -53,7 +69,9 @@ def handle_status(projection_path: str = DEFAULT_PROJECTION) -> str:
         else:
             unit = "j" if m == "sleep_hours" else "/10"
             lines.append(f"{label}: {s['value']:g}{unit} [{s['freshness']}]")
-    lines.append(f"Attention: {a.get('state', 'UNKNOWN')} ({a.get('confidence', 'NONE')})")
+    lines.append(
+        f"Attention: {a.get('state', 'UNKNOWN')} ({a.get('confidence', 'NONE')})"
+    )
     return "\n".join(lines)
 
 
