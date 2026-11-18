@@ -114,9 +114,13 @@ def parse_observed_at(raw: str | None) -> _dt.datetime:
     return ts
 
 
-def _idempotency_key(subject: str, source: str, values: dict[str, float],
-                     recorded_at: _dt.datetime | None = None,
-                     bucket_s: int = 300) -> str:
+def _idempotency_key(
+    subject: str,
+    source: str,
+    values: dict[str, float],
+    recorded_at: _dt.datetime | None = None,
+    bucket_s: int = 300,
+) -> str:
     """subject + source + values + 5-minute ARRIVAL bucket (event's own
     recorded time, not wall clock — a retry collapses, a later genuine
     check-in with identical values does not)."""
@@ -152,24 +156,36 @@ def parse_checkin_text(text: str) -> dict[str, float]:
     return out
 
 
-def build_event(values: dict[str, float], subject_id: str = SUBJECT_ID,
-                source: str = SOURCE, observed_at: str | None = None,
-                recorded_at_utc: str | None = None) -> CheckinEvent:
+def build_event(
+    values: dict[str, float],
+    subject_id: str = SUBJECT_ID,
+    source: str = SOURCE,
+    observed_at: str | None = None,
+    recorded_at_utc: str | None = None,
+) -> CheckinEvent:
     """Build a typed event from validated values. Missing fields get an
     explicit missing_reason — never zero, never derived."""
-    now_iso = observed_at or _dt.datetime.now(_dt.timezone.utc).astimezone().isoformat(timespec="seconds")
+    now_iso = observed_at or _dt.datetime.now(_dt.timezone.utc).astimezone().isoformat(
+        timespec="seconds"
+    )
     # per-field observed_at = the check-in moment, stored per field
     observations: list[FieldObservation] = []
     units = {"sleep_hours": "hours", "energy": "score_1_10", "load": "score_1_10"}
     for name in CHECKIN_FIELDS:
         if name in values:
-            observations.append(FieldObservation(
-                measurement=name, value=values[name], unit=units[name],
-                observed_at=now_iso, source=source,
-            ))
+            observations.append(
+                FieldObservation(
+                    measurement=name,
+                    value=values[name],
+                    unit=units[name],
+                    observed_at=now_iso,
+                    source=source,
+                )
+            )
     missing = [
         {"measurement": name, "missing_reason": "not_provided"}
-        for name in CHECKIN_FIELDS if name not in values
+        for name in CHECKIN_FIELDS
+        if name not in values
     ]
     ref_ts = parse_observed_at(recorded_at_utc) if recorded_at_utc else None
     idem = _idempotency_key(subject_id, source, values, recorded_at=ref_ts)
@@ -187,8 +203,9 @@ def build_event(values: dict[str, float], subject_id: str = SUBJECT_ID,
 # --- intake (append-only, idempotent) -------------------------------------------
 
 
-def find_duplicate(event_log: str, event: CheckinEvent,
-                   window_s: int = DEDUPE_WINDOW_S) -> dict[str, Any] | None:
+def find_duplicate(
+    event_log: str, event: CheckinEvent, window_s: int = DEDUPE_WINDOW_S
+) -> dict[str, Any] | None:
     """Return the prior event dict if an identical submission exists:
     same idempotency_key, OR same subject+source+values inside window_s."""
     if not os.path.exists(event_log):
@@ -205,7 +222,10 @@ def find_duplicate(event_log: str, event: CheckinEvent,
                 continue  # corrupted line: skip, never crash intake
             if prior.get("idempotency_key") == event.idempotency_key:
                 return prior
-            if prior.get("subject_id") != event.subject_id or prior.get("source") != event.source:
+            if (
+                prior.get("subject_id") != event.subject_id
+                or prior.get("source") != event.source
+            ):
                 continue
             prior_vals = {
                 o["measurement"]: round(float(o["value"]), 6)
@@ -237,16 +257,25 @@ def append_event(event_log: str, event: CheckinEvent) -> None:
             fcntl.flock(fh.fileno(), fcntl.LOCK_UN)
 
 
-def ingest(text_or_values: str | dict[str, float],
-           event_log: str = DEFAULT_EVENT_LOG,
-           subject_id: str = SUBJECT_ID,
-           source: str = SOURCE,
-           observed_at: str | None = None,
-           recorded_at_utc: str | None = None) -> dict[str, Any]:
+def ingest(
+    text_or_values: str | dict[str, float],
+    event_log: str = DEFAULT_EVENT_LOG,
+    subject_id: str = SUBJECT_ID,
+    source: str = SOURCE,
+    observed_at: str | None = None,
+    recorded_at_utc: str | None = None,
+) -> dict[str, Any]:
     """Full intake path: parse → validate → dedupe → append → receipt.
     NEVER restarts any service. NEVER touches state.json.
     recorded_at_utc: override for backfill/tests (dedupe compares arrival time).
     Returns a receipt dict (accepted | duplicate | rejected)."""
+    if subject_id != SUBJECT_ID:
+        return {
+            "status": "rejected",
+            "reason": f"unknown_subject:{subject_id} (subject binding: {SUBJECT_ID})",
+            "evidence_class": "SELF_REPORT",
+            "note": "Subject tidak terikat. Tiada apa-apa disimpan.",
+        }
     try:
         if isinstance(text_or_values, str):
             values = parse_checkin_text(text_or_values)
@@ -266,8 +295,13 @@ def ingest(text_or_values: str | dict[str, float],
             "note": "Tiada apa-apa disimpan. Betulkan format: tidur,tenaga,beban (cth 6.5,5,8).",
         }
 
-    event = build_event(values, subject_id=subject_id, source=source,
-                        observed_at=observed_at, recorded_at_utc=recorded_at_utc)
+    event = build_event(
+        values,
+        subject_id=subject_id,
+        source=source,
+        observed_at=observed_at,
+        recorded_at_utc=recorded_at_utc,
+    )
     dup = find_duplicate(event_log, event)
     if dup is not None:
         return {

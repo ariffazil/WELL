@@ -25,14 +25,22 @@ def _log(tmp: pathlib.Path) -> str:
 
 
 def _age_iso(seconds: int) -> str:
-    return (_dt.datetime.now(UTC) - _dt.timedelta(seconds=seconds)).astimezone().isoformat(timespec="seconds")
+    return (
+        (_dt.datetime.now(UTC) - _dt.timedelta(seconds=seconds))
+        .astimezone()
+        .isoformat(timespec="seconds")
+    )
 
 
 # --- parsing / validation ------------------------------------------------------
 
 
 def test_parse_basic():
-    assert I.parse_checkin_text("6.5,5,8") == {"sleep_hours": 6.5, "energy": 5.0, "load": 8.0}
+    assert I.parse_checkin_text("6.5,5,8") == {
+        "sleep_hours": 6.5,
+        "energy": 5.0,
+        "load": 8.0,
+    }
 
 
 def test_parse_partial_two_fields():
@@ -62,6 +70,14 @@ def test_no_fourth_field_clarity():
     r = I.ingest("6.5,5,8,7", event_log="/tmp/hc_t4/x.jsonl")
     assert r["status"] == "rejected"
     assert "too_many_fields" in r["reason"]
+
+
+def test_subject_binding_allowlist(tmp_path):
+    """Subject binding (F13 P0 acceptance): only the bound subject may check in."""
+    r = I.ingest("6.5,5,8", event_log=_log(tmp_path), subject_id="not_arif")
+    assert r["status"] == "rejected"
+    assert "unknown_subject" in r["reason"]
+    assert P.load_events(_log(tmp_path)) == []  # nothing written
 
 
 # --- honesty invariants ----------------------------------------------------------
@@ -96,8 +112,12 @@ def test_no_score_synthesis(tmp_path):
 def test_per_signal_freshness_isolation(tmp_path):
     """A NEW energy observation must NOT refresh an OLD sleep observation."""
     log = _log(tmp_path)
-    I.ingest("6.5,5,8", event_log=log, observed_at=_age_iso(12 * 3600))  # 12h old -> STALE band
-    I.ingest({"energy": 6.0, "load": 4.0}, event_log=log)  # fresh energy+load, sleep untouched
+    I.ingest(
+        "6.5,5,8", event_log=log, observed_at=_age_iso(12 * 3600)
+    )  # 12h old -> STALE band
+    I.ingest(
+        {"energy": 6.0, "load": 4.0}, event_log=log
+    )  # fresh energy+load, sleep untouched
     proj = P.build_projection(P.load_events(log))
     assert proj["signals"]["sleep_hours"]["freshness"] in ("STALE", "EXPIRED")
     assert proj["signals"]["energy"]["freshness"] == "FRESH"
@@ -130,13 +150,19 @@ def test_saturated_on_high_load(tmp_path):
 def test_constrained_on_short_sleep(tmp_path):
     log = _log(tmp_path)
     I.ingest("5.0,6,4", event_log=log)
-    assert P.build_projection(P.load_events(log))["attention_readiness"]["state"] == "CONSTRAINED"
+    assert (
+        P.build_projection(P.load_events(log))["attention_readiness"]["state"]
+        == "CONSTRAINED"
+    )
 
 
 def test_available_when_no_constraining_signal(tmp_path):
     log = _log(tmp_path)
     I.ingest("8.0,7,3", event_log=log)
-    assert P.build_projection(P.load_events(log))["attention_readiness"]["state"] == "AVAILABLE"
+    assert (
+        P.build_projection(P.load_events(log))["attention_readiness"]["state"]
+        == "AVAILABLE"
+    )
 
 
 # --- reliability: idempotency, rebuild, atomicity --------------------------------
@@ -198,7 +224,11 @@ def test_evidence_separation(tmp_path):
     log = _log(tmp_path)
     I.ingest("6.5,5,8", event_log=log)
     proj = P.build_projection(P.load_events(log))
-    assert proj["evidence_summary"] == {"self_reported": 3, "system_observed": 0, "sensor_measured": 0}
+    assert proj["evidence_summary"] == {
+        "self_reported": 3,
+        "system_observed": 0,
+        "sensor_measured": 0,
+    }
     assert proj["human_evidence"]["class"] == "PARTIAL_SELF_REPORT"
     assert proj["human_evidence"]["has_verified_telemetry"] is False
 
@@ -206,6 +236,7 @@ def test_evidence_separation(tmp_path):
 def test_no_restart_touch(tmp_path):
     """Intake path must never invoke systemctl / service restart."""
     import inspect
+
     src = inspect.getsource(I) + inspect.getsource(P)
     for forbidden in ("systemctl", "subprocess", "os.system"):
         assert forbidden not in src
