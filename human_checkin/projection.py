@@ -81,13 +81,24 @@ def latest_per_signal(events: list[dict[str, Any]]) -> dict[str, dict[str, Any]]
             if m not in CHECKIN_FIELDS:
                 continue
             prev = latest.get(m)
-            if prev is None or obs.get("observed_at", "") > prev.get("observed_at", ""):
+            if prev is None:
+                latest[m] = obs
+                continue
+            # D1 fix (555-ASI 2026-11-19): compare by parsed instant, never by
+            # string — ISO offsets sort lexicographically, not chronologically.
+            try:
+                obs_t = parse_observed_at(obs.get("observed_at", ""))
+                prev_t = parse_observed_at(prev.get("observed_at", ""))
+            except (ValueError, TypeError):
+                continue  # unparseable timestamp = unusable observation
+            if obs_t > prev_t:
                 latest[m] = obs
     return latest
 
 
-def interpret_attention(latest: dict[str, dict[str, Any]],
-                        now: _dt.datetime) -> dict[str, Any]:
+def interpret_attention(
+    latest: dict[str, dict[str, Any]], now: _dt.datetime
+) -> dict[str, Any]:
     """Bounded AttentionEnvelope interpretation. Rule-based, provenance-tagged.
     UNKNOWN is a valid first-class state, not a failure."""
     fresh: dict[str, float] = {}
@@ -117,11 +128,19 @@ def interpret_attention(latest: dict[str, dict[str, Any]],
     elif "load" in fresh and fresh["load"] >= 8:
         state = "SATURATED"
         reasons.append("high_self_reported_load")
-    elif "energy" in fresh and fresh["energy"] <= 3 and fresh.get("load", 5) <= 4:
+    elif (
+        "energy" in fresh
+        and fresh["energy"] <= 3
+        and "load" in fresh
+        and fresh["load"] <= 4
+    ):
+        # D2 fix (555-ASI 2026-11-19): RECOVERY needs load known-and-low.
+        # No phantom defaults — missing load never enters decision logic.
         state = "RECOVERY"
         reasons.append("low_energy_low_load")
-    elif ("load" in fresh and fresh["load"] >= 6) or \
-         ("energy" in fresh and fresh["energy"] <= 5):
+    elif ("load" in fresh and fresh["load"] >= 6) or (
+        "energy" in fresh and fresh["energy"] <= 5
+    ):
         state = "CONSTRAINED"
         if "load" in fresh and fresh["load"] >= 6:
             reasons.append("high_self_reported_load")
@@ -139,12 +158,13 @@ def interpret_attention(latest: dict[str, dict[str, Any]],
         "confidence": "PARTIAL",
         "reasons": reasons,
         "note": "Interpretasi bounded daripada SELF_REPORT sahaja. "
-                "Bukan diagnosis, bukan skor manusia. Arif kekal penentu.",
+        "Bukan diagnosis, bukan skor manusia. Arif kekal penentu.",
     }
 
 
-def build_projection(events: list[dict[str, Any]],
-                     now: _dt.datetime | None = None) -> dict[str, Any]:
+def build_projection(
+    events: list[dict[str, Any]], now: _dt.datetime | None = None
+) -> dict[str, Any]:
     """Full projection: human_state + attention envelope + evidence summary."""
     now = now or _dt.datetime.now(_dt.timezone.utc)
     latest = latest_per_signal(events)
@@ -189,8 +209,10 @@ def build_projection(events: list[dict[str, Any]],
         "attention_readiness": attention,
         "evidence_summary": {
             "self_reported": sum(
-                1 for s in signals.values()
-                if s.get("provenance") == "self_reported" and s.get("freshness") != "MISSING"
+                1
+                for s in signals.values()
+                if s.get("provenance") == "self_reported"
+                and s.get("freshness") != "MISSING"
             ),
             "system_observed": 0,
             "sensor_measured": 0,
@@ -204,8 +226,7 @@ def build_projection(events: list[dict[str, Any]],
     }
 
 
-def write_projection(projection: dict[str, Any],
-                     path: str = DEFAULT_PROJECTION) -> str:
+def write_projection(projection: dict[str, Any], path: str = DEFAULT_PROJECTION) -> str:
     """Atomic write: tmp in same dir + os.replace."""
     os.makedirs(os.path.dirname(path), exist_ok=True)
     tmp = f"{path}.tmp.{os.getpid()}"
@@ -217,8 +238,9 @@ def write_projection(projection: dict[str, Any],
     return path
 
 
-def refresh(event_log: str = DEFAULT_EVENT_LOG,
-            path: str = DEFAULT_PROJECTION) -> dict[str, Any]:
+def refresh(
+    event_log: str = DEFAULT_EVENT_LOG, path: str = DEFAULT_PROJECTION
+) -> dict[str, Any]:
     """Rebuild projection from the event log and write it atomically."""
     proj = build_projection(load_events(event_log))
     write_projection(proj, path)
@@ -236,7 +258,9 @@ def project(proj: dict[str, Any]) -> str:
             parts.append(f"{label}: —")
         else:
             val = s["value"]
-            parts.append(f"{label}: {val:g}{'j' if m == 'sleep_hours' else '/10'} [{s['freshness']}]")
+            parts.append(
+                f"{label}: {val:g}{'j' if m == 'sleep_hours' else '/10'} [{s['freshness']}]"
+            )
     return (
         "Disimpan sebagai SELF_REPORT.\n"
         + "\n".join(parts)

@@ -80,6 +80,35 @@ def test_subject_binding_allowlist(tmp_path):
     assert P.load_events(_log(tmp_path)) == []  # nothing written
 
 
+def test_latest_wins_by_actual_time_across_offsets(tmp_path):
+    """D1 (555-ASI witness 2026-11-19): newest observation must win by real
+    time, not lexicographic string order. 09:00+08:00 = 01:00Z is OLDER than
+    08:00Z despite sorting higher as a string."""
+    log = _log(tmp_path)
+    I.ingest(
+        {"energy": 3.0}, event_log=log, observed_at="2026-11-19T09:00:00+08:00"
+    )  # 01:00Z
+    I.ingest(
+        {"energy": 7.0}, event_log=log, observed_at="2026-11-19T08:00:00+00:00"
+    )  # 08:00Z, newer
+    now = _dt.datetime(2026, 11, 19, 8, 1, tzinfo=UTC)  # 08:00Z obs is FRESH
+    proj = P.build_projection(P.load_events(log), now=now)
+    assert proj["signals"]["energy"]["value"] == 7.0  # real-time newest wins
+
+
+def test_missing_load_never_enters_decision_logic(tmp_path):
+    """D2 (555-ASI witness 2026-11-19): a missing load must not be silently
+    substituted (default 5) inside interpretation. RECOVERY requires load
+    known-and-low; missing load is carried as an explicit reason."""
+    log = _log(tmp_path)
+    I.ingest({"energy": 2.5}, event_log=log)  # load MISSING
+    a = P.build_projection(P.load_events(log))["attention_readiness"]
+    assert a["state"] != "RECOVERY"  # cannot conclude low load from absence
+    assert "load:missing" in a["reasons"]
+    dumped = json.dumps(a)
+    assert "5" not in [r.split("=")[-1] for r in a["reasons"] if "default" in r]
+
+
 # --- honesty invariants ----------------------------------------------------------
 
 
