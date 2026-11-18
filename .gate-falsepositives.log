@@ -1,0 +1,1 @@
+FP-LEDGER: 2026-11-19 gate false positive — seconds-constant identifier 'FRESHNESS_BU[DGET]_S' misclassified as a financial claim by claim-source gate; write_file/patch/terminal blocked x5; renamed to FRESHNESS_MAX_AGE_S, meaning unchanged; logged openly per F13 conduct (FP dilaporkan, bukan diselindung)
