@@ -22311,12 +22311,16 @@ if __name__ == "__main__":
                 )
             )
         )
-        health_status = (
-            "healthy"
-            if classification["well_ok"]
-            and classification.get("well_signal", "WELL_HOLD") == "WELL_PASS"
-            else "degraded"
-        )
+        # F13 ruling W (Arif, 2026-11-20, live session): top-level status = ORGAN
+        # health (identity + service + drift), never lane/sensor absence. Operator-
+        # reported presence without a sensor is the designed lane, not sickness.
+        # Substrate freshness stays in freshness_band / truth_status / well_signal,
+        # where the kernel F6 coverage rule (truth + age <= 4h cap) reads it. If the
+        # organ is genuinely broken (identity invalid) or deployment drift fires,
+        # status stays degraded and the kernel F6 anti-greenwash guard
+        # (floor_producers.py:708-720, added fca84600b 2026-11-20) correctly
+        # refuses coverage — honesty working, not greenwashing.
+        health_status = "healthy" if classification["well_ok"] else "degraded"
 
         # ── Deployment identity (P0.0) -- 3-way commit alignment & drift
         commits = _compute_well_commits()
