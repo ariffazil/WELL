@@ -527,6 +527,168 @@ def _is_stale_band(band: str | None) -> bool:
     return (band or "EXPIRED") != "FRESH"
 
 
+# ── WELL_HUMAN_ATTENTION_DEAMPLIFICATION (F13 directive 2026-11-20) ──────────
+# The lanes block is the SEMANTIC reading of the human substrate; the
+# freshness block above stays the observation-validity arithmetic (D1).
+# Absence of a new self-report is NOT_RECENT — a valid state, never a
+# negative health claim. Silence is a valid state.
+LANE_STATUS_VOCAB = ("FRESH", "NOT_RECENT", "UNMEASURED", "UNAVAILABLE", "UNKNOWN")
+
+_HUMAN_STATE_PATH = "/var/lib/well/human_state.json"
+_HUMAN_REALITY_LOG = "/var/lib/well/human_reality.jsonl"
+_HUMAN_CONSENT_PATH = "/var/lib/well/human_consent.json"
+
+
+def _age_from_iso(ts_iso: str | None) -> float | None:
+    if not ts_iso or not isinstance(ts_iso, str):
+        return None
+    try:
+        ts = datetime.datetime.fromisoformat(ts_iso.strip().replace("Z", "+00:00"))
+        if ts.tzinfo is None:
+            ts = ts.replace(tzinfo=datetime.timezone.utc)
+        return max(
+            0.0, (datetime.datetime.now(datetime.timezone.utc) - ts).total_seconds()
+        )
+    except (ValueError, TypeError):
+        return None
+
+
+def _lane_view() -> dict[str, Any]:
+    """Lane-split human substrate view — no cross-lane substitution, no
+    averaging, no health verdict derived from lane absence."""
+    lanes: dict[str, Any] = {}
+
+    # SELF_REPORT — human-only truth, never synthesized by machines.
+    try:
+        self_lane: dict[str, Any] = {
+            "status": "UNMEASURED",
+            "observed_at": None,
+            "age_seconds": None,
+        }
+        if _os.path.exists(_HUMAN_STATE_PATH):
+            with open(_HUMAN_STATE_PATH) as _fh:
+                _hs = json.load(_fh)
+            counts = _hs.get("freshness_counts", {}) or {}
+            reported = (_hs.get("evidence_summary", {}) or {}).get("self_reported", 0)
+            gen = _hs.get("generated_at_utc")
+            self_lane["age_seconds"] = _age_from_iso(gen)
+            self_lane["observed_at"] = gen
+            if counts.get("FRESH", 0) > 0:
+                self_lane["status"] = "FRESH"
+            elif reported:
+                self_lane["status"] = "NOT_RECENT"
+            self_lane["evidence_class"] = (_hs.get("human_evidence", {}) or {}).get(
+                "class"
+            )
+        lanes["self_report"] = self_lane
+    except Exception as _exc:  # noqa: BLE001 — lane view never breaks /health
+        lanes["self_report"] = {
+            "status": "UNKNOWN",
+            "note": f"unreadable: {type(_exc).__name__}",
+        }
+
+    # SYSTEM_OBSERVED — metadata-only session observer, consent-gated.
+    sys_lane: dict[str, Any] = {
+        "status": "UNMEASURED",
+        "observed_at": None,
+        "age_seconds": None,
+    }
+    try:
+        consent_active = False
+        if _os.path.exists(_HUMAN_CONSENT_PATH):
+            with open(_HUMAN_CONSENT_PATH) as _fh:
+                consent_active = json.load(_fh).get("active") is True
+        sys_lane["consent_active"] = consent_active
+        if _os.path.exists(_HUMAN_REALITY_LOG):
+            with open(_HUMAN_REALITY_LOG) as _fh:
+                _last = None
+                for _line in _fh:
+                    _line = _line.strip()
+                    if _line:
+                        _last = _line
+            if _last:
+                _rec = json.loads(_last)
+                sys_lane["observed_at"] = _rec.get("recorded_at_utc")
+                sys_lane["age_seconds"] = _age_from_iso(sys_lane["observed_at"])
+                if (
+                    sys_lane["age_seconds"] is not None
+                    and sys_lane["age_seconds"] <= WELL_MAX_FRESH_AGE_SECONDS
+                ):
+                    sys_lane["status"] = "FRESH"
+                else:
+                    sys_lane["status"] = "NOT_RECENT"
+        lanes["system_observed"] = sys_lane
+    except Exception as _exc:  # noqa: BLE001
+        lanes["system_observed"] = {
+            "status": "UNKNOWN",
+            "note": f"unreadable: {type(_exc).__name__}",
+        }
+
+    # SENSOR_MEASURED — consent-bound device lane. No device in mesh:
+    # UNAVAILABLE (not FAIL, not zero).
+    lanes["sensor_measured"] = {
+        "status": "UNAVAILABLE",
+        "observed_at": None,
+        "age_seconds": None,
+        "note": "no consent-bound sensor device in mesh",
+    }
+
+    _self = lanes["self_report"].get("status")
+    _sys = lanes["system_observed"].get("status")
+    if _self == "FRESH":
+        overall, note = "FRESH", "self-report coverage present"
+    elif _sys == "FRESH":
+        overall, note = (
+            "PARTIAL",
+            "self-report not recent; observational metadata fresh — PARTIAL is not unhealthy",
+        )
+    elif _self == "NOT_RECENT":
+        overall, note = (
+            "PARTIAL",
+            "no new self-report — NOT_RECENT is a valid state, not a health failure",
+        )
+    else:
+        overall, note = (
+            "UNMEASURED",
+            "no human-lane coverage yet; absence stays absence",
+        )
+    return {
+        "lanes": lanes,
+        "overall": overall,
+        "note": note,
+        "vocabulary": list(LANE_STATUS_VOCAB),
+        "contract": "lane absence never collapses into a human health claim; no cross-lane substitution",
+    }
+
+
+def _ask_gate_view() -> dict[str, Any]:
+    """The single sanctioned ask contract for every agent. TTL expiry NEVER
+    appears here as a prompt trigger; consult well_ask_gate before any ask."""
+    try:
+        from human_checkin.ask_gate import explain as _agx
+
+        _ex = _agx()
+        return {
+            "required": bool(_ex.get("well_input_required")),
+            "open_requests": len(_ex.get("open_requests", [])),
+            "active_mode": _ex.get("active_mode", "NORMAL"),
+            "suppression_reason": None
+            if _ex.get("well_input_required")
+            else "NO_DECISION_DEPENDENCY",
+            "contract": (
+                "TTL/freshness expiry never authorizes a human prompt; open a "
+                "request only for a named blocked decision via well_ask_gate"
+            ),
+            "privacy": _ex.get("privacy"),
+        }
+    except Exception as _exc:  # noqa: BLE001 — gate view never breaks /health
+        return {
+            "required": False,
+            "suppression_reason": "GATE_UNAVAILABLE",
+            "note": f"ask_gate unreadable: {type(_exc).__name__} — default to silent exit",
+        }
+
+
 def _observation_clock(state: dict[str, Any] | None) -> tuple[Any, float | None, str]:
     """Pick the clock that says when a human reading was last actually taken.
 
@@ -15957,6 +16119,13 @@ if __name__ == "__main__":
                 "honesty": classification.get("honesty"),
                 "honesty_banner": classification.get("honesty_banner"),
                 "clarity": _clarity,
+                # WELL_HUMAN_ATTENTION_DEAMPLIFICATION (F13 2026-11-20):
+                # additive lane view + the only sanctioned ask contract.
+                # `freshness_band`/`truth_status` above keep their legacy
+                # arithmetic for existing consumers; agents must gate any
+                # human prompt on `well_input_required`, never on freshness.
+                "human_lanes": _lane_view(),
+                "well_input_required": _ask_gate_view(),
             }
         )
 
@@ -16959,6 +17128,93 @@ def _get_live_G() -> tuple[float | str | None, str | None]:
         return "UNMEASURED", "G exists in apex_scalars but value is None."
     except Exception as exc:
         return "UNMEASURED", f"arifOS kernel unreachable: {exc}"
+
+
+# ── WELL_HUMAN_ATTENTION_DEAMPLIFICATION (F13 directive 2026-11-20) ─────────
+@mcp.tool()
+def well_ask_gate(
+    action: str = "check",
+    decision_object: str | None = None,
+    input_class: str = "human_state",
+    scope: str = "",
+    critical: bool = False,
+    request_id: str | None = None,
+    resolution: str = "",
+    mode: str = "",
+    mode_scope: str = "current work session",
+    mode_ttl_s: int = 8 * 3600,
+) -> dict:
+    """THE sanctioned gate for any human WELL ask (de-amplification v1).
+
+    Binding rules: TTL/freshness expiry NEVER authorizes a human prompt. A
+    prompt is allowed only for a NAMED blocked decision (decision_object)
+    whose answer can change its verdict, when no equivalent request is open
+    (dedup across ALL agents), and the budget permits (one ask per decision
+    per scope window). Human silence is never a health claim.
+
+    Actions:
+      check    — consult BEFORE asking; returns well_input_required + reason.
+      open     — open (first agent) or subscribe (later agents) to a request
+                 for a named blocked decision.
+      resolve  — record the human's scoped answer (all subscribers consume).
+      close    — decision no longer depends on human input; close, no ask.
+      mode     — set a bounded mode: NORMAL / LOW_ATTENTION / STOP_NONCRITICAL
+                 / HUMAN_ONLY (expiring, revisable, non-diagnostic).
+      get_mode — read the active mode.
+      explain  — bounded gate-state diagnostic; no human-state content.
+    """
+    from human_checkin import ask_gate as _gate
+
+    a = (action or "check").lower()
+    if a == "check":
+        return _gate.check(
+            decision_object=decision_object,
+            input_class=input_class,
+            scope=scope,
+            critical=critical,
+        )
+    if a == "open":
+        if not decision_object or not str(decision_object).strip():
+            return {
+                "error": "decision_object required for open — name the blocked decision"
+            }
+        return _gate.open_request(
+            str(decision_object),
+            input_class=input_class,
+            scope=scope,
+            critical=critical,
+            opened_by="well_mcp_caller",
+        )
+    if a == "resolve":
+        if not request_id or not resolution:
+            return {"error": "request_id and resolution required for resolve"}
+        return _gate.resolve(request_id, resolution)
+    if a == "close":
+        if not request_id:
+            return {"error": "request_id required for close"}
+        return _gate.close_request(request_id)
+    if a == "mode":
+        if not mode:
+            return {"error": "mode required for action=mode"}
+        return _gate.set_mode(
+            mode, scope=mode_scope, ttl_s=mode_ttl_s, source="SELF_REPORT"
+        )
+    if a == "get_mode":
+        return _gate.get_mode()
+    if a == "explain":
+        return _gate.explain()
+    return {
+        "error": f"unknown action: {action}",
+        "valid_actions": [
+            "check",
+            "open",
+            "resolve",
+            "close",
+            "mode",
+            "get_mode",
+            "explain",
+        ],
+    }
 
 
 def _get_live_apex_scalars() -> dict:
@@ -22404,6 +22660,13 @@ if __name__ == "__main__":
                 },
                 # Boundary disclaimer
                 "boundary_notice": "Not diagnosis. Not therapy. Reflective readiness only. Arif remains final judge.",
+                # ── WELL_HUMAN_ATTENTION_DEAMPLIFICATION (F13 2026-11-20) ──
+                # Additive lane view + the only sanctioned ask contract.
+                # Legacy fields above keep their arithmetic; agents must gate
+                # any human prompt on well_input_required, never on freshness
+                # age. Lane absence never collapses into a health failure.
+                "human_lanes": _lane_view(),
+                "well_input_required": _ask_gate_view(),
             }
         )
 
