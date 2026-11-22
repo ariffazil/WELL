@@ -1,6 +1,6 @@
 ---
 id: well-substrate-readiness
-name: well-substrate-readiness
+name: WELL-substrate-readiness
 version: 1.0.0-2026.06.25
 description: Human readiness — vitality, fatigue, dignity. Reflect, never diagnose.
 owner: WELL team
