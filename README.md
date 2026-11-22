@@ -1,11 +1,11 @@
 <!-- SOT-MANIFEST
 owner: Muhammad Arif bin Fazil (F13 SOVEREIGN)
-federation_release: v2026.11.18
-last_verified: 2026-11-18T07:32:07Z
-source_commit: 02465de
-live_commit: b7a1b9a (v2026-11-18 runtime on host)
+federation_release: v2026.11.23
+last_verified: 2026-11-22T23:36:39Z
+source_commit: b88d9f2
+live_commit: b88d9f2 (v2026-11-23 runtime on host, /health source=built=deployed, drift=false)
 live_health: degraded (OBS 2026-11-18) — REFLECT_ONLY, no autonomy escalation (SELF_REPORT / EXPIRED)
-tools_live: 10 (canonical, live-witnessed via :18083 MCP tools/list, OBS 2026-11-18: well_assess_homeostasis, well_assess_reliability, well_check_repair, well_classify_substrate, well_guard_dignity, well_machine_diagnose, well_machine_recommend, well_registry_status, well_trace_lineage, well_validate_vitality)
+tools_live: 10 (canonical, live-reprobed 2026-11-22 via :18083 /health tool_count=10; names: well_assess_homeostasis, well_assess_reliability, well_check_repair, well_classify_substrate, well_guard_dignity, well_machine_diagnose, well_machine_recommend, well_registry_status, well_trace_lineage, well_validate_vitality)
 authority_ceiling: REFLECT_ONLY
 apex_zen: A2A delegates ⊥ MCP equips ⊥ ACT mutates ⊥ arifOS governs ⊥ F13 decides
 honesty: H-WELL is OPERATOR_REPORTED (SELF_REPORT/EXPIRED 5.9h) until wearable/biometric inject; M-WELL machine_state.json is separate
