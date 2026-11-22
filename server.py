@@ -6632,14 +6632,26 @@ def well_readiness(
     datum = _human_datum(state)
     human_reported = bool(datum.get("operator_datum_present"))
     # PR-0a cross-substrate guard (2026-11-22):
-    # A stored well_score is a composite and may NEVER be published as the
-    # operator's body when self_report_score is None and no verified sensor exists.
+    # Provenance-based admission: publish score ONLY when backed by verified
+    # telemetry, an explicit self_report_score, a real operator biometric datum
+    # (not explicitly absent self_report_score=None), or a fresh self_reported human_checkin.
     has_verified = _has_verified_telemetry(state)
     self_report_score = state.get("self_report_score")
-    score_publishable = (not insufficient) and (
-        has_verified or (human_reported and self_report_score is not None)
+    explicit_absent = ("self_report_score" in state) and (self_report_score is None)
+    hc_signals = ((state.get("human_checkin") or {}).get("signals") or []) if isinstance(state.get("human_checkin"), dict) else []
+    has_checkin_self = any(
+        isinstance(sig, dict)
+        and sig.get("provenance") == "self_reported"
+        and str(sig.get("freshness", "")).upper() != "EXPIRED"
+        for sig in hc_signals
     )
-    raw_score = state.get("well_score") if has_verified else self_report_score
+    has_human_provenance = (
+        (self_report_score is not None)
+        or (human_reported and not explicit_absent)
+        or has_checkin_self
+    )
+    score_publishable = (not insufficient) and (has_verified or has_human_provenance)
+    raw_score = self_report_score if self_report_score is not None else state.get("well_score")
     score: float | None
     if score_publishable and raw_score is not None:
         try:
