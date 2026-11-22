@@ -201,3 +201,29 @@ def test_machine_load_delta_never_writes_well_score(tmp_path, monkeypatch):
     # machine evidence itself must survive under machine provenance
     assert after["metrics"]["cognitive"]["decision_fatigue"] == 9.0
     assert "W6_METABOLIC_PAUSE" in after["floors_violated"]
+
+
+# ── Test G — Converse metamorphic test (Case C: H changes, M invariant) ──────
+def test_human_self_report_changes_h_well_without_mutating_m_well(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """Case C (Copilot metamorphic converse): fresh human self-report updates H_WELL
+    while M_WELL stays completely invariant (bidirectional substrate separation)."""
+    fixed_m = {
+        "state": "STABLE",
+        "rank": 4,
+        "evidence": "fixed-machine-telemetry",
+        "uncertainty": 0.05,
+        "source": "machine_state.json",
+    }
+    monkeypatch.setattr(vg, "assess_m_well", lambda: dict(fixed_m))
+
+    gate_no_h = vitality_gate(state=_operator_reported_state(self_report_score=None), sensor_data=None)
+    gate_with_h = vitality_gate(
+        state=_operator_reported_state(self_report_score=78, self_report_source="SELF_REPORTED"),
+        sensor_data=None,
+    )
+    assert gate_no_h["H_WELL"]["state"] == "UNKNOWN"
+    assert gate_with_h["H_WELL"]["state"] == "READY"
+    assert gate_no_h["M_WELL"] == fixed_m
+    assert gate_with_h["M_WELL"] == fixed_m
