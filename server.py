@@ -6631,14 +6631,15 @@ def well_readiness(
     insufficient, _insufficient_reasons = _state_is_insufficient(state)
     datum = _human_datum(state)
     human_reported = bool(datum.get("operator_datum_present"))
-    # A stored well_score is a reading only when the record is not a fixture and a
-    # person or a verified sensor supplied it. The April mock still says 100 / HIGH,
-    # and _ensure_well_identity mints peace2=1.0 as INJECTED_DEFAULT (D4). Neither
-    # may be published as the operator's body.
+    # PR-0a cross-substrate guard (2026-11-22):
+    # A stored well_score is a composite and may NEVER be published as the
+    # operator's body when self_report_score is None and no verified sensor exists.
+    has_verified = _has_verified_telemetry(state)
+    self_report_score = state.get("self_report_score")
     score_publishable = (not insufficient) and (
-        human_reported or _has_verified_telemetry(state)
+        has_verified or (human_reported and self_report_score is not None)
     )
-    raw_score = state.get("well_score")
+    raw_score = state.get("well_score") if has_verified else self_report_score
     score: float | None
     if score_publishable and raw_score is not None:
         try:
@@ -6662,13 +6663,15 @@ def well_readiness(
         except (ValueError, TypeError):
             pass
 
-    # Classify. No score is not a zero, and it is never GREEN.
+    # Classify. No score is not a zero, and it is never GREEN or RED.
+    # Grammar boundary (WELL != arifOS): WELL emits advisory postures
+    # (PROCEED / SIMPLIFY / PAUSE_ADVISORY / INJECT_NEEDED), never constitutional HOLD.
     if ttl_hours > TTL_STALE:
         color, action = "STALE", "INJECT_NEEDED"
     elif score is None:
         color, action = "UNKNOWN", "INJECT_NEEDED"
     elif ttl_hours > TTL_WARN:
-        color, action = "RED", "HOLD"
+        color, action = "STALE", "INJECT_NEEDED"
     elif ttl_hours > TTL_FRESH:
         color, action = "YELLOW", "SIMPLIFY"
     elif score >= 75:
@@ -6676,7 +6679,7 @@ def well_readiness(
     elif score >= 50:
         color, action = "YELLOW", "SIMPLIFY"
     else:
-        color, action = "RED", "HOLD"
+        color, action = "RED", "PAUSE_ADVISORY"
 
     # Build reason
     reasons = []
@@ -6710,9 +6713,9 @@ def well_readiness(
 
         gate = _vitality_gate(state=state)
         g_verdict = str(gate.get("verdict", ""))
-        # Gate can only tighten posture (never invent a greener color)
+        # Gate can only tighten posture (never invent a greener color, never emit constitutional HOLD)
         if g_verdict in ("HOLD", "RECOVER") and action in ("PROCEED", "SIMPLIFY"):
-            action = "HOLD" if g_verdict == "HOLD" else "SIMPLIFY"
+            action = "PAUSE_ADVISORY" if g_verdict == "HOLD" else "SIMPLIFY"
             color = "RED" if g_verdict == "HOLD" else "YELLOW"
             reasons.append(
                 f"gate={g_verdict}/{gate.get('weakest_substrate')} "
