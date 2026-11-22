@@ -136,6 +136,18 @@ def probe_human() -> dict:
         if fatigue is not None:
             signals["decision_fatigue"] = fatigue
 
+        # PR-0a boundary: without sensor or explicit human self-report, never
+        # instantiate a human state (never map derived/missing 0 to CRITICAL).
+        if not is_sensor and not is_self:
+            signals["probe"] = "NO_HUMAN_REPORT_OR_SENSOR"
+            return {"score": None, "state": "UNKNOWN", "signals": signals}
+
+        freshness = (data.get("freshness") or {}).get("status", "")
+        age_h = data.get("state_age_hours")
+        if freshness in ("stale", "expired") or (isinstance(age_h, (int, float)) and age_h > 12):
+            signals["probe"] = "EXPIRED_HUMAN_REPORT"
+            return {"score": None, "state": "UNKNOWN", "signals": signals}
+
         if h_strength is None and well_score is None and clarity is None:
             signals["probe"] = "NO_HUMAN_FIELDS"
             return {"score": None, "state": "UNKNOWN", "signals": signals}

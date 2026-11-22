@@ -539,21 +539,41 @@ def assess_h_well(
         evidence_parts.append(f"stale_{age_hours:.0f}h")
         uncertainty = 0.8
     elif truth == "OPERATOR_REPORTED":
-        if well_score is not None:
-            if well_score >= 70:
+        # PR-0a cross-substrate guard (2026-11-22):
+        # Composite well_score may NEVER instantiate H_WELL or carry a
+        # self_report label when self_report_score is absent (None).
+        self_report = state.get("self_report_score")
+        if self_report is None:
+            h_state = "UNKNOWN"
+            h_rank = 0
+            evidence_parts.append("no_human_observation")
+            uncertainty = 0.85
+        elif state.get("self_report_scale") or state.get("self_report_metric"):
+            # Declared scale travels with the observation; until PR-1 binds
+            # scale semantics, preserve the raw SELF_REPORTED observation
+            # without misreading 0 as CRITICAL.
+            h_state = "UNKNOWN"
+            h_rank = 0
+            sr_src = state.get("self_report_source") or "SELF_REPORTED"
+            evidence_parts.append(
+                f"self_report_score={self_report} ({sr_src}; scale_unbound)"
+            )
+            uncertainty = 0.5
+            sources.append(str(sr_src))
+        else:
+            if self_report >= 70:
                 h_state = "READY"
-            elif well_score >= 50:
+            elif self_report >= 50:
                 h_state = "BELOW_BASELINE"
-            elif well_score >= 30:
+            elif self_report >= 30:
                 h_state = "DEGRADED"
             else:
                 h_state = "CRITICAL"
-        else:
-            h_state = "UNKNOWN"
-        h_rank = _rank(h_state)
-        evidence_parts.append(f"self_report_score={well_score}")
-        uncertainty = 0.4
-        sources.append("biometric_inject.sh")
+            h_rank = _rank(h_state)
+            sr_src = state.get("self_report_source") or "SELF_REPORTED"
+            evidence_parts.append(f"self_report_score={self_report} ({sr_src})")
+            uncertainty = 0.4
+            sources.append("biometric_inject.sh")
     else:
         h_state = "READY"
         h_rank = 4
@@ -599,15 +619,16 @@ def assess_h_well(
                 )
             combined_rank = min(combined_rank, substrate_rank + 1)
         else:
-            # No self-report — substrate is the only signal (cap at rank 3 to prevent ungrounded READY)
-            combined_rank = min(substrate_rank, 3)
+            # PR-0a invariant: machine carbon inference degrades evidence/uncertainty,
+            # NEVER instantiates H_WELL state when no human observation exists.
+            combined_rank = 0
             evidence_parts.append(
                 f"substrate_only readiness={readiness:.2f} "
                 f"circadian={circadian.get('phase', '?')} "
-                f"sleeping={sleep.get('sleeping', False)}"
+                f"sleeping={sleep.get('sleeping', False)} (uninstantiated: no human observation)"
             )
             sources.append("machine_human_substrate")
-            uncertainty = max(uncertainty, 0.5)
+            uncertainty = max(uncertainty, 0.7)
 
         if sleep.get("sleeping"):
             evidence_parts.append("sleep_detected")
