@@ -26,7 +26,7 @@ constitutional_floors: [F1, F2, F4, F5, F6, F8, F11, F13]
 truth_level: 1
 schema_ref: well_resource_chemistry_glue_v1
 companion_tools: [well_couple_human_machine, well_attest_to_kernel,
-                  well_measure_gradient, well_detect_boundary,
+                  well_measure_gradient, well_guard_dignity,
                   well_assess_machine_substrate, well_coupled_readiness]
 federation_siblings: [arifos://kernel/governance, aforge://execution/shell,
                       aaa://control/cockpit, geox://earth/evidence,

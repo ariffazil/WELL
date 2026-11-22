@@ -65,7 +65,7 @@ Total: 9 prompts (matches 9 canonical loop stages)
 ## §3. TOOLS (canonical — existing in server.py)
 
   17+ canonical tools (somatic surface):
-    well_classify_substrate, well_detect_boundary,
+    well_classify_substrate, well_guard_dignity,
     well_trace_lineage, well_measure_gradient,
     well_assess_metabolism, well_assess_homeostasis,
     well_check_repair, well_validate_vitality,

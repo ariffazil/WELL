@@ -35,7 +35,7 @@ any reasoning, before any action: load the canon.
 
 Every WELL interaction begins with the Boundary-Sense protocol:
 1. Classify the substrate (well_classify_substrate)
-2. Detect the boundary (well_detect_boundary)
+2. Assess reliability & dignity (well_assess_reliability, well_guard_dignity)
 3. Check sovereignty entropy (well_assess_sovereign_entropy)
 4. Assess coupling if needed (well_assess_metabolism)
 

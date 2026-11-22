@@ -60,7 +60,7 @@ It has five lenses, each a different aspect of "what is alive and well":
   │  G-WELL — Governance gradient                                        │
   │    Subject:  Floor compliance, autonomic coherence, lane discipline  │
   │    Domain:   floor integrity, drift detection, asymmetry preservation│
-  │    Tools:    well_classify_substrate, well_detect_boundary,          │
+  │    Tools:    well_classify_substrate, well_guard_dignity,             │
   │              well_assess_governance                                  │
   ├──────────────────────────────────────────────────────────────────────┤
   │  U-WELL — Universal substrate classifier                             │

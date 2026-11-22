@@ -18,7 +18,7 @@ loop_position: observe
 blast_radius: LOCAL
 mutation_allowed: false
 required_resources: [well://bio/signals, well://machine/substrate]
-companion_tools: [well_classify_substrate, well_detect_boundary,
+companion_tools: [well_classify_substrate, well_guard_dignity,
                   well_assess_reliability, well_trace_lineage]
 forged_at: 2026-06-27
 ---end_well_meta
@@ -31,7 +31,7 @@ The 111 stage observes the substrate. It does NOT reason, route, or
 act. It collects evidence.
 
 **Pre-requisite:** Boundary-Sense protocol must have run (classify → detect → entropy).
-If Boundary-Sense has not run, run it first via well_classify_substrate + well_detect_boundary.
+If Boundary-Sense has not run, run it first via well_classify_substrate + well_guard_dignity.
 
 ## Observation targets
 

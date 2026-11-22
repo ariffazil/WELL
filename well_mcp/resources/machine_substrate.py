@@ -27,7 +27,7 @@ truth_level: 2  # empirical about the deployment
 schema_ref: well_resource_machine_substrate_v1
 companion_tools: [well_assess_reliability, well_machine_state,
                   well_measure_machine_entropy, well_assess_machine_substrate,
-                  well_compute_metabolic_flux, well_detect_boundary]
+                  well_compute_metabolic_flux, well_guard_dignity]
 forbidden_actions: [auto_remediate, restart_service, kill_process,
                     modify_firewall, bypass_governance, self_monitor]
 forged_at: 2026-06-27

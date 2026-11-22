@@ -31,7 +31,7 @@ The 666 stage is self-critique. WELL checks its own reflection before
 yielding to arifOS for adjudication.
 
 **Pre-requisite:** Boundary-Sense protocol must have classified the substrate
-and detected boundary state. If not, run well_classify_substrate + well_detect_boundary first.
+and detected boundary state. If not, run well_classify_substrate + well_guard_dignity first.
 
 ## Step 1 — DOCTRINE COMPLIANCE
 
