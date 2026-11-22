@@ -29,7 +29,9 @@ import os
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Optional, Sequence
+
+from ..receipts import default_receipt_logs, newest_real_receipt_age_s
 
 WELL_STATE_PATH_DEFAULT = "/var/lib/well/state.json"
 INTAKE_LOG_DEFAULT = "/var/log/well/intake.log"
@@ -55,29 +57,20 @@ def _read_state(state_path: Optional[str]) -> dict:
 def _last_intake_age_s(
     log_path: Optional[str], now: Optional[float]
 ) -> Optional[float]:
-    """Age (seconds) of the newest structured receipt in the intake log.
+    """Age (seconds) of the newest REAL receipt in the intake stream.
 
-    Returns None when the log is unreadable or contains no parseable ts
-    (honest None — never a fabricated age).
+    2026-11-23 (F13 GO B): the previous implementation took the newest
+    parseable timestamp in the intake log — but that file is the well_ingest
+    CRON'S STDOUT, and the cron writes a line every 30 minutes whether or not
+    anything arrived (`status: NO_INTAKE`). Measured live: 3206 heartbeat
+    lines and ZERO real receipts in the whole history, so the flow leg was
+    covered by CRON LIVENESS rather than by reality entering the substrate —
+    and a self-report check-in never touched that log at all.
+
+    Heartbeats are now excluded (D1 — a heartbeat may write its own liveness
+    fields and nothing else); see well_mcp/receipts.py for the full contract.
     """
-    p = Path(log_path or INTAKE_LOG_DEFAULT)
-    try:
-        lines = p.read_text(errors="replace").strip().splitlines()
-    except Exception:
-        return None
-    now = now if now is not None else time.time()
-    for line in reversed(lines):
-        try:
-            ts = json.loads(line).get("ts")
-            if not ts:
-                continue
-            dt = datetime.fromisoformat(str(ts))
-            if dt.tzinfo is None:
-                dt = dt.replace(tzinfo=timezone.utc)
-            return max(0.0, now - dt.timestamp())
-        except Exception:
-            continue
-    return None
+    return newest_real_receipt_age_s([log_path or INTAKE_LOG_DEFAULT], now=now)
 
 
 def _canonical_dignity_surface(server_py: Optional[str]) -> bool:
@@ -96,6 +89,8 @@ async def well_measure_floor_f6(
     intake_log: Optional[str] = None,
     server_py: Optional[str] = None,
     now: Optional[float] = None,
+    receipt_logs: Optional[Sequence[str]] = None,
+    self_report_log: Optional[str] = None,
 ) -> dict:
     """F6 MARUAH floor instrument v0 — coverage-first, null-unless-covered.
 
@@ -139,8 +134,18 @@ async def well_measure_floor_f6(
         and age_s is not None
         and age_s <= STATE_MAX_AGE_S
     )
-    # 2. consequence_flow
-    intake_age = _last_intake_age_s(intake_log, now)
+    # 2. consequence_flow — the age of the newest REAL receipt (human reality
+    #    entering the substrate). 2026-11-23 (F13 GO B): cron heartbeats no
+    #    longer count, and the self-report lane does.
+    if receipt_logs is not None:
+        logs = list(receipt_logs)
+    elif intake_log:
+        # An explicit intake_log means "this stream only" — keeps callers (and
+        # tests) isolated from the live substrate.
+        logs = [intake_log] + ([self_report_log] if self_report_log else [])
+    else:
+        logs = default_receipt_logs(self_report_log=self_report_log)
+    intake_age = newest_real_receipt_age_s(logs, now=now)
     flow_ok = intake_age is not None and intake_age <= INTAKE_MAX_AGE_S
     # 3. dignity_surface
     surface_ok = _canonical_dignity_surface(server_py)

@@ -553,6 +553,44 @@ def _age_from_iso(ts_iso: str | None) -> float | None:
         return None
 
 
+def _consequence_flow_view() -> dict[str, Any]:
+    """F6 consequence_flow leg — evidence only, no verdict.
+
+    Age of the newest REAL receipt (human reality entering the substrate).
+    Cron heartbeats are liveness, not receipt, and are excluded — see
+    well_mcp/receipts.py. Lives here as a thin wrapper so the served surface
+    never imports the F6 instrument module (A4 scar guard).
+    """
+    try:
+        from well_mcp.receipts import consequence_flow_view
+
+        return consequence_flow_view()
+    except Exception as exc:  # never break the health surface for a leg
+        return {
+            "covered": False,
+            "last_receipt_age_s": None,
+            "band_seconds": 24 * 3600,
+            "flow_factor": 0.0,
+            "note": "consequence_flow unavailable (%s) — the kernel will assume the "
+                    "worst case rather than a painted number" % exc,
+        }
+
+
+def _dignity_surface_view() -> dict[str, Any]:
+    """F6 dignity_surface leg — static presence of the canonical Ω-WELL-12
+    guard. Evidence only; no verdict."""
+    try:
+        from well_mcp.receipts import dignity_surface_view
+
+        return dignity_surface_view()
+    except Exception as exc:
+        return {
+            "covered": False,
+            "guard": "Ω-WELL-12 well_guard_dignity (canonical server.py)",
+            "note": "dignity surface unavailable (%s)" % exc,
+        }
+
+
 def _lane_view() -> dict[str, Any]:
     """Lane-split human substrate view — no cross-lane substitution, no
     averaging, no health verdict derived from lane absence."""
@@ -22682,6 +22720,15 @@ if __name__ == "__main__":
                 # age. Lane absence never collapses into a health failure.
                 "human_lanes": _lane_view(),
                 "well_input_required": _ask_gate_view(),
+                # ── F6 MARUAH evidence legs (F13 GO A, 2026-11-23) ──
+                # The served surface now carries the SAME two legs WELL's own
+                # instrument computes, so arifOS no longer has to assume the
+                # worst case (flow factor 0) when it reads F6 coverage.
+                # EVIDENCE ONLY — no verdict, and deliberately no reference to
+                # the F6 instrument module: the production monolith must never
+                # gain one (A4 scar guard — a dual surface would drift).
+                "consequence_flow": _consequence_flow_view(),
+                "dignity_surface": _dignity_surface_view(),
             }
         )
 
