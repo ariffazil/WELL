@@ -28,6 +28,6 @@
 mcp==2.3.0
 fastmcp==4.1.8
 fastmcp-slim==4.1.8
-pydantic==2.14.3
+pydantic==2.14.4
 uvicorn==0.54.0
 starlette==1.10.0
